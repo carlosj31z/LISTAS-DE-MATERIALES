@@ -3,11 +3,11 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Explorador BOM · Listas de Materiales</title>
-<script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+<title>Suite SAP MM · Materiales &amp; BOM</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
 <style>
   :root{
     --bg:#F1F4F4;
@@ -38,44 +38,71 @@
     --shadow-lg: 0 20px 50px rgba(18,33,50,0.22);
     --ease: cubic-bezier(.22,.9,.32,1);
   }
-
   *{box-sizing:border-box;}
   html,body{margin:0;padding:0;}
-  body{
-    background:var(--bg);
-    color:var(--ink);
-    font-family:var(--body);
-    font-size:14px;
-    line-height:1.45;
-    -webkit-font-smoothing:antialiased;
-  }
+  body{background:var(--bg); color:var(--ink); font-family:var(--body); font-size:14px; line-height:1.45; -webkit-font-smoothing:antialiased;}
   ::selection{background:var(--teal); color:#fff;}
   a{color:inherit;}
   button{font-family:inherit;}
+  :focus-visible{outline:2px solid var(--teal); outline-offset:2px; border-radius:4px;}
+  @media (prefers-reduced-motion: reduce){ *{animation-duration:0.001ms !important; transition-duration:0.001ms !important;} }
 
-  /* Scrollbars */
-  .table-wrap, .drawer-body, .filter-panel-list{
-    scrollbar-width:thin;
-    scrollbar-color:#B7C3C8 transparent;
+  /* ================= SUITE TABS (nivel superior, homologado) ================= */
+  .suite-bar{
+    background:
+      radial-gradient(ellipse 900px 260px at 12% -20%, rgba(79,209,197,0.16), transparent 60%),
+      linear-gradient(160deg, var(--navy-deep) 0%, var(--navy) 100%);
+    background-image:
+      radial-gradient(ellipse 900px 260px at 12% -20%, rgba(79,209,197,0.16), transparent 60%),
+      repeating-linear-gradient(90deg, rgba(255,255,255,0.035) 0px, rgba(255,255,255,0.035) 1px, transparent 1px, transparent 28px),
+      linear-gradient(160deg, var(--navy-deep) 0%, var(--navy) 100%);
+    color:#EAF1F3;
+    padding:16px 32px 0;
+    border-bottom:1px solid rgba(79,209,197,0.25);
   }
-  .table-wrap::-webkit-scrollbar, .drawer-body::-webkit-scrollbar, .filter-panel-list::-webkit-scrollbar{
-    width:9px; height:9px;
+  .suite-eyebrow{
+    font-family:var(--mono); font-size:10.5px; letter-spacing:.16em; text-transform:uppercase;
+    color:#7FBBBA; display:flex; align-items:center; gap:8px; margin:0 0 12px;
   }
-  .table-wrap::-webkit-scrollbar-track, .drawer-body::-webkit-scrollbar-track{background:transparent;}
-  .table-wrap::-webkit-scrollbar-thumb, .drawer-body::-webkit-scrollbar-thumb{
-    background:#C4CDD1; border-radius:20px; border:2px solid var(--surface);
+  .suite-eyebrow .dot{width:6px;height:6px;border-radius:50%;background:#4FD1C5; box-shadow:0 0 0 3px rgba(79,209,197,0.18);}
+  .suite-tabs{ display:flex; gap:4px; }
+  .suite-tab{
+    font-family:var(--display); font-weight:600; font-size:14.5px; color:#B7C6CE;
+    background:transparent; border:none; border-bottom:2px solid transparent;
+    padding:11px 18px 13px; cursor:pointer; display:flex; align-items:center; gap:8px;
+    transition:color .15s var(--ease), border-color .15s var(--ease), background .15s var(--ease);
+    border-radius:6px 6px 0 0;
   }
-  .table-wrap::-webkit-scrollbar-thumb:hover, .drawer-body::-webkit-scrollbar-thumb:hover{background:#A6B2B8;}
+  .suite-tab:hover{ color:#EAF1F3; background:rgba(255,255,255,0.05); }
+  .suite-tab.active{ color:#fff; border-bottom-color:#4FD1C5; background:rgba(255,255,255,0.06); }
+  .suite-tab .tab-badge{
+    font-family:var(--mono); font-size:10px; padding:1px 7px; border-radius:10px;
+    background:rgba(79,209,197,0.16); color:#9FE0DA;
+  }
 
-  @media (prefers-reduced-motion: reduce){
-    *{animation-duration:0.001ms !important; transition-duration:0.001ms !important;}
-  }
+  .app-view{ display:none; }
+  .app-view.active{ display:block; }
 
-  :focus-visible{
-    outline:2px solid var(--teal);
-    outline-offset:2px;
-    border-radius:4px;
+  /* ================= util compartidos ================= */
+  .btn{
+    padding:9px 14px; border-radius:var(--radius); font-size:13px; cursor:pointer;
+    border:1px solid transparent; font-weight:500; display:inline-flex; align-items:center; gap:7px;
+    white-space:nowrap; transition:background .15s var(--ease), border-color .15s var(--ease), transform .1s var(--ease), box-shadow .15s var(--ease);
   }
+  .btn svg{width:14px;height:14px; flex:none;}
+  .btn:hover{transform:translateY(-1px);}
+  .btn:active{transform:translateY(0);}
+  .btn-ghost{ background:var(--surface-alt); border-color:var(--border); color:var(--ink-soft); }
+  .btn-ghost:hover{color:var(--brick); border-color:var(--brick); background:var(--brick-soft);}
+  .btn-primary{ background:var(--navy); color:#fff; }
+  .btn-primary:hover{background:var(--navy-deep); box-shadow:0 4px 14px rgba(31,59,87,0.28);}
+  .btn-success{ background:var(--teal); color:#fff; }
+  .btn-success:hover{background:#0A5352; box-shadow:0 4px 14px rgba(14,124,123,0.28);}
+  .btn-amber{ background:var(--amber-soft); border-color:var(--amber); color:var(--amber); }
+  .btn-amber:hover{background:#EADFB0; box-shadow:0 4px 14px rgba(138,109,30,0.2);}
+  .btn-amber.loaded{background:var(--amber); color:#fff;}
+  .btn-brick{ background:var(--brick-soft); border-color:var(--brick); color:var(--brick); }
+  .btn-brick.active{ background:var(--brick); color:#fff; font-weight:600; }
 
   header.top{
     background:
@@ -86,350 +113,116 @@
       repeating-linear-gradient(0deg, rgba(255,255,255,0.035) 0px, rgba(255,255,255,0.035) 1px, transparent 1px, transparent 28px),
       repeating-linear-gradient(90deg, rgba(255,255,255,0.035) 0px, rgba(255,255,255,0.035) 1px, transparent 1px, transparent 28px),
       linear-gradient(160deg, var(--navy-deep) 0%, var(--navy) 100%);
-    color:#EAF1F3;
-    padding:30px 32px 24px;
-    position:relative;
-    border-bottom:1px solid rgba(79,209,197,0.25);
+    color:#EAF1F3; padding:24px 32px 22px; position:relative; border-bottom:1px solid rgba(79,209,197,0.25);
   }
   .eyebrow{
-    font-family:var(--mono);
-    font-size:11px;
-    letter-spacing:0.14em;
-    text-transform:uppercase;
-    color:#7FBBBA;
-    display:flex;
-    align-items:center;
-    gap:8px;
-    margin-bottom:9px;
+    font-family:var(--mono); font-size:11px; letter-spacing:0.14em; text-transform:uppercase; color:#7FBBBA;
+    display:flex; align-items:center; gap:8px; margin-bottom:9px;
   }
   .eyebrow .dot{width:6px;height:6px;border-radius:50%;background:#4FD1C5; box-shadow:0 0 0 3px rgba(79,209,197,0.18); animation:pulse 2.4s ease-in-out infinite;}
-  @keyframes pulse{
-    0%,100%{box-shadow:0 0 0 3px rgba(79,209,197,0.18);}
-    50%{box-shadow:0 0 0 5px rgba(79,209,197,0.1);}
-  }
-  h1.title{
-    font-family:var(--display);
-    font-weight:700;
-    font-size:29px;
-    letter-spacing:-0.01em;
-    margin:0 0 5px;
-  }
-  .subtitle{
-    color:#B7C6CE;
-    font-size:13px;
-    max-width:640px;
-    margin:0;
-  }
+  @keyframes pulse{ 0%,100%{box-shadow:0 0 0 3px rgba(79,209,197,0.18);} 50%{box-shadow:0 0 0 5px rgba(79,209,197,0.1);} }
+  h1.title{ font-family:var(--display); font-weight:700; font-size:26px; letter-spacing:-0.01em; margin:0 0 5px; }
+  .subtitle{ color:#B7C6CE; font-size:13px; max-width:680px; margin:0; }
 
   .status-strip{
-    margin-top:22px;
-    display:flex;
-    flex-wrap:wrap;
-    gap:0;
-    border:1px solid rgba(255,255,255,0.14);
-    border-radius:var(--radius-lg);
-    overflow:hidden;
-    background:rgba(255,255,255,0.03);
-    backdrop-filter:blur(2px);
+    margin-top:18px; display:flex; flex-wrap:wrap; gap:0; border:1px solid rgba(255,255,255,0.14);
+    border-radius:var(--radius-lg); overflow:hidden; background:rgba(255,255,255,0.03);
   }
-  .status-cell{
-    flex:1 1 140px;
-    padding:13px 18px;
-    border-right:1px solid rgba(255,255,255,0.1);
-    min-width:120px;
-    transition:background .15s;
-  }
+  .status-cell{ flex:1 1 140px; padding:12px 18px; border-right:1px solid rgba(255,255,255,0.1); min-width:120px; transition:background .15s;}
   .status-cell:hover{background:rgba(255,255,255,0.035);}
   .status-cell:last-child{border-right:none;}
+  .status-cell.flag-cell{ background:rgba(150,59,50,0.14); }
   .status-label{
-    font-family:var(--mono);
-    font-size:10px;
-    letter-spacing:0.1em;
-    text-transform:uppercase;
-    color:#8FA3AD;
-    display:flex;
-    align-items:center;
-    gap:6px;
-    margin-bottom:7px;
+    font-family:var(--mono); font-size:10px; letter-spacing:0.1em; text-transform:uppercase; color:#8FA3AD;
+    display:flex; align-items:center; gap:6px; margin-bottom:7px;
   }
   .status-label .tick{width:7px;height:7px;border-radius:2px;flex:none;}
-  .status-value{
-    font-family:var(--mono);
-    font-size:23px;
-    font-weight:500;
-    color:#F3F7F8;
-    font-variant-numeric:tabular-nums;
-  }
+  .status-value{ font-family:var(--mono); font-size:21px; font-weight:500; color:#F3F7F8; font-variant-numeric:tabular-nums; }
   .status-value small{font-size:12px; color:#93A6AF; font-weight:400; margin-left:4px;}
 
   .toolbar{
-    position:sticky;
-    top:0;
-    z-index:30;
-    background:rgba(255,255,255,0.92);
-    backdrop-filter:blur(8px);
-    border-bottom:1px solid var(--border);
-    padding:14px 32px;
-    box-shadow:var(--shadow-sm);
+    position:sticky; top:0; z-index:30; background:rgba(255,255,255,0.92); backdrop-filter:blur(8px);
+    border-bottom:1px solid var(--border); padding:14px 32px; box-shadow:var(--shadow-sm);
   }
-  .toolbar-row{
-    display:flex;
-    flex-wrap:wrap;
-    gap:10px;
-    align-items:center;
-  }
-  .search-box{
-    position:relative;
-    flex:1 1 280px;
-    min-width:220px;
-    max-width:420px;
-  }
+  .toolbar-row{ display:flex; flex-wrap:wrap; gap:10px; align-items:center; }
+  .search-box{ position:relative; flex:1 1 280px; min-width:220px; max-width:420px; }
   .search-box input{
-    width:100%;
-    padding:9px 12px 9px 34px;
-    border:1px solid var(--border);
-    border-radius:var(--radius);
-    font-size:13.5px;
-    font-family:var(--body);
-    background:var(--surface-alt);
-    color:var(--ink);
+    width:100%; padding:9px 12px 9px 34px; border:1px solid var(--border); border-radius:var(--radius);
+    font-size:13.5px; font-family:var(--body); background:var(--surface-alt); color:var(--ink);
     transition:border-color .15s var(--ease), background .15s var(--ease), box-shadow .15s var(--ease);
   }
-  .search-box input:focus{
-    background:#fff;
-    border-color:var(--teal);
-    outline:none;
-    box-shadow:0 0 0 3px rgba(14,124,123,0.12);
-  }
-  .search-box svg{
-    position:absolute;
-    left:10px; top:50%;
-    transform:translateY(-50%);
-    width:15px; height:15px;
-    color:var(--ink-faint);
-    pointer-events:none;
-  }
-
-  .toolbar-divider{
-    width:1px; align-self:stretch; min-height:28px;
-    background:var(--border); margin:0 2px;
-  }
+  .search-box input:focus{ background:#fff; border-color:var(--teal); outline:none; box-shadow:0 0 0 3px rgba(14,124,123,0.12); }
+  .search-box svg{ position:absolute; left:10px; top:50%; transform:translateY(-50%); width:15px; height:15px; color:var(--ink-faint); pointer-events:none; }
+  .toolbar-divider{ width:1px; align-self:stretch; min-height:28px; background:var(--border); margin:0 2px; }
 
   .filter-group{position:relative;}
   .filter-btn{
-    display:flex;
-    align-items:center;
-    gap:6px;
-    padding:9px 12px;
-    border:1px solid var(--border);
-    background:var(--surface-alt);
-    border-radius:var(--radius);
-    font-size:13px;
-    color:var(--ink);
-    cursor:pointer;
-    white-space:nowrap;
-    transition:border-color .15s var(--ease), background .15s var(--ease), transform .1s var(--ease);
+    display:flex; align-items:center; gap:6px; padding:9px 12px; border:1px solid var(--border);
+    background:var(--surface-alt); border-radius:var(--radius); font-size:13px; color:var(--ink); cursor:pointer;
+    white-space:nowrap; transition:border-color .15s var(--ease), background .15s var(--ease), transform .1s var(--ease);
   }
   .filter-btn:hover{border-color:var(--ink-faint); transform:translateY(-1px);}
-  .filter-btn:active{transform:translateY(0);}
-  .filter-btn.active{
-    border-color:var(--teal);
-    background:var(--teal-soft);
-    color:var(--navy-deep);
-  }
-  .filter-btn .count{
-    background:var(--teal);
-    color:#fff;
-    font-family:var(--mono);
-    font-size:10.5px;
-    padding:1px 6px;
-    border-radius:10px;
-    line-height:1.5;
-  }
+  .filter-btn.active{ border-color:var(--teal); background:var(--teal-soft); color:var(--navy-deep); }
+  .filter-btn .count{ background:var(--teal); color:#fff; font-family:var(--mono); font-size:10.5px; padding:1px 6px; border-radius:10px; line-height:1.5; }
   .filter-btn svg.chev{width:11px;height:11px; opacity:0.6; transition:transform .18s var(--ease);}
   .filter-group:has(.filter-panel.open) svg.chev{transform:rotate(180deg);}
 
   .filter-panel{
-    position:absolute;
-    top:calc(100% + 6px);
-    left:0;
-    background:#fff;
-    border:1px solid var(--border);
-    border-radius:var(--radius);
-    box-shadow:var(--shadow-md);
-    width:260px;
-    max-height:340px;
-    display:flex;
-    flex-direction:column;
-    z-index:40;
-    overflow:hidden;
-    opacity:0;
-    transform:translateY(-6px) scale(.98);
-    visibility:hidden;
-    pointer-events:none;
-    transition:opacity .16s var(--ease), transform .16s var(--ease), visibility .16s;
+    position:absolute; top:calc(100% + 6px); left:0; background:#fff; border:1px solid var(--border);
+    border-radius:var(--radius); box-shadow:var(--shadow-md); width:260px; max-height:340px; display:flex;
+    flex-direction:column; z-index:40; overflow:hidden; opacity:0; transform:translateY(-6px) scale(.98);
+    visibility:hidden; pointer-events:none; transition:opacity .16s var(--ease), transform .16s var(--ease), visibility .16s;
     transform-origin:top left;
   }
-  .filter-panel.open{
-    opacity:1;
-    transform:translateY(0) scale(1);
-    visibility:visible;
-    pointer-events:auto;
-  }
-  .filter-panel-search{
-    padding:8px;
-    border-bottom:1px solid var(--border-soft);
-  }
-  .filter-panel-search input{
-    width:100%;
-    padding:6px 8px;
-    border:1px solid var(--border);
-    border-radius:6px;
-    font-size:12.5px;
-  }
+  .filter-panel.open{ opacity:1; transform:translateY(0) scale(1); visibility:visible; pointer-events:auto; }
+  .filter-panel-search{ padding:8px; border-bottom:1px solid var(--border-soft); }
+  .filter-panel-search input{ width:100%; padding:6px 8px; border:1px solid var(--border); border-radius:6px; font-size:12.5px; }
   .filter-panel-search input:focus{border-color:var(--teal); outline:none;}
-  .filter-panel-actions{
-    display:flex;
-    justify-content:space-between;
-    padding:6px 10px;
-    border-bottom:1px solid var(--border-soft);
-  }
-  .filter-panel-actions button{
-    background:none;border:none;color:var(--teal);font-size:11.5px;cursor:pointer;padding:2px 4px;font-weight:500;border-radius:4px;
-  }
+  .filter-panel-actions{ display:flex; justify-content:space-between; padding:6px 10px; border-bottom:1px solid var(--border-soft); }
+  .filter-panel-actions button{ background:none;border:none;color:var(--teal);font-size:11.5px;cursor:pointer;padding:2px 4px;font-weight:500;border-radius:4px; }
   .filter-panel-actions button:hover{text-decoration:underline; background:var(--teal-soft);}
-  .filter-panel-list{
-    overflow-y:auto;
-    padding:4px 4px;
-  }
-  .filter-option{
-    display:flex;
-    align-items:center;
-    gap:8px;
-    padding:6px 8px;
-    border-radius:5px;
-    cursor:pointer;
-    font-size:12.5px;
-    transition:background .1s;
-  }
+  .filter-panel-list{ overflow-y:auto; padding:4px 4px; scrollbar-width:thin; scrollbar-color:#B7C3C8 transparent; }
+  .filter-panel-list::-webkit-scrollbar{width:9px;}
+  .filter-panel-list::-webkit-scrollbar-thumb{background:#C4CDD1; border-radius:20px; border:2px solid var(--surface);}
+  .filter-option{ display:flex; align-items:center; gap:8px; padding:6px 8px; border-radius:5px; cursor:pointer; font-size:12.5px; transition:background .1s; }
   .filter-option:hover{background:var(--surface-alt);}
   .filter-option input{margin:0; accent-color:var(--teal);}
   .filter-option .opt-label{flex:1; overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
   .filter-option .opt-count{color:var(--ink-faint); font-family:var(--mono); font-size:11px;}
 
-  .btn{
-    padding:9px 14px;
-    border-radius:var(--radius);
-    font-size:13px;
-    cursor:pointer;
-    border:1px solid transparent;
-    font-weight:500;
-    display:inline-flex;
-    align-items:center;
-    gap:7px;
-    white-space:nowrap;
-    transition:background .15s var(--ease), border-color .15s var(--ease), transform .1s var(--ease), box-shadow .15s var(--ease);
-  }
-  .btn svg{width:14px;height:14px; flex:none;}
-  .btn:hover{transform:translateY(-1px);}
-  .btn:active{transform:translateY(0);}
-  .btn-ghost{
-    background:var(--surface-alt);
-    border-color:var(--border);
-    color:var(--ink-soft);
-  }
-  .btn-ghost:hover{color:var(--brick); border-color:var(--brick); background:var(--brick-soft);}
-  .btn-primary{
-    background:var(--navy);
-    color:#fff;
-  }
-  .btn-primary:hover{background:var(--navy-deep); box-shadow:0 4px 14px rgba(31,59,87,0.28);}
-  .btn-success{
-    background:var(--teal);
-    color:#fff;
-  }
-  .btn-success:hover{background:#0A5352; box-shadow:0 4px 14px rgba(14,124,123,0.28);}
-
-  .btn-amber{
-    background:var(--amber-soft);
-    border-color:var(--amber);
-    color:var(--amber);
-  }
-  .btn-amber:hover{background:#EADFB0; box-shadow:0 4px 14px rgba(138,109,30,0.2);}
-  .btn-amber.loaded{background:var(--amber); color:#fff;}
-
-  /* Botón específico para MM */
-  #toggleMM.active {
-    background: var(--amber-soft);
-    border-color: var(--amber);
-    color: var(--amber);
-    font-weight: 600;
-  }
-
-  .toolbar-meta{
-    margin-top:10px;
-    display:flex;
-    justify-content:space-between;
-    align-items:center;
-    flex-wrap:wrap;
-    gap:8px;
-    font-size:12.5px;
-    color:var(--ink-soft);
-  }
+  .toolbar-meta{ margin-top:10px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; font-size:12.5px; color:var(--ink-soft); }
   .toolbar-meta strong{color:var(--ink); font-family:var(--mono); font-weight:600;}
 
-  .more-filters{
-    display:none;
-    margin-top:10px;
-    padding-top:10px;
-    border-top:1px dashed var(--border);
-    gap:14px;
-    flex-wrap:wrap;
-    align-items:flex-end;
-  }
+  .more-filters{ display:none; margin-top:10px; padding-top:10px; border-top:1px dashed var(--border); gap:14px; flex-wrap:wrap; align-items:flex-end; }
   .more-filters.open{display:flex;}
   .date-field{display:flex; flex-direction:column; gap:4px;}
   .date-field label{font-size:11px; text-transform:uppercase; letter-spacing:0.05em; color:var(--ink-faint); font-family:var(--mono);}
-  .date-field input{
-    padding:7px 8px; border:1px solid var(--border); border-radius:6px; font-size:12.5px; font-family:var(--mono);
-  }
+  .date-field input{ padding:7px 8px; border:1px solid var(--border); border-radius:6px; font-size:12.5px; font-family:var(--mono); }
   .date-field input:focus{border-color:var(--teal); outline:none;}
 
-  main{padding:20px 32px 48px;}
+  select{
+    padding:9px 30px 9px 12px; border:1px solid var(--border); border-radius:var(--radius);
+    background:var(--surface-alt) url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="%235C6B77"><path d="M5.5 7.5l4.5 5 4.5-5z"/></svg>') no-repeat right 8px center;
+    background-size:14px; appearance:none; -webkit-appearance:none;
+    font-family:var(--body); font-size:13px; color:var(--ink); min-width:150px; cursor:pointer;
+  }
+  select:focus{ outline:2px solid var(--teal); outline-offset:-1px; }
+
+  main.view-main{padding:20px 32px 48px;}
 
   .table-wrap{
-    background:var(--surface);
-    border:1px solid var(--border);
-    border-radius:var(--radius-lg);
-    overflow:auto;
-    max-height:62vh;
-    box-shadow:var(--shadow-sm);
+    background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-lg);
+    overflow:auto; max-height:62vh; box-shadow:var(--shadow-sm);
+    scrollbar-width:thin; scrollbar-color:#B7C3C8 transparent;
   }
-  table{
-    border-collapse:collapse;
-    width:100%;
-    min-width:1400px;
-    font-size:12.8px;
-  }
+  .table-wrap::-webkit-scrollbar{width:9px; height:9px;}
+  .table-wrap::-webkit-scrollbar-thumb{background:#C4CDD1; border-radius:20px; border:2px solid var(--surface);}
+  table{ border-collapse:collapse; width:100%; min-width:1200px; font-size:12.8px; }
   thead th{
-    position:sticky;
-    top:0;
-    background:var(--navy);
-    color:#EAF1F3;
-    text-align:left;
-    padding:10px 12px;
-    font-family:var(--mono);
-    font-weight:500;
-    font-size:11px;
-    letter-spacing:0.03em;
-    text-transform:uppercase;
-    cursor:pointer;
-    user-select:none;
-    white-space:nowrap;
-    z-index:10;
-    border-right:1px solid rgba(255,255,255,0.08);
-    border-bottom:2px solid rgba(79,209,197,0.35);
-    transition:background .12s;
+    position:sticky; top:0; background:var(--navy); color:#EAF1F3; text-align:left; padding:10px 12px;
+    font-family:var(--mono); font-weight:500; font-size:11px; letter-spacing:0.03em; text-transform:uppercase;
+    cursor:pointer; user-select:none; white-space:nowrap; z-index:10; border-right:1px solid rgba(255,255,255,0.08);
+    border-bottom:2px solid rgba(79,209,197,0.35); transition:background .12s;
   }
   thead th:hover{background:var(--navy-deep);}
   thead th .arrow{opacity:0.5; margin-left:4px; font-size:10px;}
@@ -438,22 +231,10 @@
   thead th.col-material{position:sticky; left:0; z-index:12;}
   thead th.col-desc{position:sticky; left:110px; z-index:12; box-shadow:2px 0 4px rgba(0,0,0,0.08);}
 
-  tbody td{
-    padding:8px 12px;
-    border-bottom:1px solid var(--border-soft);
-    white-space:nowrap;
-    color:var(--ink);
-    vertical-align:middle;
-  }
-  tbody td.col-material{
-    position:sticky; left:0; background:inherit; z-index:5;
-    font-family:var(--mono); font-weight:500; color:var(--navy-deep);
-  }
-  tbody td.col-desc{
-    position:sticky; left:110px; background:inherit; z-index:5;
-    white-space:normal; min-width:220px; max-width:280px;
-    box-shadow:2px 0 4px rgba(0,0,0,0.04);
-  }
+  tbody td{ padding:8px 12px; border-bottom:1px solid var(--border-soft); white-space:nowrap; color:var(--ink); vertical-align:middle; max-width:230px; overflow:hidden; text-overflow:ellipsis; }
+  tbody td.wrap{white-space:normal;}
+  tbody td.col-material{ position:sticky; left:0; background:inherit; z-index:5; font-family:var(--mono); font-weight:500; color:var(--navy-deep); }
+  tbody td.col-desc{ position:sticky; left:110px; background:inherit; z-index:5; white-space:normal; min-width:220px; max-width:280px; box-shadow:2px 0 4px rgba(0,0,0,0.04); }
   tbody tr{background:#fff; cursor:pointer; transition:background .12s;}
   tbody tr:nth-child(even){background:#FAFBFB;}
   tbody tr:nth-child(even) td.col-material, tbody tr:nth-child(even) td.col-desc{background:#FAFBFB;}
@@ -461,26 +242,14 @@
   tbody tr:hover td.col-material, tbody tr:hover td.col-desc{background:var(--teal-soft) !important;}
   tbody tr.selected{background:#DCEEED !important; box-shadow:inset 3px 0 0 var(--teal);}
   tbody tr.selected td.col-material, tbody tr.selected td.col-desc{background:#DCEEED !important;}
-
-  tbody tr.has-comp td.col-material::after{
-    content:'●';
-    color:var(--amber);
-    font-size:8px;
-    margin-left:6px;
-    vertical-align:middle;
+  tbody tr.suspendido td.col-material::after{
+    content:'Z'; display:inline-flex; align-items:center; justify-content:center;
+    width:15px; height:15px; margin-left:6px; border-radius:3px; background:var(--brick); color:#fff;
+    font-size:9px; font-weight:700; vertical-align:middle;
   }
+  tbody tr.has-comp td.col-material::before{ content:'●'; color:var(--amber); font-size:8px; margin-right:5px; vertical-align:middle; }
 
-  .badge{
-    display:inline-flex;
-    align-items:center;
-    gap:5px;
-    padding:2px 9px;
-    border-radius:12px;
-    font-size:11px;
-    font-weight:500;
-    font-family:var(--mono);
-    white-space:nowrap;
-  }
+  .badge{ display:inline-flex; align-items:center; gap:5px; padding:2px 9px; border-radius:12px; font-size:11px; font-weight:500; font-family:var(--mono); white-space:nowrap; }
   .badge .dot{width:6px;height:6px;border-radius:50%;}
   .badge-activo{background:var(--teal-soft); color:#0A5352;}
   .badge-activo .dot{background:var(--teal);}
@@ -488,1247 +257,1639 @@
   .badge-inactivo .dot{background:var(--brick);}
   .badge-ate{background:var(--teal-soft); color:#0A5352;}
   .badge-lima{background:var(--violet-soft); color:#3E3163;}
+  .badge-suspendido{ background:var(--brick-soft); color:var(--brick); font-weight:700; }
+  .badge-neutro{ background:var(--surface-alt); color:var(--ink-soft); border:1px solid var(--border); }
 
-  .empty-state{
-    padding:64px 20px;
-    text-align:center;
-    color:var(--ink-soft);
-  }
-  .empty-state .icon{
-    width:52px; height:52px; margin:0 auto 16px; color:var(--ink-faint);
-  }
+  .empty-state{ padding:64px 20px; text-align:center; color:var(--ink-soft); }
+  .empty-state .icon{ width:52px; height:52px; margin:0 auto 16px; color:var(--ink-faint); }
   .empty-state h3{font-family:var(--display); color:var(--ink); margin:0 0 6px; font-size:17px;}
   .empty-state p{margin:0 0 4px; font-size:13px;}
   .empty-state button{margin-top:16px;}
 
-  .pagination{
-    display:flex;
-    justify-content:space-between;
-    align-items:center;
-    flex-wrap:wrap;
-    gap:12px;
-    margin-top:14px;
-    font-size:13px;
-    color:var(--ink-soft);
+  .dropzone{
+    border:1.5px dashed var(--border); border-radius:var(--radius-lg); background:var(--surface);
+    padding:44px 30px; text-align:center; transition:border-color .15s ease, background .15s ease; cursor:pointer;
   }
+  .dropzone.drag{ border-color:var(--teal); background:var(--teal-soft); }
+  .dropzone h2{ font-family:var(--display); font-size:19px; margin:0 0 6px; font-weight:700; color:var(--ink); }
+  .dropzone p{ margin:0 auto 18px; color:var(--ink-soft); font-size:13.5px; max-width:460px; line-height:1.55;}
+  .dz-icon{ width:46px; height:46px; margin:0 auto 16px; color:var(--teal); }
+  .dz-error{ color:var(--brick); font-size:12.5px; margin-top:14px; font-family:var(--mono); display:none;}
+
+  .filebar{
+    display:none; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap;
+    background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:12px 16px; margin-bottom:16px;
+  }
+  .filebar .fname{ font-family:var(--mono); font-size:12.5px; color:var(--ink-soft); display:flex; align-items:center; gap:10px; }
+  .fname .dot{ width:7px; height:7px; border-radius:50%; background:#4C7A4A; flex:none; }
+
+  .pagination{ display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-top:14px; font-size:13px; color:var(--ink-soft); }
   .pagination .pg-controls{display:flex; align-items:center; gap:6px;}
   .pagination button{
-    border:1px solid var(--border);
-    background:#fff;
-    padding:6px 10px;
-    border-radius:6px;
-    cursor:pointer;
-    font-size:12.5px;
-    color:var(--ink);
-    display:inline-flex;
-    align-items:center;
-    gap:5px;
-    transition:border-color .12s, color .12s;
+    border:1px solid var(--border); background:#fff; padding:6px 10px; border-radius:6px; cursor:pointer;
+    font-size:12.5px; color:var(--ink); display:inline-flex; align-items:center; gap:5px; transition:border-color .12s, color .12s;
   }
   .pagination button svg{width:13px;height:13px;}
   .pagination button:disabled{opacity:0.4; cursor:not-allowed;}
   .pagination button:not(:disabled):hover{border-color:var(--teal); color:var(--teal);}
-  .pagination select{
-    border:1px solid var(--border);
-    border-radius:6px;
-    padding:6px 8px;
-    font-size:12.5px;
-    background:#fff;
-  }
-  .pagination select:focus{border-color:var(--teal); outline:none;}
-  #pgIndicator{font-family:var(--mono); font-size:12px; padding:0 4px;}
+  .pagination select{ border:1px solid var(--border); border-radius:6px; padding:6px 8px; font-size:12.5px; background:#fff; min-width:auto;}
+  .pg-indicator{font-family:var(--mono); font-size:12px; padding:0 4px;}
 
-  .overlay{
-    position:fixed; inset:0; background:rgba(18,33,50,0.4);
-    backdrop-filter:blur(1px);
-    opacity:0; pointer-events:none; transition:opacity .2s var(--ease);
-    z-index:49;
-  }
+  .overlay{ position:fixed; inset:0; background:rgba(18,33,50,0.4); backdrop-filter:blur(1px); opacity:0; pointer-events:none; transition:opacity .2s var(--ease); z-index:49; }
   .overlay.open{opacity:1; pointer-events:auto;}
 
   .drawer{
-    position:fixed;
-    top:0; right:0; height:100%;
-    width:460px;
-    max-width:94vw;
-    background:#fff;
-    box-shadow:var(--shadow-lg);
-    transform:translateX(100%);
-    transition:transform .24s var(--ease);
-    z-index:50;
-    display:flex;
-    flex-direction:column;
+    position:fixed; top:0; right:0; height:100%; width:480px; max-width:94vw; background:#fff;
+    box-shadow:var(--shadow-lg); transform:translateX(100%); transition:transform .24s var(--ease); z-index:50;
+    display:flex; flex-direction:column;
   }
   .drawer.open{transform:translateX(0);}
   .drawer-header{
-    padding:22px 22px 18px;
-    border-bottom:1px solid var(--border);
-    background:
-      radial-gradient(ellipse 400px 160px at 90% -20%, rgba(79,209,197,0.18), transparent 60%),
-      var(--navy-deep);
-    color:#fff;
-    position:relative;
+    padding:22px 22px 18px; border-bottom:1px solid var(--border);
+    background: radial-gradient(ellipse 400px 160px at 90% -20%, rgba(79,209,197,0.18), transparent 60%), var(--navy-deep);
+    color:#fff; position:relative;
   }
   .drawer-header .eyebrow{color:#7FBBBA; margin-bottom:7px;}
-  .drawer-header h2{
-    font-family:var(--mono);
-    font-size:20px;
-    margin:0 0 4px;
-    font-weight:600;
-    padding-right:26px;
-    word-break:break-word;
-  }
+  .drawer-header h2{ font-family:var(--mono); font-size:20px; margin:0 0 4px; font-weight:600; padding-right:26px; word-break:break-word; }
   .drawer-header p{margin:0; color:#C3D0D6; font-size:13px;}
+  .drawer-stamp{
+    position:absolute; right:22px; bottom:-14px; transform:rotate(-6deg);
+    border:2px solid var(--brick); color:var(--brick); background:#fff; font-family:var(--mono); font-size:10.5px;
+    font-weight:700; letter-spacing:.06em; text-transform:uppercase; padding:5px 10px; border-radius:2px;
+    box-shadow:0 4px 10px rgba(0,0,0,0.15); max-width:230px; text-align:center; line-height:1.3;
+  }
   .drawer-close{
-    position:absolute; top:16px; right:16px;
-    background:rgba(255,255,255,0.1);
-    border:none; color:#fff; width:30px; height:30px; border-radius:7px;
-    cursor:pointer; display:flex; align-items:center; justify-content:center;
-    transition:background .15s;
+    position:absolute; top:16px; right:16px; background:rgba(255,255,255,0.1); border:none; color:#fff;
+    width:30px; height:30px; border-radius:7px; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:background .15s;
   }
   .drawer-close svg{width:15px; height:15px;}
   .drawer-close:hover{background:rgba(255,255,255,0.2);}
-  .drawer-body{padding:18px 22px; overflow-y:auto; flex:1;}
+  .drawer-body{padding:18px 22px; overflow-y:auto; flex:1; scrollbar-width:thin; scrollbar-color:#B7C3C8 transparent;}
+  .drawer-body::-webkit-scrollbar{width:9px;}
+  .drawer-body::-webkit-scrollbar-thumb{background:#C4CDD1; border-radius:20px; border:2px solid var(--surface);}
   .field-group{margin-bottom:20px;}
   .field-group:last-child{margin-bottom:4px;}
   .field-group-title{
-    font-family:var(--mono);
-    font-size:10.5px;
-    text-transform:uppercase;
-    letter-spacing:0.08em;
-    color:var(--teal);
-    margin-bottom:8px;
-    padding-bottom:6px;
-    border-bottom:1px solid var(--border-soft);
-    display:flex;
-    align-items:center;
-    justify-content:space-between;
-    gap:8px;
+    font-family:var(--mono); font-size:10.5px; text-transform:uppercase; letter-spacing:0.08em; color:var(--teal);
+    margin-bottom:8px; padding-bottom:6px; border-bottom:1px solid var(--border-soft);
+    display:flex; align-items:center; justify-content:space-between; gap:8px;
   }
-  .field-group-title .fg-count{
-    color:var(--ink-faint);
-    font-weight:400;
-    text-transform:none;
-    letter-spacing:0;
-  }
-  .field-row{
-    display:flex;
-    justify-content:space-between;
-    gap:12px;
-    padding:6px 0;
-    font-size:13px;
-  }
+  .field-group-title .fg-count{ color:var(--ink-faint); font-weight:400; text-transform:none; letter-spacing:0; }
+  .field-row{ display:flex; justify-content:space-between; gap:12px; padding:6px 0; font-size:13px; }
   .field-row .f-label{color:var(--ink-soft); flex:0 0 44%;}
   .field-row .f-value{color:var(--ink); font-weight:500; text-align:right; flex:1; word-break:break-word;}
   .field-row .f-value.mono{font-family:var(--mono); font-weight:500;}
+  .field-grid{ display:grid; grid-template-columns:1fr 1fr; gap:10px 16px; }
+  .field{ min-width:0; }
+  .field.full{ grid-column:1 / -1; }
+  .field-label2{ font-size:10.5px; color:var(--ink-faint); text-transform:uppercase; letter-spacing:.05em; margin-bottom:3px; font-family:var(--mono); }
+  .field-value2{ font-size:13.5px; color:var(--ink); line-height:1.45; word-break:break-word; }
+  .field-value2.empty{ color:var(--ink-faint); font-style:italic; }
+  .field-value2.mono{ font-family:var(--mono); font-size:12.5px; }
 
-  /* ---- Componentes de la lista (drawer) ---- */
-  .comp-empty{
-    padding:16px 12px;
-    text-align:center;
-    color:var(--ink-faint);
-    font-size:12.5px;
-    background:var(--surface-alt);
-    border-radius:8px;
-    border:1px dashed var(--border);
-  }
+  .comp-empty{ padding:16px 12px; text-align:center; color:var(--ink-faint); font-size:12.5px; background:var(--surface-alt); border-radius:8px; border:1px dashed var(--border); }
   .comp-empty button{margin-top:8px;}
-  .comp-group{
-    border:1px solid var(--border-soft);
-    border-radius:9px;
-    margin-bottom:10px;
-    overflow:hidden;
-  }
-  .comp-group-head{
-    display:flex;
-    align-items:center;
-    justify-content:space-between;
-    gap:8px;
-    padding:7px 10px;
-    background:var(--surface-alt);
-    font-family:var(--mono);
-    font-size:11px;
-    color:var(--ink-soft);
-    letter-spacing:0.03em;
-  }
+  .comp-group{ border:1px solid var(--border-soft); border-radius:9px; margin-bottom:10px; overflow:hidden; }
+  .comp-group-head{ display:flex; align-items:center; justify-content:space-between; gap:8px; padding:7px 10px; background:var(--surface-alt); font-family:var(--mono); font-size:11px; color:var(--ink-soft); letter-spacing:0.03em; }
   .comp-group-head .pos-num{color:var(--navy-deep); font-weight:600;}
-  .comp-group-head .alt-tag{
-    background:var(--violet-soft); color:var(--violet);
-    padding:1px 7px; border-radius:8px; font-size:10px; font-weight:600;
-  }
-  .comp-item{
-    padding:9px 10px;
-    display:grid;
-    grid-template-columns:1fr auto;
-    gap:2px 10px;
-    align-items:start;
-    border-top:1px solid var(--border-soft);
-  }
+  .comp-group-head .alt-tag{ background:var(--violet-soft); color:var(--violet); padding:1px 7px; border-radius:8px; font-size:10px; font-weight:600; }
+  .comp-item{ padding:9px 10px; display:grid; grid-template-columns:1fr auto; gap:2px 10px; align-items:start; border-top:1px solid var(--border-soft); }
   .comp-item:first-of-type{border-top:none;}
-  .comp-item .c-code{
-    font-family:var(--mono); font-size:12px; font-weight:600; color:var(--navy-deep);
-    grid-column:1; grid-row:1;
-  }
-  .comp-item .c-qty{
-    font-family:var(--mono); font-size:12.5px; font-weight:600; color:var(--teal);
-    grid-column:2; grid-row:1; text-align:right; white-space:nowrap;
-  }
-  .comp-item .c-desc{
-    font-size:12.5px; color:var(--ink-soft);
-    grid-column:1 / -1; grid-row:2;
-  }
-  .comp-item .c-prob{
-    grid-column:1/-1; grid-row:3;
-    font-size:10.5px; color:var(--amber); font-family:var(--mono); margin-top:2px;
-  }
-  .comp-search-hit{background:#FBF3D9;}
+  .comp-item .c-code{ font-family:var(--mono); font-size:12px; font-weight:600; color:var(--navy-deep); grid-column:1; grid-row:1; }
+  .comp-item .c-qty{ font-family:var(--mono); font-size:12.5px; font-weight:600; color:var(--teal); grid-column:2; grid-row:1; text-align:right; white-space:nowrap; }
+  .comp-item .c-desc{ font-size:12.5px; color:var(--ink-soft); grid-column:1 / -1; grid-row:2; }
+  .comp-item .c-prob{ grid-column:1/-1; grid-row:3; font-size:10.5px; color:var(--amber); font-family:var(--mono); margin-top:2px; }
 
-  footer.page-footer{
-    text-align:center;
-    padding:18px;
-    color:var(--ink-faint);
-    font-size:11.5px;
-    font-family:var(--mono);
-  }
+  footer.page-footer{ text-align:center; padding:18px; color:var(--ink-faint); font-size:11.5px; font-family:var(--mono); }
 
-  #fileInput, #componentesFileInput{display:none;}
+  [id$="FileInput"], [id$="ComponentesFileInput"]{ display:none; }
 
   @media (max-width: 720px){
     header.top{padding:22px 16px 18px;}
     .toolbar{padding:12px 16px;}
-    main{padding:16px 16px 40px;}
+    main.view-main{padding:16px 16px 40px;}
     .status-cell{flex:1 1 45%;}
     .toolbar-divider{display:none;}
+    .field-grid{ grid-template-columns:1fr; }
+    table{ min-width:900px; }
+    .suite-bar{ padding:14px 16px 0; }
   }
 </style>
 </head>
 <body>
 
-<header class="top">
-  <div class="eyebrow"><span class="dot"></span>SAP · EXPORT · MAESTRO DE LISTAS DE MATERIALES</div>
-  <h1 class="title">Explorador BOM</h1>
-  <p class="subtitle">Búsqueda y filtrado del maestro de listas de materiales (BOM) exportado de SAP — Planta Ate y Planta Lima. Haz clic en una lista para ver sus componentes.</p>
-
-  <div class="status-strip" id="statusStrip">
-    <div class="status-cell">
-      <div class="status-label"><span class="tick" style="background:#4FD1C5"></span>Registros</div>
-      <div class="status-value" id="statTotal">0</div>
-    </div>
-    <div class="status-cell">
-      <div class="status-label"><span class="tick" style="background:#4FD1C5"></span>Activos</div>
-      <div class="status-value" id="statActivos">0</div>
-    </div>
-    <div class="status-cell">
-      <div class="status-label"><span class="tick" style="background:#C97F73"></span>Inactivos</div>
-      <div class="status-value" id="statInactivos">0</div>
-    </div>
-    <div class="status-cell">
-      <div class="status-label"><span class="tick" style="background:#4FD1C5"></span>Planta Ate</div>
-      <div class="status-value" id="statAte">0</div>
-    </div>
-    <div class="status-cell">
-      <div class="status-label"><span class="tick" style="background:#9689C7"></span>Planta Lima</div>
-      <div class="status-value" id="statLima">0</div>
-    </div>
-    <div class="status-cell">
-      <div class="status-label"><span class="tick" style="background:#EAD98C"></span>Materiales únicos</div>
-      <div class="status-value" id="statUnicos">0</div>
-    </div>
-    <div class="status-cell">
-      <div class="status-label"><span class="tick" style="background:#8A6D1E"></span>Componentes cargados</div>
-      <div class="status-value" id="statComponentes">0</div>
-    </div>
-  </div>
-</header>
-
-<div class="toolbar">
-  <div class="toolbar-row">
-    <div class="search-box">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
-      <input type="text" id="searchInput" placeholder="Buscar por material, descripción, categoría o usuario…">
-    </div>
-
-    <input type="file" id="fileInput" accept=".xlsx,.xls,.csv">
-    <button class="btn btn-success" id="loadExcelBtn">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-      Cargar Excel
-    </button>
-
-    <input type="file" id="componentesFileInput" accept=".xlsx,.xls,.csv">
-    <button class="btn btn-amber" id="loadComponentesBtn" title="Cargar el export de SAP con los componentes de cada lista de materiales (Material, Lista mat.alternat., Componente, Denominación, Cantidad, Unidad…)">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M20 7h-9M14 17H5M17 3l4 4-4 4M7 21l-4-4 4-4"/></svg>
-      Cargar Componentes
-    </button>
-
-    <div class="toolbar-divider"></div>
-
-    <div class="filter-group" data-filter="centro">
-      <button class="filter-btn" data-toggle="centro">Centro <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M6 9l6 6 6-6"/></svg></button>
-      <div class="filter-panel" data-panel="centro"></div>
-    </div>
-
-    <div class="filter-group" data-filter="estado">
-      <button class="filter-btn" data-toggle="estado">Estado <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M6 9l6 6 6-6"/></svg></button>
-      <div class="filter-panel" data-panel="estado"></div>
-    </div>
-
-    <div class="filter-group" data-filter="categoria">
-      <button class="filter-btn" data-toggle="categoria">Categoría <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M6 9l6 6 6-6"/></svg></button>
-      <div class="filter-panel" data-panel="categoria"></div>
-    </div>
-
-    <div class="filter-group" data-filter="unidad">
-      <button class="filter-btn" data-toggle="unidad">Unidad medida <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M6 9l6 6 6-6"/></svg></button>
-      <div class="filter-panel" data-panel="unidad"></div>
-    </div>
-
-    <div class="filter-group" data-filter="creadopor">
-      <button class="filter-btn" data-toggle="creadopor">Creado por <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M6 9l6 6 6-6"/></svg></button>
-      <div class="filter-panel" data-panel="creadopor"></div>
-    </div>
-
-    <!-- Botón de Muestras Médicas -->
-    <button id="toggleMM" class="filter-btn" title="Filtrar solo registros que contengan 'MM' en la descripción (Muestras Médicas)">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true" style="width:14px;height:14px;"><path d="M9 3h6v6l4 8a2 2 0 0 1-2 3H7a2 2 0 0 1-2-3l4-8V3z"/><line x1="9" y1="3" x2="15" y2="3"/><line x1="8" y1="14" x2="16" y2="14"/></svg>
-      MM (Muestras médicas)
-    </button>
-
-    <div class="toolbar-divider"></div>
-
-    <button class="btn btn-ghost" id="toggleMoreFilters">Más filtros</button>
-    <button class="btn btn-ghost" id="clearFilters">Limpiar filtros</button>
-    <button class="btn btn-primary" id="exportCsv">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-      Exportar CSV
-    </button>
-  </div>
-
-  <div class="more-filters" id="moreFilters">
-    <div class="filter-group" data-filter="utilizacion">
-      <button class="filter-btn" data-toggle="utilizacion">Utilización <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M6 9l6 6 6-6"/></svg></button>
-      <div class="filter-panel" data-panel="utilizacion"></div>
-    </div>
-    <div class="filter-group" data-filter="modificadopor">
-      <button class="filter-btn" data-toggle="modificadopor">Modificado por <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M6 9l6 6 6-6"/></svg></button>
-      <div class="filter-panel" data-panel="modificadopor"></div>
-    </div>
-    <div class="date-field">
-      <label>Creado desde</label>
-      <input type="date" id="creadoDesde">
-    </div>
-    <div class="date-field">
-      <label>Creado hasta</label>
-      <input type="date" id="creadoHasta">
-    </div>
-  </div>
-
-  <div class="toolbar-meta">
-    <div>Mostrando <strong id="metaShowing">0</strong> de <strong id="metaTotal">0</strong> registros filtrados <span id="metaOfAll" style="color:var(--ink-faint)"></span></div>
+<!-- ========================= BARRA DE PESTAÑAS DE LA SUITE ========================= -->
+<div class="suite-bar">
+  <p class="suite-eyebrow"><span class="dot"></span>SAP · SUITE MM · Materiales &amp; Listas de materiales</p>
+  <div class="suite-tabs">
+    <button class="suite-tab active" data-tab="mm" id="tabBtnMM">Fichero de Materiales <span class="tab-badge" id="tabBadgeMM">0</span></button>
+    <button class="suite-tab" data-tab="bom" id="tabBtnBOM">Explorador BOM <span class="tab-badge" id="tabBadgeBOM">0</span></button>
   </div>
 </div>
 
-<main>
-  <div class="table-wrap">
-    <table id="dataTable">
-      <thead>
-        <tr id="headerRow"></tr>
-      </thead>
-      <tbody id="tableBody"></tbody>
-    </table>
-    <div class="empty-state" id="emptyState">
-      <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18"/><path d="M8 4v5"/><path d="M9 13h2M9 17h6"/></svg>
-      <h3>Sin datos</h3>
-      <p>Haz clic en "Cargar Excel" para empezar a explorar tus listas de materiales.</p>
-      <button class="btn btn-success" id="emptyStateLoadBtn">
+<!-- ========================= VISTA 1: FICHERO DE MATERIALES ========================= -->
+<section class="app-view active" id="view-mm">
+
+  <header class="top">
+    <p class="eyebrow"><span class="dot"></span>MAESTRO DE MATERIALES · EXPORT SAP MM</p>
+    <h1 class="title">Fichero de Materiales</h1>
+    <p class="subtitle">Carga el export del maestro de materiales y organiza cada registro como una ficha consultable: vista general al frente, detalle completo al reverso.</p>
+    <div class="status-strip" id="mmStatStrip">
+      <div class="status-cell"><div class="status-label"><span class="tick" style="background:#4FD1C5"></span>Materiales</div><div class="status-value" id="mmStatTotal">0</div></div>
+      <div class="status-cell"><div class="status-label"><span class="tick" style="background:#4FD1C5"></span>Tipos</div><div class="status-value" id="mmStatTipos">0</div></div>
+      <div class="status-cell"><div class="status-label"><span class="tick" style="background:#4FD1C5"></span>Últ. modif.</div><div class="status-value" id="mmStatRango">—</div></div>
+      <div class="status-cell flag-cell"><div class="status-label"><span class="tick" style="background:#963B32"></span>Suspendidos (Z)</div><div class="status-value" id="mmStatSuspendidos">0</div></div>
+    </div>
+  </header>
+
+  <div class="toolbar" style="position:static;">
+    <div class="dropzone" id="mmDropzone" tabindex="0" role="button" aria-label="Cargar archivo Excel">
+      <svg class="dz-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4">
+        <path d="M12 3v12m0 0l-4-4m4 4l4-4" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M4 16.5V19a2 2 0 002 2h12a2 2 0 002-2v-2.5" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      <h2>Suelta aquí tu export de SAP</h2>
+      <p>Acepta el .xlsx generado desde el maestro de materiales (transacción MM03 / MM60 y similares). El archivo se procesa en tu navegador &mdash; no se envía a ningún servidor.</p>
+      <button class="btn btn-success" id="mmBtnSelect" type="button">Seleccionar archivo</button>
+      <input type="file" id="mmFileInput" accept=".xlsx,.xls">
+      <p class="dz-error" id="mmDzError"></p>
+    </div>
+
+    <div class="filebar" id="mmFilebar">
+      <span class="fname"><span class="dot"></span><span id="mmFnameText"></span></span>
+      <button class="btn btn-ghost" id="mmBtnChange" type="button">Cambiar archivo</button>
+    </div>
+
+    <div class="toolbar-row" id="mmToolbar" style="display:none; margin-top:14px;">
+      <div class="search-box">
+        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="9" cy="9" r="6"/><path d="M17 17l-4-4" stroke-linecap="round"/></svg>
+        <input type="text" id="mmSearchInput" placeholder="Buscar por código o texto de material&hellip;">
+      </div>
+      <select id="mmFilterTipo"><option value="">Tipo material: todos</option></select>
+      <select id="mmFilterEstado"><option value="">Estado: todos</option></select>
+      <select id="mmFilterCreador"><option value="">Creado por: todos</option></select>
+      <div class="toolbar-divider"></div>
+      <button class="btn filter-btn btn-brick" id="mmToggleSuspendidos" title="Mostrar solo materiales con estado Z1/Z2/Z3 (suspendidos)">Solo suspendidos (Z)</button>
+      <span class="count" id="mmResultCount" style="margin-left:auto; font-family:var(--mono); font-size:12px; color:var(--ink-soft); white-space:nowrap;"></span>
+    </div>
+  </div>
+
+  <main class="view-main">
+    <div class="table-wrap" id="mmTableWrap" style="display:none;">
+      <table>
+        <thead><tr id="mmTheadRow"></tr></thead>
+        <tbody id="mmTbody"></tbody>
+      </table>
+    </div>
+
+    <div class="pagination" id="mmPagination" style="display:none;">
+      <div class="pg-controls">
+        <span>Filas por página</span>
+        <select id="mmPageSize">
+          <option value="25">25</option>
+          <option value="50" selected>50</option>
+          <option value="100">100</option>
+          <option value="200">200</option>
+        </select>
+      </div>
+      <div class="pg-controls">
+        <button id="mmPgFirst" title="Primera página">&laquo;</button>
+        <button id="mmPgPrev" title="Anterior">&lsaquo;</button>
+        <span class="pg-indicator" id="mmPgInfo">Página 1 de 1</span>
+        <button id="mmPgNext" title="Siguiente">&rsaquo;</button>
+        <button id="mmPgLast" title="Última página">&raquo;</button>
+      </div>
+    </div>
+
+    <footer class="page-footer">FICHERO DE MATERIALES — Datos según exportación de SAP</footer>
+  </main>
+
+</section>
+
+<div class="overlay" id="mmScrim"></div>
+<aside class="drawer" id="mmDrawer" aria-hidden="true">
+  <div class="drawer-header">
+    <button class="drawer-close" id="mmDrawerClose" aria-label="Cerrar ficha"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+    <p class="eyebrow">Ficha de material</p>
+    <h2 id="mmDMat">—</h2>
+    <p id="mmDName">—</p>
+    <div class="drawer-stamp" id="mmDStamp" style="display:none;"></div>
+  </div>
+  <div class="drawer-body" id="mmDrawerBody"></div>
+</aside>
+
+<!-- ========================= VISTA 2: EXPLORADOR BOM ========================= -->
+<section class="app-view" id="view-bom">
+
+  <header class="top">
+    <p class="eyebrow"><span class="dot"></span>SAP · EXPORT · MAESTRO DE LISTAS DE MATERIALES</p>
+    <h1 class="title">Explorador BOM</h1>
+    <p class="subtitle">Búsqueda y filtrado del maestro de listas de materiales (BOM) exportado de SAP — Planta Ate y Planta Lima. Haz clic en una lista para ver sus componentes.</p>
+    <div class="status-strip" id="bomStatusStrip">
+      <div class="status-cell"><div class="status-label"><span class="tick" style="background:#4FD1C5"></span>Registros</div><div class="status-value" id="bomStatTotal">0</div></div>
+      <div class="status-cell"><div class="status-label"><span class="tick" style="background:#4FD1C5"></span>Activos</div><div class="status-value" id="bomStatActivos">0</div></div>
+      <div class="status-cell"><div class="status-label"><span class="tick" style="background:#C97F73"></span>Inactivos</div><div class="status-value" id="bomStatInactivos">0</div></div>
+      <div class="status-cell"><div class="status-label"><span class="tick" style="background:#4FD1C5"></span>Planta Ate</div><div class="status-value" id="bomStatAte">0</div></div>
+      <div class="status-cell"><div class="status-label"><span class="tick" style="background:#9689C7"></span>Planta Lima</div><div class="status-value" id="bomStatLima">0</div></div>
+      <div class="status-cell"><div class="status-label"><span class="tick" style="background:#EAD98C"></span>Materiales únicos</div><div class="status-value" id="bomStatUnicos">0</div></div>
+      <div class="status-cell"><div class="status-label"><span class="tick" style="background:#8A6D1E"></span>Componentes cargados</div><div class="status-value" id="bomStatComponentes">0</div></div>
+      <div class="status-cell flag-cell"><div class="status-label"><span class="tick" style="background:#963B32"></span>Suspendidos (Z)</div><div class="status-value" id="bomStatSuspendidos">0</div></div>
+    </div>
+  </header>
+
+  <div class="toolbar">
+    <div class="toolbar-row">
+      <div class="search-box">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+        <input type="text" id="bomSearchInput" placeholder="Buscar por material, descripción, categoría o usuario…">
+      </div>
+
+      <input type="file" id="bomFileInput" accept=".xlsx,.xls,.csv">
+      <button class="btn btn-success" id="bomLoadExcelBtn">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
         Cargar Excel
       </button>
+
+      <input type="file" id="bomComponentesFileInput" accept=".xlsx,.xls,.csv">
+      <button class="btn btn-amber" id="bomLoadComponentesBtn" title="Cargar el export de SAP con los componentes de cada lista de materiales (Material, Lista mat.alternat., Componente, Denominación, Cantidad, Unidad…)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M20 7h-9M14 17H5M17 3l4 4-4 4M7 21l-4-4 4-4"/></svg>
+        Cargar Componentes
+      </button>
+
+      <div class="toolbar-divider"></div>
+
+      <div class="filter-group" data-filter="centro">
+        <button class="filter-btn" data-toggle="centro">Centro <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M6 9l6 6 6-6"/></svg></button>
+        <div class="filter-panel" data-panel="centro"></div>
+      </div>
+      <div class="filter-group" data-filter="estado">
+        <button class="filter-btn" data-toggle="estado">Estado <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M6 9l6 6 6-6"/></svg></button>
+        <div class="filter-panel" data-panel="estado"></div>
+      </div>
+      <div class="filter-group" data-filter="categoria">
+        <button class="filter-btn" data-toggle="categoria">Categoría <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M6 9l6 6 6-6"/></svg></button>
+        <div class="filter-panel" data-panel="categoria"></div>
+      </div>
+      <div class="filter-group" data-filter="unidad">
+        <button class="filter-btn" data-toggle="unidad">Unidad medida <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M6 9l6 6 6-6"/></svg></button>
+        <div class="filter-panel" data-panel="unidad"></div>
+      </div>
+      <div class="filter-group" data-filter="creadopor">
+        <button class="filter-btn" data-toggle="creadopor">Creado por <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M6 9l6 6 6-6"/></svg></button>
+        <div class="filter-panel" data-panel="creadopor"></div>
+      </div>
+
+      <button id="bomToggleMM" class="filter-btn" title="Filtrar solo registros que contengan 'MM' en la descripción (Muestras Médicas)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true" style="width:14px;height:14px;"><path d="M9 3h6v6l4 8a2 2 0 0 1-2 3H7a2 2 0 0 1-2-3l4-8V3z"/><line x1="9" y1="3" x2="15" y2="3"/><line x1="8" y1="14" x2="16" y2="14"/></svg>
+        MM (Muestras médicas)
+      </button>
+
+      <button id="bomToggleSuspendidos" class="filter-btn btn-brick" title="Filtrar solo registros con estado Z1/Z2/Z3 (suspendidos)">Solo suspendidos (Z)</button>
+
+      <div class="toolbar-divider"></div>
+
+      <button class="btn btn-ghost" id="bomToggleMoreFilters">Más filtros</button>
+      <button class="btn btn-ghost" id="bomClearFilters">Limpiar filtros</button>
+      <button class="btn btn-primary" id="bomExportCsv">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        Exportar CSV
+      </button>
+    </div>
+
+    <div class="more-filters" id="bomMoreFilters">
+      <div class="filter-group" data-filter="utilizacion">
+        <button class="filter-btn" data-toggle="utilizacion">Utilización <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M6 9l6 6 6-6"/></svg></button>
+        <div class="filter-panel" data-panel="utilizacion"></div>
+      </div>
+      <div class="filter-group" data-filter="modificadopor">
+        <button class="filter-btn" data-toggle="modificadopor">Modificado por <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M6 9l6 6 6-6"/></svg></button>
+        <div class="filter-panel" data-panel="modificadopor"></div>
+      </div>
+      <div class="date-field"><label>Creado desde</label><input type="date" id="bomCreadoDesde"></div>
+      <div class="date-field"><label>Creado hasta</label><input type="date" id="bomCreadoHasta"></div>
+    </div>
+
+    <div class="toolbar-meta">
+      <div>Mostrando <strong id="bomMetaShowing">0</strong> de <strong id="bomMetaTotal">0</strong> registros filtrados <span id="bomMetaOfAll" style="color:var(--ink-faint)"></span></div>
     </div>
   </div>
 
-  <div class="pagination">
-    <div class="pg-controls">
-      <span>Filas por página</span>
-      <select id="pageSize">
-        <option value="25">25</option>
-        <option value="50" selected>50</option>
-        <option value="100">100</option>
-        <option value="250">250</option>
-      </select>
+  <main class="view-main">
+    <div class="table-wrap">
+      <table id="bomDataTable">
+        <thead><tr id="bomHeaderRow"></tr></thead>
+        <tbody id="bomTableBody"></tbody>
+      </table>
+      <div class="empty-state" id="bomEmptyState">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18"/><path d="M8 4v5"/><path d="M9 13h2M9 17h6"/></svg>
+        <h3>Sin datos</h3>
+        <p>Haz clic en "Cargar Excel" para empezar a explorar tus listas de materiales.</p>
+        <button class="btn btn-success" id="bomEmptyStateLoadBtn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Cargar Excel
+        </button>
+      </div>
     </div>
-    <div class="pg-controls">
-      <button id="pgFirst" title="Primero"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M11 17l-5-5 5-5M18 17l-5-5 5-5"/></svg>Primero</button>
-      <button id="pgPrev" title="Anterior"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M15 18l-6-6 6-6"/></svg>Anterior</button>
-      <span id="pgIndicator">Página 1 de 1</span>
-      <button id="pgNext" title="Siguiente">Siguiente<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M9 18l6-6-6-6"/></svg></button>
-      <button id="pgLast" title="Último">Último<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M13 17l5-5-5-5M6 17l5-5-5-5"/></svg></button>
+
+    <div class="pagination">
+      <div class="pg-controls">
+        <span>Filas por página</span>
+        <select id="bomPageSize">
+          <option value="25">25</option>
+          <option value="50" selected>50</option>
+          <option value="100">100</option>
+          <option value="250">250</option>
+        </select>
+      </div>
+      <div class="pg-controls">
+        <button id="bomPgFirst" title="Primero"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M11 17l-5-5 5-5M18 17l-5-5 5-5"/></svg>Primero</button>
+        <button id="bomPgPrev" title="Anterior"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M15 18l-6-6 6-6"/></svg>Anterior</button>
+        <span class="pg-indicator" id="bomPgIndicator">Página 1 de 1</span>
+        <button id="bomPgNext" title="Siguiente">Siguiente<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M9 18l6-6-6-6"/></svg></button>
+        <button id="bomPgLast" title="Último">Último<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M13 17l5-5-5-5M6 17l5-5-5-5"/></svg></button>
+      </div>
     </div>
-  </div>
 
-  <footer class="page-footer">EXPORT — Maestro de listas de materiales · Datos según exportación de SAP</footer>
-</main>
+    <footer class="page-footer">EXPLORADOR BOM — Maestro de listas de materiales · Datos según exportación de SAP</footer>
+  </main>
 
-<div class="overlay" id="overlay"></div>
-<div class="drawer" id="drawer">
+</section>
+
+<div class="overlay" id="bomOverlay"></div>
+<div class="drawer" id="bomDrawer">
   <div class="drawer-header">
-    <button class="drawer-close" id="drawerClose" aria-label="Cerrar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+    <button class="drawer-close" id="bomDrawerClose" aria-label="Cerrar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
     <div class="eyebrow"><span class="dot"></span>DETALLE DE REGISTRO</div>
-    <h2 id="drawerMaterial">—</h2>
-    <p id="drawerDesc">—</p>
+    <h2 id="bomDrawerMaterial">—</h2>
+    <p id="bomDrawerDesc">—</p>
   </div>
-  <div class="drawer-body" id="drawerBody"></div>
+  <div class="drawer-body" id="bomDrawerBody"></div>
 </div>
 
 <script>
-// ---------- DATOS: CABECERA DE LISTAS (BOM) ----------
-let COLUMNS = [];
-let ROWS = [];
-
-let IDX = {};
-let iMaterial, iDesc, iUtil, iEstadoCod, iEstado, iAlt, iTexto, iCentro, iCant, iUM, iCreadoEl, iCreadoPor, iValidoDe, iNumMod, iModEl, iModPor;
-
-let TABLE_COLS = [];
-let FILTER_DEFS = [];
-let filterState = {};
-
-let dateDesde = '';
-let dateHasta = '';
-let searchTerm = '';
-let filterMM = false; // filtro de muestras médicas
-let sortCol = null;
-let sortDir = 1;
-let currentPage = 1;
-let pageSize = 50;
-
-// ---------- DATOS: COMPONENTES DE CADA LISTA ----------
-let COMP_COLUMNS = [];
-let COMP_ROWS = [];
-let COMP_IDX = {};
-let cMaterial, cAlt, cPos, cComponente, cDenom, cUM, cCantidad, cPosAlt, cProbabilidad, cGrupoAlt, cTipoPos, cListaMat, cRelevFab;
-let COMP_MAP = new Map(); // clave: material||alternativa  ->  array de filas de componentes
-
-function normKey(material, alt){
-  const a = (alt===''||alt===null||alt===undefined) ? '1' : String(alt).trim();
-  return String(material).trim() + '||' + a;
+/* ============================================================
+   UTILIDAD HOMOLOGADA: detección de códigos suspendidos (Z1/Z2/Z3…)
+   Se usa igual en el Fichero de Materiales y en el Explorador BOM.
+   ============================================================ */
+function isSuspendedCode(v){
+  if(v===null || v===undefined) return false;
+  return /^Z\d/i.test(String(v).trim());
 }
 
-// ---------- CARGA DE EXCEL: CABECERA ----------
-document.getElementById('loadExcelBtn').addEventListener('click', ()=>{
-  document.getElementById('fileInput').click();
-});
+/* ============================================================
+   NAVEGACIÓN ENTRE PESTAÑAS DE LA SUITE
+   ============================================================ */
+(function(){
+  var tabBtnMM = document.getElementById('tabBtnMM');
+  var tabBtnBOM = document.getElementById('tabBtnBOM');
+  var viewMM = document.getElementById('view-mm');
+  var viewBOM = document.getElementById('view-bom');
 
-document.getElementById('fileInput').addEventListener('change', async (e)=>{
-  const file = e.target.files[0];
-  if(!file) return;
-  
-  try {
-    const data = await file.arrayBuffer();
-    const workbook = XLSX.read(data, { type: 'array' });
-    const firstSheet = workbook.SheetNames[0];
-    const worksheet = workbook.Sheets[firstSheet];
-    const jsonData = XLSX.utils.sheet_to_json(worksheet, { defval: '' });
-    
-    if(jsonData.length === 0) {
-      alert('El archivo está vacío o no tiene datos.');
-      return;
-    }
-    
-    COLUMNS = Object.keys(jsonData[0]);
-    ROWS = jsonData.map(row => COLUMNS.map(col => row[col] ?? ''));
-    
-    const colMaterial = COLUMNS.indexOf('Material');
-    const colCentro = COLUMNS.indexOf('Centro-instalación');
-    if(colMaterial === -1 || colCentro === -1) {
-      alert('El archivo debe contener las columnas "Material" y "Centro-instalación".\nColumnas encontradas: ' + COLUMNS.join(', '));
-      return;
-    }
-    
-    resetApp();
-    alert(`Se cargaron ${ROWS.length.toLocaleString('es-PE')} registros correctamente.`);
-    
-  } catch(err) {
-    console.error(err);
-    alert('Error al leer el archivo. Asegúrate de que sea un Excel válido (.xlsx, .xls).');
+  function activate(tab){
+    var isMM = tab === 'mm';
+    tabBtnMM.classList.toggle('active', isMM);
+    tabBtnBOM.classList.toggle('active', !isMM);
+    viewMM.classList.toggle('active', isMM);
+    viewBOM.classList.toggle('active', !isMM);
   }
-  e.target.value = '';
-});
+  tabBtnMM.addEventListener('click', function(){ activate('mm'); });
+  tabBtnBOM.addEventListener('click', function(){ activate('bom'); });
+})();
+</script>
 
-// ---------- CARGA DE EXCEL: COMPONENTES ----------
-document.getElementById('loadComponentesBtn').addEventListener('click', ()=>{
-  document.getElementById('componentesFileInput').click();
-});
+<script>
+/* ============================================================
+   APP 1 — FICHERO DE MATERIALES (ids con prefijo "mm")
+   ============================================================ */
+(function(){
 
-document.getElementById('componentesFileInput').addEventListener('change', async (e)=>{
-  const file = e.target.files[0];
-  if(!file) return;
+  var EXCLUDE = ['Texto de compra'];
 
-  try {
-    const data = await file.arrayBuffer();
-    const workbook = XLSX.read(data, { type: 'array' });
-    const firstSheet = workbook.SheetNames[0];
-    const worksheet = workbook.Sheets[firstSheet];
-    const jsonData = XLSX.utils.sheet_to_json(worksheet, { defval: '' });
+  var SUMMARY_COLS = [
+    {key:'Material', label:'Material', cls:'mat'},
+    {key:'Texto Material', label:'Texto material', cls:'matname wrap'},
+    {key:'Denominación tipo material', label:'Tipo material'},
+    {key:'Unidad de medida base', label:'UM base'},
+    {key:'Estado mat.todos ce', label:'Estado', badge:true},
+    {key:'Texto condiciones de almacenaje', label:'Cond. almacenaje', cls:'wrap'},
+    {key:'Nombre creador', label:'Creado por', cls:'mono-small'},
+    {key:'Fecha creación material', label:'F. creación', cls:'mono-small', date:true},
+    {key:'Nombre de modificador', label:'Modificado por', cls:'mono-small'},
+    {key:'Última modificación', label:'Últ. modificación', cls:'mono-small', date:true}
+  ];
 
-    if(jsonData.length === 0) {
-      alert('El archivo de componentes está vacío o no tiene datos.');
-      return;
-    }
+  var DETAIL_GROUPS = [
+    { title:'Identificación', fields:[
+      'Material','Texto Material','Texto de datos básicos','Texto de inspección','Texto de insp. VI',
+      'Nro. antiguo de material','Denom.estándar','Ind.Borrado'
+    ]},
+    { title:'Clasificación', fields:[
+      'Ramo','Denominación de Ramo','Tipo material','Denominación tipo material',
+      'Grupo de artículos','Denom. Grupo de artículos','Grupo de artículos externo','Laboratorio/oficina',
+      'Grupo de tipos de posición general','Texto Grupo de tipos de posición',
+      'Jerarquía de productos','Des. Jerarquía de productos','Sector','Denominación sector'
+    ]},
+    { title:'Unidades, peso y volumen', fields:[
+      'Unidad de medida base','Texto unidad de medida','Peso neto','Peso bruto','Unidad de peso',
+      'Volumen','Unidad de volumen','Código EAN/UPC','Tipo EAN'
+    ]},
+    { title:'Compras y embalaje', fields:[
+      'Grupo materiales de embalaje','Texto Grupo materiales embalaje','Grupo de transporte','Texto grupo de transporte',
+      'Tipo material embalaje','Texto tipo material embalaje','Peso de embalaje permitido','Volumen de embalaje permitido',
+      'Clave de valores de compras','Unidad de medida de pedido','Texto unidad de medida de pedido','Nº pieza fabricante'
+    ]},
+    { title:'Trazabilidad, lote y vencimiento', fields:[
+      'Indicador: Sujeto a lote','Duración total de conservación','Tiempo mínimo de duración restante',
+      'Indicador período p.fe.caducidad','Texto indicador período p.fe.caducidad',
+      'Indicador para condiciones de temperatur','Texto condiciones de temperatura',
+      'Condiciones de almacenaje','Texto condiciones de almacenaje','Nivel de univocidad para número de serie'
+    ]},
+    { title:'Estado del material', fields:[ 'Estado mat.todos ce' ]},
+    { title:'Auditoría', fields:[
+      'Fecha creación material','Nombre creador','Última modificación','Nombre de modificador'
+    ]}
+  ];
 
-    // Descartar filas donde "Relevancia p.fabr." (columna U) esté vacía:
-    // esos componentes no deben participar en el cruce con el maestro BOM.
-    const isBlank = (v) => v===''||v===null||v===undefined || (typeof v==='string' && v.trim()==='');
-    const tieneColRelevFab = Object.prototype.hasOwnProperty.call(jsonData[0], 'Relevancia p.fabr.');
-    const jsonDataFiltrada = tieneColRelevFab
-      ? jsonData.filter(row => !isBlank(row['Relevancia p.fabr.']))
-      : jsonData;
-    const descartados = jsonData.length - jsonDataFiltrada.length;
+  var state = { headers: [], rows: [], filtered: [], page: 1, pageSize: 50, sortKey: 'Material', sortDir: 1, onlySuspendidos:false };
 
-    if(jsonDataFiltrada.length === 0) {
-      alert('Ningún componente tiene la columna "Relevancia p.fabr." con valor, así que no hay componentes para cargar.');
-      return;
-    }
+  var $ = function(id){ return document.getElementById(id); };
+  var dropzone = $('mmDropzone'), fileInput = $('mmFileInput'), btnSelect = $('mmBtnSelect'),
+      dzError = $('mmDzError'), filebar = $('mmFilebar'), fnameText = $('mmFnameText'), btnChange = $('mmBtnChange'),
+      toolbar = $('mmToolbar'), tableWrap = $('mmTableWrap'), theadRow = $('mmTheadRow'), tbody = $('mmTbody'),
+      pagination = $('mmPagination'), pgInfo = $('mmPgInfo'), resultCount = $('mmResultCount'),
+      searchInput = $('mmSearchInput'), filterTipo = $('mmFilterTipo'), filterEstado = $('mmFilterEstado'), filterCreador = $('mmFilterCreador'),
+      pageSizeSel = $('mmPageSize'), scrim = $('mmScrim'), drawer = $('mmDrawer'), drawerBody = $('mmDrawerBody'),
+      dMat = $('mmDMat'), dName = $('mmDName'), dStamp = $('mmDStamp'), drawerClose = $('mmDrawerClose'),
+      toggleSuspendidos = $('mmToggleSuspendidos'), tabBadgeMM = $('tabBadgeMM');
 
-    COMP_COLUMNS = Object.keys(jsonData[0]);
-    COMP_ROWS = jsonDataFiltrada.map(row => COMP_COLUMNS.map(col => row[col] ?? ''));
+  btnSelect.addEventListener('click', function(){ fileInput.click(); });
+  btnChange.addEventListener('click', function(){ fileInput.click(); });
+  dropzone.addEventListener('click', function(){ fileInput.click(); });
+  dropzone.addEventListener('keydown', function(e){ if(e.key==='Enter' || e.key===' '){ fileInput.click(); }});
 
-    COMP_IDX = {};
-    COMP_COLUMNS.forEach((c,i)=> COMP_IDX[c]=i);
-
-    cMaterial   = COMP_IDX['Material'];
-    cListaMat   = COMP_IDX['Lista de materiales'] ?? -1;
-    cAlt        = COMP_IDX['Lista mat.alternat.'];
-    cPos        = COMP_IDX['Núm.posición'] ?? -1;
-    cTipoPos    = COMP_IDX['Tipo de posición'] ?? -1;
-    cComponente = COMP_IDX['Componente'];
-    cDenom      = COMP_IDX['Denominación de componente'] ?? -1;
-    cUM         = COMP_IDX['Un.medida componente'] ?? -1;
-    cCantidad   = COMP_IDX['Cantidad componente'] ?? -1;
-    cPosAlt     = COMP_IDX['Posición alternativa'] ?? -1;
-    cProbabilidad = COMP_IDX['Probabilidad empl.'] ?? -1;
-    cGrupoAlt   = COMP_IDX['GrPosAlternat'] ?? -1;
-    cRelevFab   = COMP_IDX['Relevancia p.fabr.'] ?? -1;
-
-    if(cMaterial === undefined || cAlt === undefined || cComponente === undefined) {
-      alert('El archivo de componentes debe contener las columnas "Material", "Lista mat.alternat." y "Componente".\nColumnas encontradas: ' + COMP_COLUMNS.join(', '));
-      return;
-    }
-
-    buildComponentMap();
-    updateAll();
-    let msg = `Se cargaron ${COMP_ROWS.length.toLocaleString('es-PE')} componentes correctamente.`;
-    if(descartados > 0) msg += `\nSe descartaron ${descartados.toLocaleString('es-PE')} fila(s) sin "Relevancia p.fabr." (no se cruzarán con el BOM).`;
-    if(!tieneColRelevFab) msg += `\nAviso: el archivo no tiene la columna "Relevancia p.fabr.", no se aplicó el filtro.`;
-    alert(msg);
-
-  } catch(err) {
-    console.error(err);
-    alert('Error al leer el archivo de componentes. Asegúrate de que sea un Excel válido (.xlsx, .xls).');
-  }
-  e.target.value = '';
-});
-
-function buildComponentMap(){
-  COMP_MAP = new Map();
-  for(const r of COMP_ROWS){
-    const key = normKey(r[cMaterial], r[cAlt]);
-    if(!COMP_MAP.has(key)) COMP_MAP.set(key, []);
-    COMP_MAP.get(key).push(r);
-  }
-  // ordenar cada grupo por Núm.posición y luego por Posición alternativa
-  for(const arr of COMP_MAP.values()){
-    arr.sort((a,b)=>{
-      const pa = cPos!==-1 ? String(a[cPos]) : '';
-      const pb = cPos!==-1 ? String(b[cPos]) : '';
-      if(pa!==pb) return pa < pb ? -1 : 1;
-      const aa = cPosAlt!==-1 ? String(a[cPosAlt]) : '';
-      const ab = cPosAlt!==-1 ? String(b[cPosAlt]) : '';
-      return aa < ab ? -1 : (aa > ab ? 1 : 0);
-    });
-  }
-}
-
-function getComponentsFor(material, alt){
-  const key = normKey(material, alt);
-  return COMP_MAP.get(key) || [];
-}
-
-function resetApp() {
-  FILTER_DEFS.forEach(f => filterState[f.key] = new Set());
-  document.querySelectorAll('.filter-panel input[type=checkbox]').forEach(cb => cb.checked = false);
-  dateDesde = ''; dateHasta = '';
-  document.getElementById('creadoDesde').value = '';
-  document.getElementById('creadoHasta').value = '';
-  searchTerm = '';
-  document.getElementById('searchInput').value = '';
-  filterMM = false;
-  document.getElementById('toggleMM').classList.remove('active');
-  sortCol = null;
-  sortDir = 1;
-  currentPage = 1;
-  
-  buildIndexes();
-  FILTER_DEFS.forEach(def => renderFilterPanel(def, ROWS));
-  rebuildHeader();
-  ROWS.forEach((r, idx) => { r.__ridx = idx; });
-  
-  updateAll();
-}
-
-function buildIndexes() {
-  IDX = {};
-  COLUMNS.forEach((c, i) => IDX[c] = i);
-  
-  iMaterial = IDX['Material'];
-  iDesc = IDX['Descripción de LMat'] ?? -1;
-  iUtil = IDX['Utilización LMat'] ?? -1;
-  iEstadoCod = IDX['Estado de LMat'] ?? -1;
-  iEstado = IDX['Stat.txt.breve'] ?? -1;
-  iAlt = IDX['Lista mat.alternat.'] ?? -1;
-  iTexto = IDX['Texto de alternativa'] ?? -1;
-  iCentro = IDX['Centro-instalación'];
-  iCant = IDX['Cantidad base'] ?? -1;
-  iUM = IDX['Unidad medida base'] ?? -1;
-  iCreadoEl = IDX['Creado el'] ?? -1;
-  iCreadoPor = IDX['Creado por'] ?? -1;
-  iValidoDe = IDX['Válido de'] ?? -1;
-  iNumMod = IDX['Número modificación'] ?? -1;
-  iModEl = IDX['Modificado el'] ?? -1;
-  iModPor = IDX['Modificado por'] ?? -1;
-  
-  updateTableCols();
-  updateFilterDefs();
-}
-
-function updateTableCols() {
-  TABLE_COLS.length = 0;
-  const addCol = (i, label, cls, fmt) => {
-    if(i !== -1 && i !== undefined) {
-      TABLE_COLS.push({i, label, cls: cls || '', fmt: fmt || ''});
-    }
-  };
-  
-  addCol(iMaterial, 'Material', 'col-material');
-  addCol(iDesc, 'Descripción', 'col-desc');
-  addCol(iCentro, 'Centro', '', 'centro');
-  addCol(iEstado, 'Estado', '', 'estado');
-  addCol(iTexto, 'Categoría (Texto alternativa)');
-  addCol(iAlt, 'Lista alt.');
-  addCol(iCant, 'Cantidad base', '', 'num');
-  addCol(iUM, 'Unidad');
-  addCol(iUtil, 'Utilización');
-  addCol(iCreadoEl, 'Creado el', '', 'date');
-  addCol(iCreadoPor, 'Creado por');
-  addCol(iValidoDe, 'Válido de', '', 'date');
-  addCol(iModEl, 'Modificado el', '', 'date');
-  addCol(iModPor, 'Modificado por');
-  addCol(iNumMod, 'N.º modificación');
-}
-
-function updateFilterDefs() {
-  FILTER_DEFS.length = 0;
-  const addFilter = (key, i, label) => {
-    if(i !== -1 && i !== undefined) {
-      FILTER_DEFS.push({key, i, label});
-    }
-  };
-  
-  addFilter('centro', iCentro, 'Centro');
-  addFilter('estado', iEstado, 'Estado');
-  addFilter('categoria', iTexto, 'Categoría');
-  addFilter('unidad', iUM, 'Unidad medida');
-  addFilter('creadopor', iCreadoPor, 'Creado por');
-  addFilter('utilizacion', iUtil, 'Utilización');
-  addFilter('modificadopor', iModPor, 'Modificado por');
-  
-  filterState = {};
-  FILTER_DEFS.forEach(f => filterState[f.key] = new Set());
-}
-
-function rebuildHeader() {
-  headerRow.innerHTML = TABLE_COLS.map(col =>
-    `<th data-i="${col.i}" class="${col.cls||''}">${esc(col.label)}<span class="arrow"></span></th>`
-  ).join('');
-}
-
-// ---------- FORMATEO ----------
-function fmtDate(v){
-  if(!v) return '<span style="color:var(--ink-faint)">—</span>';
-  const str = String(v);
-  let d, m, y;
-  if(str.includes('/')) {
-    const parts = str.split('/');
-    d = parts[0]; m = parts[1]; y = parts[2];
-  } else if(str.includes('-')) {
-    const parts = str.split('-');
-    if(parts[0].length === 4) { y = parts[0]; m = parts[1]; d = parts[2]; }
-    else { d = parts[0]; m = parts[1]; y = parts[2]; }
-  } else {
-    const serial = parseInt(str);
-    if(!isNaN(serial) && serial > 40000) {
-      const date = XLSX.SSF.parse_date_code(serial);
-      d = String(date.d).padStart(2,'0');
-      m = String(date.m).padStart(2,'0');
-      y = date.y;
-    } else {
-      return esc(str);
-    }
-  }
-  return `${d}/${m}/${y}`;
-}
-
-function fmtNum(v){
-  if(v===''||v===null||v===undefined) return '—';
-  return Number(v).toLocaleString('es-PE');
-}
-
-function esc(v){
-  if(v===null||v===undefined) return '';
-  return String(v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-}
-
-function centroBadge(v){
-  const cls = v==='PLANTA ATE' ? 'badge-ate' : (v==='PLANTA LIMA' ? 'badge-lima' : '');
-  return `<span class="badge ${cls}"><span class="dot"></span>${esc(v)||'—'}</span>`;
-}
-
-function estadoBadge(v){
-  const cls = v==='Activo' ? 'badge-activo' : 'badge-inactivo';
-  return `<span class="badge ${cls}"><span class="dot"></span>${esc(v)||'—'}</span>`;
-}
-
-function renderCell(col, row){
-  const raw = row[col.i];
-  if(col.fmt==='centro') return centroBadge(raw);
-  if(col.fmt==='estado') return estadoBadge(raw);
-  if(col.fmt==='date') return fmtDate(raw);
-  if(col.fmt==='num') return fmtNum(raw);
-  if(raw===''||raw===null||raw===undefined) return '<span style="color:var(--ink-faint)">—</span>';
-  return esc(raw);
-}
-
-// ---------- FILTROS CONTEXTUALES ----------
-function matchesFilters(row, exceptKey = null) {
-  // Filtro MM
-  if(filterMM && iDesc !== -1) {
-    const desc = String(row[iDesc] || '').toUpperCase();
-    if(!desc.includes('MM')) return false;
-  }
-  
-  for(const def of FILTER_DEFS) {
-    if(def.key === exceptKey) continue;
-    const set = filterState[def.key];
-    if(set.size===0) continue;
-    const v = row[def.i]===''||row[def.i]===null||row[def.i]===undefined ? '(vacío)' : String(row[def.i]);
-    if(!set.has(v)) return false;
-  }
-  if(dateDesde && iCreadoEl !== -1) {
-    const v = row[iCreadoEl];
-    if(!v || String(v) < dateDesde) return false;
-  }
-  if(dateHasta && iCreadoEl !== -1) {
-    const v = row[iCreadoEl];
-    if(!v || String(v) > dateHasta) return false;
-  }
-  if(searchTerm) {
-    const hay = COLUMNS.map((_, i) => String(row[i] || '')).join(' ').toLowerCase();
-    if(!hay.includes(searchTerm)) return false;
-  }
-  return true;
-}
-
-function getFiltered() {
-  return ROWS.filter(r => matchesFilters(r, null));
-}
-
-function getFilteredExcept(exceptKey) {
-  return ROWS.filter(r => matchesFilters(r, exceptKey));
-}
-
-// ---------- CONSTRUIR PANELES ----------
-function buildOptionCounts(columnIndex, dataRows) {
-  const counts = new Map();
-  for(const r of dataRows) {
-    const v = r[columnIndex]===''||r[columnIndex]===null||r[columnIndex]===undefined ? '(vacío)' : String(r[columnIndex]);
-    counts.set(v, (counts.get(v)||0)+1);
-  }
-  return [...counts.entries()].sort((a,b)=> b[1]-a[1]);
-}
-
-function renderFilterPanel(def, dataRows) {
-  const panel = document.querySelector(`.filter-panel[data-panel="${def.key}"]`);
-  if(!panel) return;
-  const options = buildOptionCounts(def.i, dataRows);
-  const needsSearch = options.length > 8;
-  
-  const selected = filterState[def.key] || new Set();
-  
-  panel.innerHTML = `
-    ${needsSearch ? `<div class="filter-panel-search"><input type="text" placeholder="Buscar…" data-search-for="${def.key}"></div>` : ''}
-    <div class="filter-panel-actions">
-      <button data-action="all" data-key="${def.key}">Todos</button>
-      <button data-action="none" data-key="${def.key}">Ninguno</button>
-    </div>
-    <div class="filter-panel-list" data-list-for="${def.key}">
-      ${options.map(([val,count])=>`
-        <label class="filter-option" data-optlabel="${esc(val.toLowerCase())}">
-          <input type="checkbox" data-key="${def.key}" value="${esc(val)}" ${selected.has(val) ? 'checked' : ''}>
-          <span class="opt-label">${esc(val)}</span>
-          <span class="opt-count">${count}</span>
-        </label>
-      `).join('')}
-    </div>
-  `;
-}
-
-// ---------- RENDER TABLA ----------
-const headerRow = document.getElementById('headerRow');
-const tableBody = document.getElementById('tableBody');
-const emptyState = document.getElementById('emptyState');
-
-headerRow.addEventListener('click', (e)=>{
-  const th = e.target.closest('th');
-  if(!th) return;
-  const i = parseInt(th.getAttribute('data-i'),10);
-  if(sortCol===i){ sortDir *= -1; } else { sortCol = i; sortDir = 1; }
-  currentPage = 1;
-  updateAll();
-});
-
-function renderSortArrows(){
-  headerRow.querySelectorAll('th').forEach(th=>{
-    const i = parseInt(th.getAttribute('data-i'),10);
-    const arrow = th.querySelector('.arrow');
-    if(i===sortCol){
-      th.classList.add('sorted');
-      arrow.textContent = sortDir===1 ? '▲' : '▼';
-    } else {
-      th.classList.remove('sorted');
-      arrow.textContent = '';
-    }
+  ['dragenter','dragover'].forEach(function(evt){
+    dropzone.addEventListener(evt, function(e){ e.preventDefault(); dropzone.classList.add('drag'); });
   });
-}
-
-function renderTable(pageRows){
-  if(pageRows.length===0){
-    tableBody.innerHTML = '';
-    emptyState.style.display = 'block';
-    emptyState.querySelector('p').textContent = ROWS.length === 0 ? 'Haz clic en "Cargar Excel" para empezar.' : 'No se encontraron registros con los filtros aplicados.';
-    return;
-  }
-  emptyState.style.display = 'none';
-  tableBody.innerHTML = pageRows.map((row)=>{
-    const cells = TABLE_COLS.map(col=>`<td class="${col.cls||''}">${renderCell(col,row)}</td>`).join('');
-    const hasComp = COMP_MAP.size>0 && getComponentsFor(row[iMaterial], iAlt!==-1?row[iAlt]:'').length>0;
-    return `<tr data-ridx="${row.__ridx}" class="${hasComp?'has-comp':''}">${cells}</tr>`;
-  }).join('');
-}
-
-tableBody.addEventListener('click', (e)=>{
-  const tr = e.target.closest('tr');
-  if(!tr) return;
-  const ridx = parseInt(tr.getAttribute('data-ridx'),10);
-  openDrawer(ROWS[ridx]);
-  tableBody.querySelectorAll('tr.selected').forEach(r=>r.classList.remove('selected'));
-  tr.classList.add('selected');
-});
-
-// ---------- PAGINACIÓN ----------
-function updatePagination(totalFiltered){
-  const totalPages = Math.max(1, Math.ceil(totalFiltered / pageSize));
-  if(currentPage > totalPages) currentPage = totalPages;
-  document.getElementById('pgIndicator').textContent = `Página ${currentPage} de ${totalPages}`;
-  document.getElementById('pgFirst').disabled = currentPage<=1;
-  document.getElementById('pgPrev').disabled = currentPage<=1;
-  document.getElementById('pgNext').disabled = currentPage>=totalPages;
-  document.getElementById('pgLast').disabled = currentPage>=totalPages;
-}
-
-document.getElementById('pgFirst').addEventListener('click', ()=>{currentPage=1; updateAll();});
-document.getElementById('pgPrev').addEventListener('click', ()=>{currentPage=Math.max(1,currentPage-1); updateAll();});
-document.getElementById('pgNext').addEventListener('click', ()=>{currentPage=currentPage+1; updateAll();});
-document.getElementById('pgLast').addEventListener('click', ()=>{currentPage=Infinity; updateAll();});
-
-// ---------- STATUS STRIP ----------
-function updateStatusStrip(filtered){
-  document.getElementById('statTotal').innerHTML = filtered.length.toLocaleString('es-PE') + ` <small>/ ${ROWS.length.toLocaleString('es-PE')}</small>`;
-  const activos = iEstado !== -1 ? filtered.filter(r=>r[iEstado]==='Activo').length : 0;
-  const inactivos = filtered.length - activos;
-  const ate = iCentro !== -1 ? filtered.filter(r=>r[iCentro]==='PLANTA ATE').length : 0;
-  const lima = iCentro !== -1 ? filtered.filter(r=>r[iCentro]==='PLANTA LIMA').length : 0;
-  const uniqueMats = iMaterial !== -1 ? new Set(filtered.map(r=>r[iMaterial])).size : 0;
-  document.getElementById('statActivos').textContent = activos.toLocaleString('es-PE');
-  document.getElementById('statInactivos').textContent = inactivos.toLocaleString('es-PE');
-  document.getElementById('statAte').textContent = ate.toLocaleString('es-PE');
-  document.getElementById('statLima').textContent = lima.toLocaleString('es-PE');
-  document.getElementById('statUnicos').textContent = uniqueMats.toLocaleString('es-PE');
-  document.getElementById('statComponentes').textContent = COMP_ROWS.length.toLocaleString('es-PE');
-}
-
-// ---------- BOTONES DE FILTRO ----------
-function updateFilterButtonStates(){
-  FILTER_DEFS.forEach(def=>{
-    const btn = document.querySelector(`[data-toggle="${def.key}"]`);
-    if(!btn) return;
-    const n = filterState[def.key]?.size || 0;
-    btn.classList.toggle('active', n>0);
-    btn.innerHTML = `${def.label} ${n>0 ? `<span class="count">${n}</span>` : ''} <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M6 9l6 6 6-6"/></svg>`;
+  ['dragleave','drop'].forEach(function(evt){
+    dropzone.addEventListener(evt, function(e){ e.preventDefault(); dropzone.classList.remove('drag'); });
   });
-  
-  // Actualizar botón MM
-  const mmBtn = document.getElementById('toggleMM');
-  if(mmBtn) {
-    mmBtn.classList.toggle('active', filterMM);
-  }
+  dropzone.addEventListener('drop', function(e){
+    var f = e.dataTransfer.files && e.dataTransfer.files[0];
+    if(f) handleFile(f);
+  });
+  fileInput.addEventListener('change', function(e){
+    var f = e.target.files && e.target.files[0];
+    if(f) handleFile(f);
+  });
 
-  // Actualizar botón Cargar Componentes
-  const compBtn = document.getElementById('loadComponentesBtn');
-  if(compBtn){
-    compBtn.classList.toggle('loaded', COMP_ROWS.length>0);
-    if(COMP_ROWS.length>0){
-      compBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg> Componentes cargados (${COMP_ROWS.length.toLocaleString('es-PE')})`;
-    }
-  }
-}
+  toggleSuspendidos.addEventListener('click', function(){
+    state.onlySuspendidos = !state.onlySuspendidos;
+    toggleSuspendidos.classList.toggle('active', state.onlySuspendidos);
+    applyFilters();
+  });
 
-// ---------- MASTER UPDATE ----------
-function updateAll(){
-  if(ROWS.length === 0) {
-    tableBody.innerHTML = '';
-    emptyState.style.display = 'block';
-    document.getElementById('statTotal').innerHTML = '0 <small>/ 0</small>';
-    document.getElementById('statActivos').textContent = '0';
-    document.getElementById('statInactivos').textContent = '0';
-    document.getElementById('statAte').textContent = '0';
-    document.getElementById('statLima').textContent = '0';
-    document.getElementById('statUnicos').textContent = '0';
-    document.getElementById('statComponentes').textContent = COMP_ROWS.length.toLocaleString('es-PE');
-    document.getElementById('metaShowing').textContent = '0';
-    document.getElementById('metaTotal').textContent = '0';
-    document.getElementById('metaOfAll').textContent = '';
-    updateFilterButtonStates();
-    return;
-  }
-  
-  const filtered = getFiltered();
-  let sorted = filtered;
-  if(sortCol !== null){
-    sorted = [...filtered].sort((a,b)=>{
-      let va = a[sortCol], vb = b[sortCol];
-      const na = parseFloat(va), nb = parseFloat(vb);
-      if(!isNaN(na) && !isNaN(nb) && va!=='' && vb!==''){
-        return (na-nb)*sortDir;
+  function showError(msg){ dzError.textContent = msg; dzError.style.display = 'block'; }
+
+  function handleFile(file){
+    dzError.style.display = 'none';
+    var reader = new FileReader();
+    reader.onload = function(e){
+      try{
+        var data = new Uint8Array(e.target.result);
+        var wb = XLSX.read(data, {type:'array', cellDates:true});
+        var sheet = wb.Sheets[wb.SheetNames[0]];
+        var rowsArr = XLSX.utils.sheet_to_json(sheet, {header:1, defval:'', raw:false, dateNF:'dd/mm/yyyy'});
+        if(!rowsArr.length){ showError('El archivo no contiene filas legibles.'); return; }
+        var headers = rowsArr[0].map(function(h){ return String(h).trim(); });
+        var idx = {};
+        headers.forEach(function(h,i){ idx[h] = i; });
+
+        if(idx['Material'] === undefined){
+          showError('No se reconocen las columnas del maestro de materiales en este archivo.');
+          return;
+        }
+
+        var rows = [];
+        for(var r=1; r<rowsArr.length; r++){
+          var raw = rowsArr[r];
+          if(!raw || raw.length===0) continue;
+          var isEmpty = raw.every(function(c){ return c==='' || c==null; });
+          if(isEmpty) continue;
+          var obj = {};
+          headers.forEach(function(h,i){
+            if(EXCLUDE.indexOf(h) !== -1) return;
+            obj[h] = raw[i] !== undefined ? raw[i] : '';
+          });
+          rows.push(obj);
+        }
+
+        state.headers = headers.filter(function(h){ return EXCLUDE.indexOf(h)===-1; });
+        state.rows = rows;
+        onDataLoaded(file.name);
+      }catch(err){
+        console.error(err);
+        showError('No se pudo leer el archivo. Verifica que sea un export válido de SAP (.xlsx).');
       }
-      va = String(va??''); vb = String(vb??'');
-      return va.localeCompare(vb, 'es')*sortDir;
+    };
+    reader.onerror = function(){ showError('Ocurrió un error leyendo el archivo.'); };
+    reader.readAsArrayBuffer(file);
+  }
+
+  function uniqueSorted(field){
+    var set = {};
+    state.rows.forEach(function(r){ var v = (r[field]||'').toString().trim(); if(v) set[v]=true; });
+    return Object.keys(set).sort(function(a,b){ return a.localeCompare(b,'es'); });
+  }
+
+  function fillSelect(sel, values, allLabel){
+    sel.innerHTML = '<option value="">'+allLabel+'</option>' + values.map(function(v){
+      return '<option value="'+escapeAttr(v)+'">'+escapeHtml(v)+'</option>';
+    }).join('');
+  }
+
+  function onDataLoaded(fname){
+    fnameText.textContent = fname + '  ·  ' + state.rows.length.toLocaleString('es') + ' registros';
+    filebar.style.display = 'flex';
+    toolbar.style.display = 'flex';
+    tableWrap.style.display = 'block';
+    pagination.style.display = 'flex';
+    dropzone.style.display = 'none';
+
+    fillSelect(filterTipo, uniqueSorted('Denominación tipo material'), 'Tipo material: todos');
+    fillSelect(filterEstado, uniqueSorted('Estado mat.todos ce'), 'Estado: todos');
+    fillSelect(filterCreador, uniqueSorted('Nombre creador'), 'Creado por: todos');
+
+    buildHeader();
+    updateStats();
+    applyFilters();
+  }
+
+  function updateStats(){
+    $('mmStatTotal').textContent = state.rows.length.toLocaleString('es');
+    $('mmStatTipos').textContent = uniqueSorted('Denominación tipo material').length;
+    tabBadgeMM.textContent = state.rows.length.toLocaleString('es');
+    var dates = state.rows.map(function(r){ return parseDMY(r['Última modificación']); }).filter(Boolean);
+    if(dates.length){
+      dates.sort(function(a,b){ return b-a; });
+      var d = dates[0];
+      $('mmStatRango').textContent = String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0')+'/'+d.getFullYear();
+    } else {
+      $('mmStatRango').textContent = '—';
+    }
+    var suspendidos = state.rows.filter(function(r){ return isSuspendedCode(r['Estado mat.todos ce']); }).length;
+    $('mmStatSuspendidos').textContent = suspendidos.toLocaleString('es');
+  }
+
+  function parseDMY(str){
+    if(!str) return null;
+    var m = /^(\d{2})\/(\d{2})\/(\d{4})/.exec(str);
+    if(!m) return null;
+    return new Date(+m[3], +m[2]-1, +m[1]);
+  }
+
+  function buildHeader(){
+    theadRow.innerHTML = SUMMARY_COLS.map(function(c){
+      return '<th data-key="'+c.key+'">'+c.label+'<span class="arrow" data-arrow="'+c.key+'"></span></th>';
+    }).join('');
+    Array.prototype.forEach.call(theadRow.querySelectorAll('th'), function(th){
+      th.addEventListener('click', function(){
+        var key = th.getAttribute('data-key');
+        if(state.sortKey === key){ state.sortDir *= -1; } else { state.sortKey = key; state.sortDir = 1; }
+        applyFilters(true);
+      });
     });
   }
 
-  updateStatusStrip(sorted);
-  updateFilterButtonStates();
-  renderSortArrows();
+  function applyFilters(keepPage){
+    var q = searchInput.value.trim().toLowerCase();
+    var tipo = filterTipo.value, estado = filterEstado.value, creador = filterCreador.value;
 
-  FILTER_DEFS.forEach(def => {
-    const subset = getFilteredExcept(def.key);
-    renderFilterPanel(def, subset);
+    var out = state.rows.filter(function(r){
+      if(tipo && r['Denominación tipo material'] !== tipo) return false;
+      if(estado && r['Estado mat.todos ce'] !== estado) return false;
+      if(creador && r['Nombre creador'] !== creador) return false;
+      if(state.onlySuspendidos && !isSuspendedCode(r['Estado mat.todos ce'])) return false;
+      if(q){
+        var hay = (String(r['Material']||'') + ' ' + String(r['Texto Material']||'') + ' ' + String(r['Denom.estándar']||'')).toLowerCase();
+        if(hay.indexOf(q) === -1) return false;
+      }
+      return true;
+    });
+
+    var key = state.sortKey, dir = state.sortDir;
+    out.sort(function(a,b){
+      var av = (a[key]==null?'':a[key]).toString();
+      var bv = (b[key]==null?'':b[key]).toString();
+      var an = parseFloat(av), bn = parseFloat(bv);
+      var cmp;
+      if(!isNaN(an) && !isNaN(bn) && av.trim()!=='' && bv.trim()!==''){
+        cmp = an - bn;
+      } else {
+        cmp = av.localeCompare(bv, 'es');
+      }
+      return cmp * dir;
+    });
+
+    state.filtered = out;
+    if(!keepPage) state.page = 1;
+    if(state.page < 1) state.page = 1;
+    renderTable();
+    updateSortArrows();
+  }
+
+  function updateSortArrows(){
+    Array.prototype.forEach.call(theadRow.querySelectorAll('[data-arrow]'), function(el){
+      var key = el.getAttribute('data-arrow');
+      el.textContent = key === state.sortKey ? (state.sortDir===1?'▲':'▼') : '';
+    });
+  }
+
+  function escapeHtml(s){
+    return String(s==null?'':s).replace(/[&<>"']/g, function(c){
+      return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
+    });
+  }
+  function escapeAttr(s){ return escapeHtml(s); }
+
+  function renderTable(){
+    var total = state.filtered.length;
+    var pageSize = state.pageSize;
+    var pages = Math.max(1, Math.ceil(total / pageSize));
+    if(state.page > pages) state.page = pages;
+    var start = (state.page - 1) * pageSize;
+    var pageRows = state.filtered.slice(start, start + pageSize);
+
+    if(total === 0){
+      tbody.innerHTML = '<tr class="no-results"><td colspan="'+SUMMARY_COLS.length+'"><div style="text-align:center;padding:50px 20px;color:var(--ink-faint);font-size:13.5px;">Ningún material coincide con estos filtros. Ajusta la búsqueda o limpia los filtros.</div></td></tr>';
+    } else {
+      tbody.innerHTML = pageRows.map(function(r){
+        var flag = (r['Ind.Borrado']||'').toString().trim().toUpperCase() === 'X';
+        var suspendido = isSuspendedCode(r['Estado mat.todos ce']);
+        var cells = SUMMARY_COLS.map(function(c, ci){
+          var v = r[c.key];
+          var display = (v==null || v==='') ? '' : String(v);
+          var content;
+          if(c.badge){
+            if(display){
+              content = '<span class="badge '+(isSuspendedCode(display)?'badge-suspendido':'badge-activo')+'">'+escapeHtml(display)+'</span>';
+            } else {
+              content = '<span class="badge badge-neutro">Sin restricción</span>';
+            }
+          } else if(!display){
+            content = '<span style="color:var(--ink-faint)">—</span>';
+          } else {
+            content = escapeHtml(display);
+          }
+          if(ci===0 && flag){ content = '<span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--brick);margin-right:6px;vertical-align:middle;" title="Marcado para borrado"></span>' + content; }
+          var cls = c.cls ? ' class="'+c.cls+'"' : '';
+          return '<td'+cls+' title="'+escapeAttr(display)+'">'+content+'</td>';
+        }).join('');
+        return '<tr data-mat="'+escapeAttr(r['Material'])+'"'+(suspendido?' class="suspendido"':'')+'>'+cells+'</tr>';
+      }).join('');
+
+      Array.prototype.forEach.call(tbody.querySelectorAll('tr[data-mat]'), function(tr){
+        tr.addEventListener('click', function(){
+          var mat = tr.getAttribute('data-mat');
+          var row = state.filtered.find(function(r){ return String(r['Material']) === mat; });
+          if(row) openDrawer(row);
+        });
+      });
+    }
+
+    resultCount.innerHTML = '<b style="color:var(--ink)">'+total.toLocaleString('es')+'</b> de '+state.rows.length.toLocaleString('es')+' materiales';
+    pgInfo.textContent = 'Página '+state.page+' de '+pages;
+    $('mmPgFirst').disabled = state.page<=1;
+    $('mmPgPrev').disabled = state.page<=1;
+    $('mmPgNext').disabled = state.page>=pages;
+    $('mmPgLast').disabled = state.page>=pages;
+  }
+
+  searchInput.addEventListener('input', debounce(function(){ applyFilters(); }, 180));
+  filterTipo.addEventListener('change', function(){ applyFilters(); });
+  filterEstado.addEventListener('change', function(){ applyFilters(); });
+  filterCreador.addEventListener('change', function(){ applyFilters(); });
+  pageSizeSel.addEventListener('change', function(){ state.pageSize = parseInt(pageSizeSel.value,10); state.page=1; renderTable(); });
+
+  $('mmPgFirst').addEventListener('click', function(){ state.page=1; renderTable(); });
+  $('mmPgPrev').addEventListener('click', function(){ state.page=Math.max(1,state.page-1); renderTable(); });
+  $('mmPgNext').addEventListener('click', function(){ state.page=state.page+1; renderTable(); });
+  $('mmPgLast').addEventListener('click', function(){ state.page=999999; renderTable(); });
+
+  function debounce(fn, ms){
+    var t; return function(){ var args=arguments, ctx=this; clearTimeout(t); t=setTimeout(function(){ fn.apply(ctx,args); }, ms); };
+  }
+
+  function openDrawer(row){
+    dMat.textContent = row['Material'] || '—';
+    dName.textContent = row['Texto Material'] || row['Denom.estándar'] || 'Sin descripción';
+
+    var estado = (row['Estado mat.todos ce']||'').toString().trim();
+    if(estado){
+      dStamp.style.display = 'block';
+      dStamp.textContent = estado;
+      dStamp.style.borderColor = isSuspendedCode(estado) ? 'var(--brick)' : 'var(--teal)';
+      dStamp.style.color = isSuspendedCode(estado) ? 'var(--brick)' : 'var(--teal)';
+    } else {
+      dStamp.style.display = 'none';
+    }
+
+    drawerBody.innerHTML = DETAIL_GROUPS.map(function(g){
+      var fieldsHtml = g.fields.map(function(f){
+        var v = row[f];
+        var display = (v==null || v==='') ? '' : String(v);
+        var isMono = /Material$|^Material$|Código|Jerarquía/.test(f) && f!=='Texto Material';
+        return '<div class="field">'+
+          '<div class="field-label2">'+escapeHtml(f)+'</div>'+
+          '<div class="field-value2'+(display?'':' empty')+(isMono?' mono':'')+'">'+(display?escapeHtml(display):'Sin dato')+'</div>'+
+        '</div>';
+      }).join('');
+      return '<div class="field-group">'+
+        '<div class="field-group-title">'+g.title+' <span class="fg-count">'+g.fields.length+' campos</span></div>'+
+        '<div class="field-grid">'+fieldsHtml+'</div>'+
+      '</div>';
+    }).join('');
+
+    drawer.classList.add('open');
+    scrim.classList.add('open');
+    drawer.setAttribute('aria-hidden','false');
+    document.body.style.overflow = 'hidden';
+  }
+
+  function closeDrawer(){
+    drawer.classList.remove('open');
+    scrim.classList.remove('open');
+    drawer.setAttribute('aria-hidden','true');
+    document.body.style.overflow = '';
+  }
+  drawerClose.addEventListener('click', closeDrawer);
+  scrim.addEventListener('click', closeDrawer);
+  document.addEventListener('keydown', function(e){ if(e.key==='Escape') closeDrawer(); });
+
+})();
+</script>
+
+<script>
+/* ============================================================
+   APP 2 — EXPLORADOR BOM (ids con prefijo "bom")
+   ============================================================ */
+(function(){
+
+  let COLUMNS = [];
+  let ROWS = [];
+
+  let IDX = {};
+  let iMaterial, iDesc, iUtil, iEstadoCod, iEstado, iAlt, iTexto, iCentro, iCant, iUM, iCreadoEl, iCreadoPor, iValidoDe, iNumMod, iModEl, iModPor;
+
+  let TABLE_COLS = [];
+  let FILTER_DEFS = [];
+  let filterState = {};
+
+  let dateDesde = '';
+  let dateHasta = '';
+  let searchTerm = '';
+  let filterMM = false;
+  let filterSuspendidos = false;
+  let sortCol = null;
+  let sortDir = 1;
+  let currentPage = 1;
+  let pageSize = 50;
+
+  let COMP_COLUMNS = [];
+  let COMP_ROWS = [];
+  let COMP_IDX = {};
+  let cMaterial, cAlt, cPos, cComponente, cDenom, cUM, cCantidad, cPosAlt, cProbabilidad, cGrupoAlt, cTipoPos, cListaMat, cRelevFab;
+  let COMP_MAP = new Map();
+
+  function normKey(material, alt){
+    const a = (alt===''||alt===null||alt===undefined) ? '1' : String(alt).trim();
+    return String(material).trim() + '||' + a;
+  }
+
+  function estadoCodeOf(row){
+    if(iEstadoCod !== -1 && iEstadoCod !== undefined) return row[iEstadoCod];
+    if(iEstado !== -1 && iEstado !== undefined) return row[iEstado];
+    return '';
+  }
+
+  document.getElementById('bomLoadExcelBtn').addEventListener('click', ()=>{
+    document.getElementById('bomFileInput').click();
   });
-  
-  document.querySelectorAll('.filter-panel.open').forEach(p => p.classList.remove('open'));
 
-  const totalPages = Math.max(1, Math.ceil(sorted.length / pageSize));
-  if(currentPage===Infinity || currentPage>totalPages) currentPage = totalPages;
-  const start = (currentPage-1)*pageSize;
-  const pageRows = sorted.slice(start, start+pageSize);
-  renderTable(pageRows);
-  updatePagination(sorted.length);
+  document.getElementById('bomFileInput').addEventListener('change', async (e)=>{
+    const file = e.target.files[0];
+    if(!file) return;
 
-  document.getElementById('metaShowing').textContent = pageRows.length.toLocaleString('es-PE');
-  document.getElementById('metaTotal').textContent = sorted.length.toLocaleString('es-PE');
-  document.getElementById('metaOfAll').textContent = sorted.length!==ROWS.length ? `(de ${ROWS.length.toLocaleString('es-PE')} totales)` : '';
+    try {
+      const data = await file.arrayBuffer();
+      const workbook = XLSX.read(data, { type: 'array' });
+      const firstSheet = workbook.SheetNames[0];
+      const worksheet = workbook.Sheets[firstSheet];
+      const jsonData = XLSX.utils.sheet_to_json(worksheet, { defval: '' });
 
-  window.__lastFiltered = sorted;
-}
+      if(jsonData.length === 0) {
+        alert('El archivo está vacío o no tiene datos.');
+        return;
+      }
 
-// ---------- DRAWER ----------
-const drawer = document.getElementById('drawer');
-const overlay = document.getElementById('overlay');
+      COLUMNS = Object.keys(jsonData[0]);
+      ROWS = jsonData.map(row => COLUMNS.map(col => row[col] ?? ''));
 
-function renderComponentesSection(row){
-  const material = iMaterial !== -1 ? row[iMaterial] : '';
-  const altVal = iAlt !== -1 ? row[iAlt] : '';
+      const colMaterial = COLUMNS.indexOf('Material');
+      const colCentro = COLUMNS.indexOf('Centro-instalación');
+      if(colMaterial === -1 || colCentro === -1) {
+        alert('El archivo debe contener las columnas "Material" y "Centro-instalación".\nColumnas encontradas: ' + COLUMNS.join(', '));
+        return;
+      }
 
-  if(COMP_ROWS.length === 0){
-    return `
-      <div class="field-group">
-        <div class="field-group-title">Componentes de la lista</div>
-        <div class="comp-empty">
-          Carga el archivo de componentes de SAP para ver aquí el detalle de esta lista de materiales.
-          <br><button class="btn btn-amber" id="drawerLoadCompBtn">Cargar Componentes</button>
-        </div>
+      resetApp();
+      alert(`Se cargaron ${ROWS.length.toLocaleString('es-PE')} registros correctamente.`);
+
+    } catch(err) {
+      console.error(err);
+      alert('Error al leer el archivo. Asegúrate de que sea un Excel válido (.xlsx, .xls).');
+    }
+    e.target.value = '';
+  });
+
+  document.getElementById('bomLoadComponentesBtn').addEventListener('click', ()=>{
+    document.getElementById('bomComponentesFileInput').click();
+  });
+
+  document.getElementById('bomComponentesFileInput').addEventListener('change', async (e)=>{
+    const file = e.target.files[0];
+    if(!file) return;
+
+    try {
+      const data = await file.arrayBuffer();
+      const workbook = XLSX.read(data, { type: 'array' });
+      const firstSheet = workbook.SheetNames[0];
+      const worksheet = workbook.Sheets[firstSheet];
+      const jsonData = XLSX.utils.sheet_to_json(worksheet, { defval: '' });
+
+      if(jsonData.length === 0) {
+        alert('El archivo de componentes está vacío o no tiene datos.');
+        return;
+      }
+
+      const isBlank = (v) => v===''||v===null||v===undefined || (typeof v==='string' && v.trim()==='');
+      const tieneColRelevFab = Object.prototype.hasOwnProperty.call(jsonData[0], 'Relevancia p.fabr.');
+      const jsonDataFiltrada = tieneColRelevFab
+        ? jsonData.filter(row => !isBlank(row['Relevancia p.fabr.']))
+        : jsonData;
+      const descartados = jsonData.length - jsonDataFiltrada.length;
+
+      if(jsonDataFiltrada.length === 0) {
+        alert('Ningún componente tiene la columna "Relevancia p.fabr." con valor, así que no hay componentes para cargar.');
+        return;
+      }
+
+      COMP_COLUMNS = Object.keys(jsonData[0]);
+      COMP_ROWS = jsonDataFiltrada.map(row => COMP_COLUMNS.map(col => row[col] ?? ''));
+
+      COMP_IDX = {};
+      COMP_COLUMNS.forEach((c,i)=> COMP_IDX[c]=i);
+
+      cMaterial   = COMP_IDX['Material'];
+      cListaMat   = COMP_IDX['Lista de materiales'] ?? -1;
+      cAlt        = COMP_IDX['Lista mat.alternat.'];
+      cPos        = COMP_IDX['Núm.posición'] ?? -1;
+      cTipoPos    = COMP_IDX['Tipo de posición'] ?? -1;
+      cComponente = COMP_IDX['Componente'];
+      cDenom      = COMP_IDX['Denominación de componente'] ?? -1;
+      cUM         = COMP_IDX['Un.medida componente'] ?? -1;
+      cCantidad   = COMP_IDX['Cantidad componente'] ?? -1;
+      cPosAlt     = COMP_IDX['Posición alternativa'] ?? -1;
+      cProbabilidad = COMP_IDX['Probabilidad empl.'] ?? -1;
+      cGrupoAlt   = COMP_IDX['GrPosAlternat'] ?? -1;
+      cRelevFab   = COMP_IDX['Relevancia p.fabr.'] ?? -1;
+
+      if(cMaterial === undefined || cAlt === undefined || cComponente === undefined) {
+        alert('El archivo de componentes debe contener las columnas "Material", "Lista mat.alternat." y "Componente".\nColumnas encontradas: ' + COMP_COLUMNS.join(', '));
+        return;
+      }
+
+      buildComponentMap();
+      updateAll();
+      let msg = `Se cargaron ${COMP_ROWS.length.toLocaleString('es-PE')} componentes correctamente.`;
+      if(descartados > 0) msg += `\nSe descartaron ${descartados.toLocaleString('es-PE')} fila(s) sin "Relevancia p.fabr." (no se cruzarán con el BOM).`;
+      if(!tieneColRelevFab) msg += `\nAviso: el archivo no tiene la columna "Relevancia p.fabr.", no se aplicó el filtro.`;
+      alert(msg);
+
+    } catch(err) {
+      console.error(err);
+      alert('Error al leer el archivo de componentes. Asegúrate de que sea un Excel válido (.xlsx, .xls).');
+    }
+    e.target.value = '';
+  });
+
+  function buildComponentMap(){
+    COMP_MAP = new Map();
+    for(const r of COMP_ROWS){
+      const key = normKey(r[cMaterial], r[cAlt]);
+      if(!COMP_MAP.has(key)) COMP_MAP.set(key, []);
+      COMP_MAP.get(key).push(r);
+    }
+    for(const arr of COMP_MAP.values()){
+      arr.sort((a,b)=>{
+        const pa = cPos!==-1 ? String(a[cPos]) : '';
+        const pb = cPos!==-1 ? String(b[cPos]) : '';
+        if(pa!==pb) return pa < pb ? -1 : 1;
+        const aa = cPosAlt!==-1 ? String(a[cPosAlt]) : '';
+        const ab = cPosAlt!==-1 ? String(b[cPosAlt]) : '';
+        return aa < ab ? -1 : (aa > ab ? 1 : 0);
+      });
+    }
+  }
+
+  function getComponentsFor(material, alt){
+    const key = normKey(material, alt);
+    return COMP_MAP.get(key) || [];
+  }
+
+  function resetApp() {
+    FILTER_DEFS.forEach(f => filterState[f.key] = new Set());
+    document.querySelectorAll('.filter-panel input[type=checkbox]').forEach(cb => cb.checked = false);
+    dateDesde = ''; dateHasta = '';
+    document.getElementById('bomCreadoDesde').value = '';
+    document.getElementById('bomCreadoHasta').value = '';
+    searchTerm = '';
+    document.getElementById('bomSearchInput').value = '';
+    filterMM = false;
+    document.getElementById('bomToggleMM').classList.remove('active');
+    filterSuspendidos = false;
+    document.getElementById('bomToggleSuspendidos').classList.remove('active');
+    sortCol = null;
+    sortDir = 1;
+    currentPage = 1;
+
+    buildIndexes();
+    FILTER_DEFS.forEach(def => renderFilterPanel(def, ROWS));
+    rebuildHeader();
+    ROWS.forEach((r, idx) => { r.__ridx = idx; });
+
+    updateAll();
+  }
+
+  function buildIndexes() {
+    IDX = {};
+    COLUMNS.forEach((c, i) => IDX[c] = i);
+
+    iMaterial = IDX['Material'];
+    iDesc = IDX['Descripción de LMat'] ?? -1;
+    iUtil = IDX['Utilización LMat'] ?? -1;
+    iEstadoCod = IDX['Estado de LMat'] ?? -1;
+    iEstado = IDX['Stat.txt.breve'] ?? -1;
+    iAlt = IDX['Lista mat.alternat.'] ?? -1;
+    iTexto = IDX['Texto de alternativa'] ?? -1;
+    iCentro = IDX['Centro-instalación'];
+    iCant = IDX['Cantidad base'] ?? -1;
+    iUM = IDX['Unidad medida base'] ?? -1;
+    iCreadoEl = IDX['Creado el'] ?? -1;
+    iCreadoPor = IDX['Creado por'] ?? -1;
+    iValidoDe = IDX['Válido de'] ?? -1;
+    iNumMod = IDX['Número modificación'] ?? -1;
+    iModEl = IDX['Modificado el'] ?? -1;
+    iModPor = IDX['Modificado por'] ?? -1;
+
+    updateTableCols();
+    updateFilterDefs();
+  }
+
+  function updateTableCols() {
+    TABLE_COLS.length = 0;
+    const addCol = (i, label, cls, fmt) => {
+      if(i !== -1 && i !== undefined) {
+        TABLE_COLS.push({i, label, cls: cls || '', fmt: fmt || ''});
+      }
+    };
+
+    addCol(iMaterial, 'Material', 'col-material');
+    addCol(iDesc, 'Descripción', 'col-desc');
+    addCol(iCentro, 'Centro', '', 'centro');
+    addCol(iEstado, 'Estado', '', 'estado');
+    addCol(iTexto, 'Categoría (Texto alternativa)');
+    addCol(iAlt, 'Lista alt.');
+    addCol(iCant, 'Cantidad base', '', 'num');
+    addCol(iUM, 'Unidad');
+    addCol(iUtil, 'Utilización');
+    addCol(iCreadoEl, 'Creado el', '', 'date');
+    addCol(iCreadoPor, 'Creado por');
+    addCol(iValidoDe, 'Válido de', '', 'date');
+    addCol(iModEl, 'Modificado el', '', 'date');
+    addCol(iModPor, 'Modificado por');
+    addCol(iNumMod, 'N.º modificación');
+  }
+
+  function updateFilterDefs() {
+    FILTER_DEFS.length = 0;
+    const addFilter = (key, i, label) => {
+      if(i !== -1 && i !== undefined) {
+        FILTER_DEFS.push({key, i, label});
+      }
+    };
+
+    addFilter('centro', iCentro, 'Centro');
+    addFilter('estado', iEstado, 'Estado');
+    addFilter('categoria', iTexto, 'Categoría');
+    addFilter('unidad', iUM, 'Unidad medida');
+    addFilter('creadopor', iCreadoPor, 'Creado por');
+    addFilter('utilizacion', iUtil, 'Utilización');
+    addFilter('modificadopor', iModPor, 'Modificado por');
+
+    filterState = {};
+    FILTER_DEFS.forEach(f => filterState[f.key] = new Set());
+  }
+
+  const headerRow = document.getElementById('bomHeaderRow');
+  const tableBody = document.getElementById('bomTableBody');
+  const emptyState = document.getElementById('bomEmptyState');
+
+  function rebuildHeader() {
+    headerRow.innerHTML = TABLE_COLS.map(col =>
+      `<th data-i="${col.i}" class="${col.cls||''}">${esc(col.label)}<span class="arrow"></span></th>`
+    ).join('');
+  }
+
+  function fmtDate(v){
+    if(!v) return '<span style="color:var(--ink-faint)">—</span>';
+    const str = String(v);
+    let d, m, y;
+    if(str.includes('/')) {
+      const parts = str.split('/');
+      d = parts[0]; m = parts[1]; y = parts[2];
+    } else if(str.includes('-')) {
+      const parts = str.split('-');
+      if(parts[0].length === 4) { y = parts[0]; m = parts[1]; d = parts[2]; }
+      else { d = parts[0]; m = parts[1]; y = parts[2]; }
+    } else {
+      const serial = parseInt(str);
+      if(!isNaN(serial) && serial > 40000) {
+        const date = XLSX.SSF.parse_date_code(serial);
+        d = String(date.d).padStart(2,'0');
+        m = String(date.m).padStart(2,'0');
+        y = date.y;
+      } else {
+        return esc(str);
+      }
+    }
+    return `${d}/${m}/${y}`;
+  }
+
+  function fmtNum(v){
+    if(v===''||v===null||v===undefined) return '—';
+    return Number(v).toLocaleString('es-PE');
+  }
+
+  function esc(v){
+    if(v===null||v===undefined) return '';
+    return String(v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  function centroBadge(v){
+    const cls = v==='PLANTA ATE' ? 'badge-ate' : (v==='PLANTA LIMA' ? 'badge-lima' : '');
+    return `<span class="badge ${cls}"><span class="dot"></span>${esc(v)||'—'}</span>`;
+  }
+
+  function estadoBadge(v){
+    if(isSuspendedCode(v)) return `<span class="badge badge-suspendido"><span class="dot" style="background:var(--brick)"></span>${esc(v)}</span>`;
+    const cls = v==='Activo' ? 'badge-activo' : 'badge-inactivo';
+    return `<span class="badge ${cls}"><span class="dot"></span>${esc(v)||'—'}</span>`;
+  }
+
+  function renderCell(col, row){
+    const raw = row[col.i];
+    if(col.fmt==='centro') return centroBadge(raw);
+    if(col.fmt==='estado') return estadoBadge(raw);
+    if(col.fmt==='date') return fmtDate(raw);
+    if(col.fmt==='num') return fmtNum(raw);
+    if(raw===''||raw===null||raw===undefined) return '<span style="color:var(--ink-faint)">—</span>';
+    return esc(raw);
+  }
+
+  function matchesFilters(row, exceptKey = null) {
+    if(filterMM && iDesc !== -1) {
+      const desc = String(row[iDesc] || '').toUpperCase();
+      if(!desc.includes('MM')) return false;
+    }
+    if(filterSuspendidos) {
+      if(!isSuspendedCode(estadoCodeOf(row))) return false;
+    }
+
+    for(const def of FILTER_DEFS) {
+      if(def.key === exceptKey) continue;
+      const set = filterState[def.key];
+      if(set.size===0) continue;
+      const v = row[def.i]===''||row[def.i]===null||row[def.i]===undefined ? '(vacío)' : String(row[def.i]);
+      if(!set.has(v)) return false;
+    }
+    if(dateDesde && iCreadoEl !== -1) {
+      const v = row[iCreadoEl];
+      if(!v || String(v) < dateDesde) return false;
+    }
+    if(dateHasta && iCreadoEl !== -1) {
+      const v = row[iCreadoEl];
+      if(!v || String(v) > dateHasta) return false;
+    }
+    if(searchTerm) {
+      const hay = COLUMNS.map((_, i) => String(row[i] || '')).join(' ').toLowerCase();
+      if(!hay.includes(searchTerm)) return false;
+    }
+    return true;
+  }
+
+  function getFiltered() {
+    return ROWS.filter(r => matchesFilters(r, null));
+  }
+
+  function getFilteredExcept(exceptKey) {
+    return ROWS.filter(r => matchesFilters(r, exceptKey));
+  }
+
+  function buildOptionCounts(columnIndex, dataRows) {
+    const counts = new Map();
+    for(const r of dataRows) {
+      const v = r[columnIndex]===''||r[columnIndex]===null||r[columnIndex]===undefined ? '(vacío)' : String(r[columnIndex]);
+      counts.set(v, (counts.get(v)||0)+1);
+    }
+    return [...counts.entries()].sort((a,b)=> b[1]-a[1]);
+  }
+
+  function renderFilterPanel(def, dataRows) {
+    const panel = document.querySelector(`#view-bom .filter-panel[data-panel="${def.key}"]`);
+    if(!panel) return;
+    const options = buildOptionCounts(def.i, dataRows);
+    const needsSearch = options.length > 8;
+
+    const selected = filterState[def.key] || new Set();
+
+    panel.innerHTML = `
+      ${needsSearch ? `<div class="filter-panel-search"><input type="text" placeholder="Buscar…" data-search-for="${def.key}"></div>` : ''}
+      <div class="filter-panel-actions">
+        <button data-action="all" data-key="${def.key}">Todos</button>
+        <button data-action="none" data-key="${def.key}">Ninguno</button>
+      </div>
+      <div class="filter-panel-list" data-list-for="${def.key}">
+        ${options.map(([val,count])=>`
+          <label class="filter-option" data-optlabel="${esc(val.toLowerCase())}">
+            <input type="checkbox" data-key="${def.key}" value="${esc(val)}" ${selected.has(val) ? 'checked' : ''}>
+            <span class="opt-label">${esc(val)}</span>
+            <span class="opt-count">${count}</span>
+          </label>
+        `).join('')}
       </div>
     `;
   }
 
-  const comps = getComponentsFor(material, altVal);
-
-  if(comps.length === 0){
-    return `
-      <div class="field-group">
-        <div class="field-group-title">Componentes de la lista</div>
-        <div class="comp-empty">No se encontraron componentes para el material <strong>${esc(material)}</strong>${altVal!==''&&altVal!==undefined?` (alternativa ${esc(altVal)})`:''} en el archivo de componentes cargado (recuerda que se excluyen los componentes sin "Relevancia p.fabr.").</div>
-      </div>
-    `;
-  }
-
-  // Agrupar por Núm.posición (y dentro, por Posición alternativa / GrPosAlternat)
-  const groups = new Map();
-  comps.forEach(c=>{
-    const pos = cPos!==-1 ? String(c[cPos]||'—') : '—';
-    if(!groups.has(pos)) groups.set(pos, []);
-    groups.get(pos).push(c);
+  headerRow.addEventListener('click', (e)=>{
+    const th = e.target.closest('th');
+    if(!th) return;
+    const i = parseInt(th.getAttribute('data-i'),10);
+    if(sortCol===i){ sortDir *= -1; } else { sortCol = i; sortDir = 1; }
+    currentPage = 1;
+    updateAll();
   });
 
-  const groupsHtml = [...groups.entries()].map(([pos, items])=>{
-    const isAlternateGroup = items.length > 1;
-    const itemsHtml = items.map(c=>{
-      const codigo = esc(c[cComponente]);
-      const desc = cDenom!==-1 ? esc(c[cDenom]) : '';
-      const cant = cCantidad!==-1 ? fmtNum(c[cCantidad]) : '—';
-      const um = cUM!==-1 ? esc(c[cUM]) : '';
-      const prob = cProbabilidad!==-1 && c[cProbabilidad]!=='' && c[cProbabilidad]!==null && Number(c[cProbabilidad])!==100 && Number(c[cProbabilidad])!==0
-        ? `Probabilidad de empleo: ${esc(c[cProbabilidad])}%` : '';
+  function renderSortArrows(){
+    headerRow.querySelectorAll('th').forEach(th=>{
+      const i = parseInt(th.getAttribute('data-i'),10);
+      const arrow = th.querySelector('.arrow');
+      if(i===sortCol){
+        th.classList.add('sorted');
+        arrow.textContent = sortDir===1 ? '▲' : '▼';
+      } else {
+        th.classList.remove('sorted');
+        arrow.textContent = '';
+      }
+    });
+  }
+
+  function renderTable(pageRows){
+    if(pageRows.length===0){
+      tableBody.innerHTML = '';
+      emptyState.style.display = 'block';
+      emptyState.querySelector('p').textContent = ROWS.length === 0 ? 'Haz clic en "Cargar Excel" para empezar.' : 'No se encontraron registros con los filtros aplicados.';
+      return;
+    }
+    emptyState.style.display = 'none';
+    tableBody.innerHTML = pageRows.map((row)=>{
+      const cells = TABLE_COLS.map(col=>`<td class="${col.cls||''}">${renderCell(col,row)}</td>`).join('');
+      const hasComp = COMP_MAP.size>0 && getComponentsFor(row[iMaterial], iAlt!==-1?row[iAlt]:'').length>0;
+      const suspendido = isSuspendedCode(estadoCodeOf(row));
+      const rowClasses = [hasComp?'has-comp':'', suspendido?'suspendido':''].filter(Boolean).join(' ');
+      return `<tr data-ridx="${row.__ridx}" class="${rowClasses}">${cells}</tr>`;
+    }).join('');
+  }
+
+  tableBody.addEventListener('click', (e)=>{
+    const tr = e.target.closest('tr');
+    if(!tr) return;
+    const ridx = parseInt(tr.getAttribute('data-ridx'),10);
+    openDrawer(ROWS[ridx]);
+    tableBody.querySelectorAll('tr.selected').forEach(r=>r.classList.remove('selected'));
+    tr.classList.add('selected');
+  });
+
+  function updatePagination(totalFiltered){
+    const totalPages = Math.max(1, Math.ceil(totalFiltered / pageSize));
+    if(currentPage > totalPages) currentPage = totalPages;
+    document.getElementById('bomPgIndicator').textContent = `Página ${currentPage} de ${totalPages}`;
+    document.getElementById('bomPgFirst').disabled = currentPage<=1;
+    document.getElementById('bomPgPrev').disabled = currentPage<=1;
+    document.getElementById('bomPgNext').disabled = currentPage>=totalPages;
+    document.getElementById('bomPgLast').disabled = currentPage>=totalPages;
+  }
+
+  document.getElementById('bomPgFirst').addEventListener('click', ()=>{currentPage=1; updateAll();});
+  document.getElementById('bomPgPrev').addEventListener('click', ()=>{currentPage=Math.max(1,currentPage-1); updateAll();});
+  document.getElementById('bomPgNext').addEventListener('click', ()=>{currentPage=currentPage+1; updateAll();});
+  document.getElementById('bomPgLast').addEventListener('click', ()=>{currentPage=Infinity; updateAll();});
+
+  function updateStatusStrip(filtered){
+    const tabBadgeBOM = document.getElementById('tabBadgeBOM');
+    document.getElementById('bomStatTotal').innerHTML = filtered.length.toLocaleString('es-PE') + ` <small>/ ${ROWS.length.toLocaleString('es-PE')}</small>`;
+    tabBadgeBOM.textContent = ROWS.length.toLocaleString('es-PE');
+    const activos = iEstado !== -1 ? filtered.filter(r=>r[iEstado]==='Activo').length : 0;
+    const inactivos = filtered.length - activos;
+    const ate = iCentro !== -1 ? filtered.filter(r=>r[iCentro]==='PLANTA ATE').length : 0;
+    const lima = iCentro !== -1 ? filtered.filter(r=>r[iCentro]==='PLANTA LIMA').length : 0;
+    const uniqueMats = iMaterial !== -1 ? new Set(filtered.map(r=>r[iMaterial])).size : 0;
+    const suspendidos = filtered.filter(r=>isSuspendedCode(estadoCodeOf(r))).length;
+    document.getElementById('bomStatActivos').textContent = activos.toLocaleString('es-PE');
+    document.getElementById('bomStatInactivos').textContent = inactivos.toLocaleString('es-PE');
+    document.getElementById('bomStatAte').textContent = ate.toLocaleString('es-PE');
+    document.getElementById('bomStatLima').textContent = lima.toLocaleString('es-PE');
+    document.getElementById('bomStatUnicos').textContent = uniqueMats.toLocaleString('es-PE');
+    document.getElementById('bomStatComponentes').textContent = COMP_ROWS.length.toLocaleString('es-PE');
+    document.getElementById('bomStatSuspendidos').textContent = suspendidos.toLocaleString('es-PE');
+  }
+
+  function updateFilterButtonStates(){
+    FILTER_DEFS.forEach(def=>{
+      const btn = document.querySelector(`#view-bom [data-toggle="${def.key}"]`);
+      if(!btn) return;
+      const n = filterState[def.key]?.size || 0;
+      btn.classList.toggle('active', n>0);
+      btn.innerHTML = `${def.label} ${n>0 ? `<span class="count">${n}</span>` : ''} <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M6 9l6 6 6-6"/></svg>`;
+    });
+
+    const mmBtn = document.getElementById('bomToggleMM');
+    if(mmBtn) mmBtn.classList.toggle('active', filterMM);
+
+    const suspBtn = document.getElementById('bomToggleSuspendidos');
+    if(suspBtn) suspBtn.classList.toggle('active', filterSuspendidos);
+
+    const compBtn = document.getElementById('bomLoadComponentesBtn');
+    if(compBtn){
+      compBtn.classList.toggle('loaded', COMP_ROWS.length>0);
+      if(COMP_ROWS.length>0){
+        compBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg> Componentes cargados (${COMP_ROWS.length.toLocaleString('es-PE')})`;
+      }
+    }
+  }
+
+  function updateAll(){
+    if(ROWS.length === 0) {
+      tableBody.innerHTML = '';
+      emptyState.style.display = 'block';
+      document.getElementById('bomStatTotal').innerHTML = '0 <small>/ 0</small>';
+      document.getElementById('bomStatActivos').textContent = '0';
+      document.getElementById('bomStatInactivos').textContent = '0';
+      document.getElementById('bomStatAte').textContent = '0';
+      document.getElementById('bomStatLima').textContent = '0';
+      document.getElementById('bomStatUnicos').textContent = '0';
+      document.getElementById('bomStatComponentes').textContent = COMP_ROWS.length.toLocaleString('es-PE');
+      document.getElementById('bomStatSuspendidos').textContent = '0';
+      document.getElementById('bomMetaShowing').textContent = '0';
+      document.getElementById('bomMetaTotal').textContent = '0';
+      document.getElementById('bomMetaOfAll').textContent = '';
+      updateFilterButtonStates();
+      return;
+    }
+
+    const filtered = getFiltered();
+    let sorted = filtered;
+    if(sortCol !== null){
+      sorted = [...filtered].sort((a,b)=>{
+        let va = a[sortCol], vb = b[sortCol];
+        const na = parseFloat(va), nb = parseFloat(vb);
+        if(!isNaN(na) && !isNaN(nb) && va!=='' && vb!==''){
+          return (na-nb)*sortDir;
+        }
+        va = String(va??''); vb = String(vb??'');
+        return va.localeCompare(vb, 'es')*sortDir;
+      });
+    }
+
+    updateStatusStrip(sorted);
+    updateFilterButtonStates();
+    renderSortArrows();
+
+    FILTER_DEFS.forEach(def => {
+      const subset = getFilteredExcept(def.key);
+      renderFilterPanel(def, subset);
+    });
+
+    document.querySelectorAll('#view-bom .filter-panel.open').forEach(p => p.classList.remove('open'));
+
+    const totalPages = Math.max(1, Math.ceil(sorted.length / pageSize));
+    if(currentPage===Infinity || currentPage>totalPages) currentPage = totalPages;
+    const start = (currentPage-1)*pageSize;
+    const pageRows = sorted.slice(start, start+pageSize);
+    renderTable(pageRows);
+    updatePagination(sorted.length);
+
+    document.getElementById('bomMetaShowing').textContent = pageRows.length.toLocaleString('es-PE');
+    document.getElementById('bomMetaTotal').textContent = sorted.length.toLocaleString('es-PE');
+    document.getElementById('bomMetaOfAll').textContent = sorted.length!==ROWS.length ? `(de ${ROWS.length.toLocaleString('es-PE')} totales)` : '';
+
+    window.__bomLastFiltered = sorted;
+  }
+
+  const drawer = document.getElementById('bomDrawer');
+  const overlay = document.getElementById('bomOverlay');
+
+  function renderComponentesSection(row){
+    const material = iMaterial !== -1 ? row[iMaterial] : '';
+    const altVal = iAlt !== -1 ? row[iAlt] : '';
+
+    if(COMP_ROWS.length === 0){
       return `
-        <div class="comp-item">
-          <span class="c-code">${codigo}</span>
-          <span class="c-qty">${cant}${um?` ${um}`:''}</span>
-          <span class="c-desc">${desc}</span>
-          ${prob?`<span class="c-prob">${prob}</span>`:''}
+        <div class="field-group">
+          <div class="field-group-title">Componentes de la lista</div>
+          <div class="comp-empty">
+            Carga el archivo de componentes de SAP para ver aquí el detalle de esta lista de materiales.
+            <br><button class="btn btn-amber" id="bomDrawerLoadCompBtn">Cargar Componentes</button>
+          </div>
+        </div>
+      `;
+    }
+
+    const comps = getComponentsFor(material, altVal);
+
+    if(comps.length === 0){
+      return `
+        <div class="field-group">
+          <div class="field-group-title">Componentes de la lista</div>
+          <div class="comp-empty">No se encontraron componentes para el material <strong>${esc(material)}</strong>${altVal!==''&&altVal!==undefined?` (alternativa ${esc(altVal)})`:''} en el archivo de componentes cargado (recuerda que se excluyen los componentes sin "Relevancia p.fabr.").</div>
+        </div>
+      `;
+    }
+
+    const groups = new Map();
+    comps.forEach(c=>{
+      const pos = cPos!==-1 ? String(c[cPos]||'—') : '—';
+      if(!groups.has(pos)) groups.set(pos, []);
+      groups.get(pos).push(c);
+    });
+
+    const groupsHtml = [...groups.entries()].map(([pos, items])=>{
+      const isAlternateGroup = items.length > 1;
+      const itemsHtml = items.map(c=>{
+        const codigo = esc(c[cComponente]);
+        const desc = cDenom!==-1 ? esc(c[cDenom]) : '';
+        const cant = cCantidad!==-1 ? fmtNum(c[cCantidad]) : '—';
+        const um = cUM!==-1 ? esc(c[cUM]) : '';
+        const prob = cProbabilidad!==-1 && c[cProbabilidad]!=='' && c[cProbabilidad]!==null && Number(c[cProbabilidad])!==100 && Number(c[cProbabilidad])!==0
+          ? `Probabilidad de empleo: ${esc(c[cProbabilidad])}%` : '';
+        return `
+          <div class="comp-item">
+            <span class="c-code">${codigo}</span>
+            <span class="c-qty">${cant}${um?` ${um}`:''}</span>
+            <span class="c-desc">${desc}</span>
+            ${prob?`<span class="c-prob">${prob}</span>`:''}
+          </div>
+        `;
+      }).join('');
+      return `
+        <div class="comp-group">
+          <div class="comp-group-head">
+            <span>Posición <span class="pos-num">${esc(pos)}</span></span>
+            ${isAlternateGroup?`<span class="alt-tag">${items.length} alternativas</span>`:''}
+          </div>
+          ${itemsHtml}
         </div>
       `;
     }).join('');
+
     return `
-      <div class="comp-group">
-        <div class="comp-group-head">
-          <span>Posición <span class="pos-num">${esc(pos)}</span></span>
-          ${isAlternateGroup?`<span class="alt-tag">${items.length} alternativas</span>`:''}
+      <div class="field-group">
+        <div class="field-group-title">
+          Componentes de la lista
+          <span class="fg-count">${comps.length} ítem${comps.length!==1?'s':''} · ${groups.size} posición${groups.size!==1?'es':''}${altVal!==''&&altVal!==undefined?` · alternativa ${esc(altVal)}`:''}</span>
         </div>
-        ${itemsHtml}
+        ${groupsHtml}
       </div>
     `;
-  }).join('');
+  }
 
-  return `
-    <div class="field-group">
-      <div class="field-group-title">
-        Componentes de la lista
-        <span class="fg-count">${comps.length} ítem${comps.length!==1?'s':''} · ${groups.size} posición${groups.size!==1?'es':''}${altVal!==''&&altVal!==undefined?` · alternativa ${esc(altVal)}`:''}</span>
+  function openDrawer(row){
+    document.getElementById('bomDrawerMaterial').textContent = iMaterial !== -1 ? row[iMaterial] : '—';
+    document.getElementById('bomDrawerDesc').textContent = iDesc !== -1 ? row[iDesc] : '—';
+
+    const groups = [
+      {title:'Identificación', fields:[
+        ['Material', iMaterial !== -1 ? row[iMaterial] : '—', true],
+        ['Descripción de LMat', iDesc !== -1 ? row[iDesc] : '—'],
+        ['Centro-instalación', iCentro !== -1 ? row[iCentro] : '—'],
+      ]},
+      {title:'Estado', fields:[
+        ['Utilización LMat', iUtil !== -1 ? row[iUtil] : '—'],
+        ['Estado de LMat', iEstadoCod !== -1 ? row[iEstadoCod] : '—'],
+        ['Stat.txt.breve', iEstado !== -1 ? row[iEstado] : '—'],
+      ]},
+      {title:'Alternativa de lista', fields:[
+        ['Lista mat.alternat.', iAlt !== -1 ? row[iAlt] : '—'],
+        ['Texto de alternativa', iTexto !== -1 ? row[iTexto] : '—'],
+      ]},
+      {title:'Cantidad', fields:[
+        ['Cantidad base', iCant !== -1 ? fmtNum(row[iCant]) : '—'],
+        ['Unidad medida base', iUM !== -1 ? row[iUM] : '—'],
+      ]},
+      {title:'Auditoría', fields:[
+        ['Creado el', iCreadoEl !== -1 ? fmtDate(row[iCreadoEl]).replace(/<[^>]+>/g,'') : '—'],
+        ['Creado por', iCreadoPor !== -1 ? row[iCreadoPor] : '—', true],
+        ['Válido de', iValidoDe !== -1 ? fmtDate(row[iValidoDe]).replace(/<[^>]+>/g,'') : '—'],
+        ['N.º modificación', iNumMod !== -1 ? row[iNumMod] || '—' : '—', true],
+        ['Modificado el', iModEl !== -1 ? fmtDate(row[iModEl]).replace(/<[^>]+>/g,'') : '—'],
+        ['Modificado por', iModPor !== -1 ? row[iModPor] || '—' : '—', true],
+      ]},
+    ];
+
+    const groupsHtml = groups.map(g=>`
+      <div class="field-group">
+        <div class="field-group-title">${g.title}</div>
+        ${g.fields.map(f=>`
+          <div class="field-row">
+            <span class="f-label">${f[0]}</span>
+            <span class="f-value ${f[2]?'mono':''}">${esc(f[1]===''||f[1]===null||f[1]===undefined?'—':f[1])}</span>
+          </div>
+        `).join('')}
       </div>
-      ${groupsHtml}
-    </div>
-  `;
-}
+    `).join('');
 
-function openDrawer(row){
-  document.getElementById('drawerMaterial').textContent = iMaterial !== -1 ? row[iMaterial] : '—';
-  document.getElementById('drawerDesc').textContent = iDesc !== -1 ? row[iDesc] : '—';
+    document.getElementById('bomDrawerBody').innerHTML = groupsHtml + renderComponentesSection(row);
 
-  const groups = [
-    {title:'Identificación', fields:[
-      ['Material', iMaterial !== -1 ? row[iMaterial] : '—', true],
-      ['Descripción de LMat', iDesc !== -1 ? row[iDesc] : '—'],
-      ['Centro-instalación', iCentro !== -1 ? row[iCentro] : '—'],
-    ]},
-    {title:'Estado', fields:[
-      ['Utilización LMat', iUtil !== -1 ? row[iUtil] : '—'],
-      ['Estado de LMat', iEstadoCod !== -1 ? row[iEstadoCod] : '—'],
-      ['Stat.txt.breve', iEstado !== -1 ? row[iEstado] : '—'],
-    ]},
-    {title:'Alternativa de lista', fields:[
-      ['Lista mat.alternat.', iAlt !== -1 ? row[iAlt] : '—'],
-      ['Texto de alternativa', iTexto !== -1 ? row[iTexto] : '—'],
-    ]},
-    {title:'Cantidad', fields:[
-      ['Cantidad base', iCant !== -1 ? fmtNum(row[iCant]) : '—'],
-      ['Unidad medida base', iUM !== -1 ? row[iUM] : '—'],
-    ]},
-    {title:'Auditoría', fields:[
-      ['Creado el', iCreadoEl !== -1 ? fmtDate(row[iCreadoEl]).replace(/<[^>]+>/g,'') : '—'],
-      ['Creado por', iCreadoPor !== -1 ? row[iCreadoPor] : '—', true],
-      ['Válido de', iValidoDe !== -1 ? fmtDate(row[iValidoDe]).replace(/<[^>]+>/g,'') : '—'],
-      ['N.º modificación', iNumMod !== -1 ? row[iNumMod] || '—' : '—', true],
-      ['Modificado el', iModEl !== -1 ? fmtDate(row[iModEl]).replace(/<[^>]+>/g,'') : '—'],
-      ['Modificado por', iModPor !== -1 ? row[iModPor] || '—' : '—', true],
-    ]},
-  ];
+    const drawerLoadCompBtn = document.getElementById('bomDrawerLoadCompBtn');
+    if(drawerLoadCompBtn){
+      drawerLoadCompBtn.addEventListener('click', ()=> document.getElementById('bomComponentesFileInput').click());
+    }
 
-  const groupsHtml = groups.map(g=>`
-    <div class="field-group">
-      <div class="field-group-title">${g.title}</div>
-      ${g.fields.map(f=>`
-        <div class="field-row">
-          <span class="f-label">${f[0]}</span>
-          <span class="f-value ${f[2]?'mono':''}">${esc(f[1]===''||f[1]===null||f[1]===undefined?'—':f[1])}</span>
-        </div>
-      `).join('')}
-    </div>
-  `).join('');
-
-  document.getElementById('drawerBody').innerHTML = groupsHtml + renderComponentesSection(row);
-
-  const drawerLoadCompBtn = document.getElementById('drawerLoadCompBtn');
-  if(drawerLoadCompBtn){
-    drawerLoadCompBtn.addEventListener('click', ()=> document.getElementById('componentesFileInput').click());
+    drawer.classList.add('open');
+    overlay.classList.add('open');
   }
 
-  drawer.classList.add('open');
-  overlay.classList.add('open');
-}
-
-function closeDrawer(){
-  drawer.classList.remove('open');
-  overlay.classList.remove('open');
-}
-
-document.getElementById('drawerClose').addEventListener('click', closeDrawer);
-overlay.addEventListener('click', closeDrawer);
-document.addEventListener('keydown', (e)=>{ if(e.key==='Escape') closeDrawer(); });
-
-// ---------- EXPORTAR CSV ----------
-document.getElementById('exportCsv').addEventListener('click', ()=>{
-  if(ROWS.length === 0) {
-    alert('No hay datos para exportar. Carga un archivo Excel primero.');
-    return;
+  function closeDrawer(){
+    drawer.classList.remove('open');
+    overlay.classList.remove('open');
   }
-  const filtered = window.__lastFiltered || getFiltered();
-  const headers = TABLE_COLS.map(c=>c.label);
-  const lines = [headers.join(',')];
-  filtered.forEach(row=>{
-    const vals = TABLE_COLS.map(c=>{
-      let v = row[c.i];
-      if(v===null||v===undefined) v='';
-      v = String(v).replace(/"/g,'""');
-      if(v.includes(',')||v.includes('"')||v.includes('\n')) v = `"${v}"`;
-      return v;
+
+  document.getElementById('bomDrawerClose').addEventListener('click', closeDrawer);
+  overlay.addEventListener('click', closeDrawer);
+  document.addEventListener('keydown', (e)=>{ if(e.key==='Escape') closeDrawer(); });
+
+  document.getElementById('bomExportCsv').addEventListener('click', ()=>{
+    if(ROWS.length === 0) {
+      alert('No hay datos para exportar. Carga un archivo Excel primero.');
+      return;
+    }
+    const filtered = window.__bomLastFiltered || getFiltered();
+    const headers = TABLE_COLS.map(c=>c.label);
+    const lines = [headers.join(',')];
+    filtered.forEach(row=>{
+      const vals = TABLE_COLS.map(c=>{
+        let v = row[c.i];
+        if(v===null||v===undefined) v='';
+        v = String(v).replace(/"/g,'""');
+        if(v.includes(',')||v.includes('"')||v.includes('\n')) v = `"${v}"`;
+        return v;
+      });
+      lines.push(vals.join(','));
     });
-    lines.push(vals.join(','));
+    const csv = '\uFEFF' + lines.join('\n');
+    const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `bom_export_filtrado_${new Date().toISOString().slice(0,10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
   });
-  const csv = '\uFEFF' + lines.join('\n');
-  const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `bom_export_filtrado_${new Date().toISOString().slice(0,10)}.csv`;
-  a.click();
-  URL.revokeObjectURL(url);
-});
 
-// ---------- EVENTOS DE FILTROS ----------
-document.querySelectorAll('[data-toggle]').forEach(btn=>{
-  btn.addEventListener('click', (e)=>{
-    e.stopPropagation();
-    const key = btn.getAttribute('data-toggle');
-    const panel = document.querySelector(`.filter-panel[data-panel="${key}"]`);
-    if(!panel) return;
-    const isOpen = panel.classList.contains('open');
-    document.querySelectorAll('.filter-panel.open').forEach(p=>p.classList.remove('open'));
-    if(!isOpen) panel.classList.add('open');
-  });
-});
-document.addEventListener('click', ()=>{
-  document.querySelectorAll('.filter-panel.open').forEach(p=>p.classList.remove('open'));
-});
-document.querySelectorAll('.filter-panel').forEach(p=>p.addEventListener('click', e=>e.stopPropagation()));
-
-document.addEventListener('change', (e)=>{
-  if(e.target.matches('.filter-panel input[type=checkbox]')){
-    const key = e.target.getAttribute('data-key');
-    const val = e.target.value;
-    if(!filterState[key]) filterState[key] = new Set();
-    if(e.target.checked) filterState[key].add(val);
-    else filterState[key].delete(val);
-    currentPage = 1;
-    updateAll();
-  }
-  if(e.target.id==='creadoDesde'){ dateDesde = e.target.value; currentPage=1; updateAll(); }
-  if(e.target.id==='creadoHasta'){ dateHasta = e.target.value; currentPage=1; updateAll(); }
-  if(e.target.id==='pageSize'){ pageSize = parseInt(e.target.value,10); currentPage=1; updateAll(); }
-});
-
-document.addEventListener('input', (e)=>{
-  if(e.target.matches('[data-search-for]')){
-    const key = e.target.getAttribute('data-search-for');
-    const q = e.target.value.toLowerCase();
-    document.querySelectorAll(`[data-list-for="${key}"] .filter-option`).forEach(opt=>{
-      const label = opt.getAttribute('data-optlabel');
-      opt.style.display = label.includes(q) ? '' : 'none';
+  document.querySelectorAll('#view-bom [data-toggle]').forEach(btn=>{
+    btn.addEventListener('click', (e)=>{
+      e.stopPropagation();
+      const key = btn.getAttribute('data-toggle');
+      const panel = document.querySelector(`#view-bom .filter-panel[data-panel="${key}"]`);
+      if(!panel) return;
+      const isOpen = panel.classList.contains('open');
+      document.querySelectorAll('#view-bom .filter-panel.open').forEach(p=>p.classList.remove('open'));
+      if(!isOpen) panel.classList.add('open');
     });
-  }
-  if(e.target.id==='searchInput'){
-    searchTerm = e.target.value.trim().toLowerCase();
-    currentPage = 1;
-    updateAll();
-  }
-});
+  });
+  document.addEventListener('click', (e)=>{
+    if(e.target.closest('#view-bom .filter-group')) return;
+    document.querySelectorAll('#view-bom .filter-panel.open').forEach(p=>p.classList.remove('open'));
+  });
+  document.querySelectorAll('#view-bom .filter-panel').forEach(p=>p.addEventListener('click', e=>e.stopPropagation()));
 
-document.addEventListener('click', (e)=>{
-  if(e.target.matches('[data-action]')){
-    const key = e.target.getAttribute('data-key');
-    const action = e.target.getAttribute('data-action');
-    const checkboxes = document.querySelectorAll(`.filter-panel[data-panel="${key}"] input[type=checkbox]`);
-    if(!filterState[key]) filterState[key] = new Set();
-    if(action==='all'){
-      filterState[key].clear();
-      checkboxes.forEach(cb=>{ if(cb.closest('.filter-option').style.display!=='none'){ cb.checked=false; } });
-    } else if(action==='none'){
-      checkboxes.forEach(cb=>{
-        if(cb.closest('.filter-option').style.display!=='none'){
-          cb.checked = true;
-          filterState[key].add(cb.value);
-        }
+  document.addEventListener('change', (e)=>{
+    if(e.target.matches('#view-bom .filter-panel input[type=checkbox]')){
+      const key = e.target.getAttribute('data-key');
+      const val = e.target.value;
+      if(!filterState[key]) filterState[key] = new Set();
+      if(e.target.checked) filterState[key].add(val);
+      else filterState[key].delete(val);
+      currentPage = 1;
+      updateAll();
+    }
+    if(e.target.id==='bomCreadoDesde'){ dateDesde = e.target.value; currentPage=1; updateAll(); }
+    if(e.target.id==='bomCreadoHasta'){ dateHasta = e.target.value; currentPage=1; updateAll(); }
+    if(e.target.id==='bomPageSize'){ pageSize = parseInt(e.target.value,10); currentPage=1; updateAll(); }
+  });
+
+  document.addEventListener('input', (e)=>{
+    if(e.target.matches('#view-bom [data-search-for]')){
+      const key = e.target.getAttribute('data-search-for');
+      const q = e.target.value.toLowerCase();
+      document.querySelectorAll(`#view-bom [data-list-for="${key}"] .filter-option`).forEach(opt=>{
+        const label = opt.getAttribute('data-optlabel');
+        opt.style.display = label.includes(q) ? '' : 'none';
       });
     }
-    currentPage = 1;
-    updateAll();
-  }
-  
-  // Toggle MM
-  if(e.target.id === 'toggleMM') {
-    filterMM = !filterMM;
-    document.getElementById('toggleMM').classList.toggle('active', filterMM);
-    currentPage = 1;
-    updateAll();
-  }
-});
-
-document.getElementById('toggleMoreFilters').addEventListener('click', ()=>{
-  document.getElementById('moreFilters').classList.toggle('open');
-});
-
-document.getElementById('clearFilters').addEventListener('click', clearAllFilters);
-
-function clearAllFilters(){
-  FILTER_DEFS.forEach(f => {
-    if(filterState[f.key]) filterState[f.key].clear();
+    if(e.target.id==='bomSearchInput'){
+      searchTerm = e.target.value.trim().toLowerCase();
+      currentPage = 1;
+      updateAll();
+    }
   });
-  document.querySelectorAll('.filter-panel input[type=checkbox]').forEach(cb=>cb.checked=false);
-  dateDesde=''; dateHasta='';
-  document.getElementById('creadoDesde').value='';
-  document.getElementById('creadoHasta').value='';
-  searchTerm='';
-  document.getElementById('searchInput').value='';
-  filterMM = false;
-  document.getElementById('toggleMM').classList.remove('active');
-  currentPage=1;
+
+  document.addEventListener('click', (e)=>{
+    if(e.target.matches('#view-bom [data-action]')){
+      const key = e.target.getAttribute('data-key');
+      const action = e.target.getAttribute('data-action');
+      const checkboxes = document.querySelectorAll(`#view-bom .filter-panel[data-panel="${key}"] input[type=checkbox]`);
+      if(!filterState[key]) filterState[key] = new Set();
+      if(action==='all'){
+        filterState[key].clear();
+        checkboxes.forEach(cb=>{ if(cb.closest('.filter-option').style.display!=='none'){ cb.checked=false; } });
+      } else if(action==='none'){
+        checkboxes.forEach(cb=>{
+          if(cb.closest('.filter-option').style.display!=='none'){
+            cb.checked = true;
+            filterState[key].add(cb.value);
+          }
+        });
+      }
+      currentPage = 1;
+      updateAll();
+    }
+
+    if(e.target.closest('#bomToggleMM')) {
+      filterMM = !filterMM;
+      document.getElementById('bomToggleMM').classList.toggle('active', filterMM);
+      currentPage = 1;
+      updateAll();
+    }
+
+    if(e.target.closest('#bomToggleSuspendidos')) {
+      filterSuspendidos = !filterSuspendidos;
+      document.getElementById('bomToggleSuspendidos').classList.toggle('active', filterSuspendidos);
+      currentPage = 1;
+      updateAll();
+    }
+  });
+
+  document.getElementById('bomToggleMoreFilters').addEventListener('click', ()=>{
+    document.getElementById('bomMoreFilters').classList.toggle('open');
+  });
+
+  document.getElementById('bomClearFilters').addEventListener('click', clearAllFilters);
+
+  function clearAllFilters(){
+    FILTER_DEFS.forEach(f => {
+      if(filterState[f.key]) filterState[f.key].clear();
+    });
+    document.querySelectorAll('#view-bom .filter-panel input[type=checkbox]').forEach(cb=>cb.checked=false);
+    dateDesde=''; dateHasta='';
+    document.getElementById('bomCreadoDesde').value='';
+    document.getElementById('bomCreadoHasta').value='';
+    searchTerm='';
+    document.getElementById('bomSearchInput').value='';
+    filterMM = false;
+    document.getElementById('bomToggleMM').classList.remove('active');
+    filterSuspendidos = false;
+    document.getElementById('bomToggleSuspendidos').classList.remove('active');
+    currentPage=1;
+    updateAll();
+  }
+
+  const emptyStateLoadBtn = document.getElementById('bomEmptyStateLoadBtn');
+  if(emptyStateLoadBtn){
+    emptyStateLoadBtn.addEventListener('click', ()=> document.getElementById('bomFileInput').click());
+  }
+
   updateAll();
-}
-
-// Botón de "Cargar Excel" dentro del estado vacío: reutiliza el mismo input de archivo
-const emptyStateLoadBtn = document.getElementById('emptyStateLoadBtn');
-if(emptyStateLoadBtn){
-  emptyStateLoadBtn.addEventListener('click', ()=> document.getElementById('fileInput').click());
-}
-
-// ---------- INICIO ----------
-updateAll();
+})();
 </script>
 </body>
 </html>

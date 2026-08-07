@@ -3,11 +3,12 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>SAP MM - LM</title>
+<title>Suite SAP MM · Materiales &amp; BOM</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
   :root{
     --bg:#F1F4F4;
@@ -359,6 +360,17 @@
   .comp-item .c-qty{ font-family:var(--mono); font-size:12.5px; font-weight:600; color:var(--teal); grid-column:2; grid-row:1; text-align:right; white-space:nowrap; }
   .comp-item .c-desc{ font-size:12.5px; color:var(--ink-soft); grid-column:1 / -1; grid-row:2; }
   .comp-item .c-prob{ grid-column:1/-1; grid-row:3; font-size:10.5px; color:var(--amber); font-family:var(--mono); margin-top:2px; }
+  .comp-item .c-vigente{ grid-column:1/-1; margin-top:6px; padding:7px 9px; background:var(--violet-soft); border:1px solid rgba(91,75,138,0.25); border-radius:6px; font-size:11.5px; color:var(--violet); display:flex; flex-direction:column; gap:2px; }
+  .comp-item .c-vigente .c-vigente-label{ font-family:var(--mono); font-size:9.5px; text-transform:uppercase; letter-spacing:0.05em; opacity:0.8; }
+  .comp-item .c-vigente .c-vigente-value{ color:var(--ink); font-size:12px; }
+  .comp-item .c-vigente.c-vigente-hv1{ border-color:var(--violet); background:#EFEAF7; }
+  .hv-badge{ display:inline-flex; align-items:center; justify-content:center; padding:1px 7px; margin-left:4px; border-radius:10px; background:var(--violet); color:#fff; font-family:var(--mono); font-size:10px; font-weight:700; vertical-align:middle; }
+  .hv1-banner{ background:var(--violet-soft); border:1px solid var(--violet); color:var(--violet); font-size:12px; padding:9px 12px; border-radius:8px; margin-bottom:10px; font-weight:500; }
+  tbody tr.pending-hv1 td.col-material::before{
+    content:'H'; display:inline-flex; align-items:center; justify-content:center;
+    width:15px; height:15px; margin-right:6px; border-radius:3px; background:var(--violet); color:#fff;
+    font-size:9px; font-weight:700; vertical-align:middle;
+  }
 
   footer.page-footer{ text-align:center; padding:18px; color:var(--ink-faint); font-size:11.5px; font-family:var(--mono); }
 
@@ -494,6 +506,7 @@
       <div class="status-cell"><div class="status-label"><span class="tick" style="background:#EAD98C"></span>Materiales únicos</div><div class="status-value" id="bomStatUnicos">0</div></div>
       <div class="status-cell"><div class="status-label"><span class="tick" style="background:#8A6D1E"></span>Componentes cargados</div><div class="status-value" id="bomStatComponentes">0</div></div>
       <div class="status-cell flag-cell"><div class="status-label"><span class="tick" style="background:#963B32"></span>Suspendidos (Z)</div><div class="status-value" id="bomStatSuspendidos">0</div></div>
+      <div class="status-cell flag-cell" style="background:rgba(91,75,138,0.14);"><div class="status-label"><span class="tick" style="background:#5B4B8A"></span>Pendientes Hv.1</div><div class="status-value" id="bomStatHv1">0</div></div>
     </div>
   </header>
 
@@ -622,6 +635,7 @@
     <div class="eyebrow"><span class="dot"></span>DETALLE DE REGISTRO</div>
     <h2 id="bomDrawerMaterial">—</h2>
     <p id="bomDrawerDesc">—</p>
+    <div class="drawer-stamp" id="bomDStamp" style="display:none;"></div>
   </div>
   <div class="drawer-body" id="bomDrawerBody"></div>
 </div>
@@ -654,6 +668,28 @@ function isSuspendedCode(v){
   }
   tabBtnMM.addEventListener('click', function(){ activate('mm'); });
   tabBtnBOM.addEventListener('click', function(){ activate('bom'); });
+})();
+</script>
+
+<script>
+/* ============================================================
+   CLIENTE SUPABASE (compartido por ambas apps de la suite)
+   Persiste el Maestro de Materiales, las Listas de Materiales
+   y sus Componentes para que no haya que volver a cargar los
+   Excel en cada visita.
+   ============================================================ */
+(function(){
+  var SUPABASE_URL = 'https://wjlryrqkcnvjlrdibzol.supabase.co';
+  var SUPABASE_ANON_KEY = 'sb_publishable_2Qm4zOkdHeSMOYvatAyNiA_K5crlvFc';
+  try{
+    if(window.supabase && window.supabase.createClient){
+      window.__sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    } else {
+      console.error('No se pudo cargar la librería de Supabase.');
+    }
+  }catch(e){
+    console.error('Error inicializando Supabase', e);
+  }
 })();
 </script>
 
@@ -807,7 +843,25 @@ function isSuspendedCode(v){
     }).join('');
   }
 
-  function onDataLoaded(fname){
+  /* Cruce de código antiguo (Nro. antiguo de material) -> material vigente (Material) y su
+     descripción (Texto Material), para que Listas de Materiales pueda resolver componentes
+     referenciados por su código antiguo. Se publica en window para que la app BOM lo consuma. */
+  function buildOldCodeMap(){
+    var map = {};
+    state.rows.forEach(function(r){
+      var old = (r['Nro. antiguo de material']||'').toString().trim();
+      if(!old) return;
+      if(!map[old]) map[old] = [];
+      map[old].push({ material: r['Material'], texto: r['Texto Material'] || r['Denom.estándar'] || '' });
+    });
+    window.MM_OLDCODE_MAP = map;
+    if(window.__refreshBomView){
+      try{ window.__refreshBomView(); }catch(e){}
+    }
+  }
+
+  function onDataLoaded(fname, opts){
+    opts = opts || {};
     fnameText.textContent = fname + '  ·  ' + state.rows.length.toLocaleString('es') + ' registros';
     filebar.style.display = 'flex';
     toolbar.style.display = 'flex';
@@ -821,7 +875,48 @@ function isSuspendedCode(v){
 
     buildHeader();
     updateStats();
+    buildOldCodeMap();
     applyFilters();
+    if(!opts.skipSave){ saveToSupabaseMM(); }
+  }
+
+  async function saveToSupabaseMM(){
+    if(!window.__sb) return;
+    try{
+      await window.__sb.from('mm_materiales').delete().neq('id', -1);
+      var records = state.rows.map(function(r){
+        return {
+          material: String(r['Material']||''),
+          texto_material: String(r['Texto Material']||''),
+          old_code: String(r['Nro. antiguo de material']||''),
+          data: r
+        };
+      });
+      for(var i=0; i<records.length; i+=500){
+        var chunk = records.slice(i, i+500);
+        var res = await window.__sb.from('mm_materiales').insert(chunk);
+        if(res.error){ console.error('Supabase insert mm_materiales error', res.error); break; }
+      }
+    }catch(e){
+      console.error('Error guardando Maestro de Materiales en Supabase', e);
+    }
+  }
+
+  async function loadFromSupabaseMM(){
+    if(!window.__sb) return false;
+    try{
+      var res = await window.__sb.from('mm_materiales').select('data').order('id', {ascending:true});
+      if(res.error){ console.error('Supabase select mm_materiales error', res.error); return false; }
+      if(!res.data || res.data.length===0) return false;
+      var rows = res.data.map(function(r){ return r.data; });
+      state.headers = Object.keys(rows[0]);
+      state.rows = rows;
+      onDataLoaded('Datos guardados en Supabase', {skipSave:true});
+      return true;
+    }catch(e){
+      console.error('Error cargando Maestro de Materiales desde Supabase', e);
+      return false;
+    }
   }
 
   function updateStats(){
@@ -1025,6 +1120,8 @@ function isSuspendedCode(v){
   scrim.addEventListener('click', closeDrawer);
   document.addEventListener('keydown', function(e){ if(e.key==='Escape') closeDrawer(); });
 
+  loadFromSupabaseMM();
+
 })();
 </script>
 
@@ -1071,6 +1168,20 @@ function isSuspendedCode(v){
     return '';
   }
 
+  /* Cruce con el Maestro de Materiales: window.MM_OLDCODE_MAP (código antiguo -> [{material, texto}])
+     lo publica la app de Maestro de Materiales al cargar su Excel. */
+  function getOldCodeMatches(componentCode){
+    const map = window.MM_OLDCODE_MAP;
+    if(!map) return null;
+    const key = String(componentCode||'').trim();
+    if(!key) return null;
+    return map[key] || null;
+  }
+
+  function isHv1(texto){
+    return typeof texto === 'string' && /HV\.?\s*1\s*$/i.test(texto.trim());
+  }
+
   document.getElementById('bomLoadExcelBtn').addEventListener('click', ()=>{
     document.getElementById('bomFileInput').click();
   });
@@ -1111,6 +1222,7 @@ function isSuspendedCode(v){
       ROWS = jsonDataFiltrada.map(row => COLUMNS.map(col => row[col] ?? ''));
 
       resetApp();
+      saveBomToSupabase(jsonDataFiltrada);
       let msg = `Se cargaron ${ROWS.length.toLocaleString('es-PE')} registros correctamente (utilización = 1).`;
       if(omitidosUtil > 0) msg += `\nSe omitieron ${omitidosUtil.toLocaleString('es-PE')} registro(s) con utilización distinta de 1 (incluye utilización 8).`;
       if(colUtil === -1) msg += `\nAviso: no se encontró la columna "Utilización LMat"; no se aplicó el filtro de utilización.`;
@@ -1182,6 +1294,7 @@ function isSuspendedCode(v){
 
       buildComponentMap();
       updateAll();
+      saveComponentesToSupabase(jsonDataFiltrada);
       let msg = `Se cargaron ${COMP_ROWS.length.toLocaleString('es-PE')} componentes correctamente.`;
       if(descartados > 0) msg += `\nSe descartaron ${descartados.toLocaleString('es-PE')} fila(s) sin "Relevancia p.fabr." (no se cruzarán con el BOM).`;
       if(!tieneColRelevFab) msg += `\nAviso: el archivo no tiene la columna "Relevancia p.fabr.", no se aplicó el filtro.`;
@@ -1193,6 +1306,107 @@ function isSuspendedCode(v){
     }
     e.target.value = '';
   });
+
+  /* ---------- Persistencia en Supabase: Listas de Materiales (BOM) ---------- */
+  async function saveBomToSupabase(jsonDataArr){
+    if(!window.__sb) return;
+    try{
+      await window.__sb.from('mm_bom').delete().neq('id', -1);
+      const records = jsonDataArr.map(row => ({
+        material: String(row['Material']||''),
+        lista_alt: String(row['Lista mat.alternat.']??''),
+        centro: String(row['Centro-instalación']||''),
+        estado: String(row['Stat.txt.breve']||row['Estado de LMat']||''),
+        data: row
+      }));
+      for(let i=0; i<records.length; i+=500){
+        const chunk = records.slice(i, i+500);
+        const res = await window.__sb.from('mm_bom').insert(chunk);
+        if(res.error){ console.error('Supabase insert mm_bom error', res.error); break; }
+      }
+    }catch(e){
+      console.error('Error guardando Listas de Materiales en Supabase', e);
+    }
+  }
+
+  async function loadBomFromSupabase(){
+    if(!window.__sb) return false;
+    try{
+      const res = await window.__sb.from('mm_bom').select('data').order('id', {ascending:true});
+      if(res.error){ console.error('Supabase select mm_bom error', res.error); return false; }
+      if(!res.data || res.data.length===0) return false;
+      const jsonDataArr = res.data.map(r=>r.data);
+      COLUMNS = Object.keys(jsonDataArr[0]);
+      const colMaterial = COLUMNS.indexOf('Material');
+      const colCentro = COLUMNS.indexOf('Centro-instalación');
+      if(colMaterial === -1 || colCentro === -1) return false;
+      ROWS = jsonDataArr.map(row => COLUMNS.map(col => row[col] ?? ''));
+      resetApp();
+      return true;
+    }catch(e){
+      console.error('Error cargando Listas de Materiales desde Supabase', e);
+      return false;
+    }
+  }
+
+  /* ---------- Persistencia en Supabase: Componentes ---------- */
+  async function saveComponentesToSupabase(jsonDataArr){
+    if(!window.__sb) return;
+    try{
+      await window.__sb.from('mm_bom_componentes').delete().neq('id', -1);
+      const records = jsonDataArr.map(row => ({
+        material: String(row['Material']||''),
+        lista_alt: String(row['Lista mat.alternat.']??''),
+        componente: String(row['Componente']||''),
+        data: row
+      }));
+      for(let i=0; i<records.length; i+=500){
+        const chunk = records.slice(i, i+500);
+        const res = await window.__sb.from('mm_bom_componentes').insert(chunk);
+        if(res.error){ console.error('Supabase insert mm_bom_componentes error', res.error); break; }
+      }
+    }catch(e){
+      console.error('Error guardando Componentes en Supabase', e);
+    }
+  }
+
+  async function loadComponentesFromSupabase(){
+    if(!window.__sb) return false;
+    try{
+      const res = await window.__sb.from('mm_bom_componentes').select('data').order('id', {ascending:true});
+      if(res.error){ console.error('Supabase select mm_bom_componentes error', res.error); return false; }
+      if(!res.data || res.data.length===0) return false;
+      const jsonDataArr = res.data.map(r=>r.data);
+
+      COMP_COLUMNS = Object.keys(jsonDataArr[0]);
+      COMP_ROWS = jsonDataArr.map(row => COMP_COLUMNS.map(col => row[col] ?? ''));
+
+      COMP_IDX = {};
+      COMP_COLUMNS.forEach((c,i)=> COMP_IDX[c]=i);
+
+      cMaterial   = COMP_IDX['Material'];
+      cListaMat   = COMP_IDX['Lista de materiales'] ?? -1;
+      cAlt        = COMP_IDX['Lista mat.alternat.'];
+      cPos        = COMP_IDX['Núm.posición'] ?? -1;
+      cTipoPos    = COMP_IDX['Tipo de posición'] ?? -1;
+      cComponente = COMP_IDX['Componente'];
+      cDenom      = COMP_IDX['Denominación de componente'] ?? -1;
+      cUM         = COMP_IDX['Un.medida componente'] ?? -1;
+      cCantidad   = COMP_IDX['Cantidad componente'] ?? -1;
+      cPosAlt     = COMP_IDX['Posición alternativa'] ?? -1;
+      cProbabilidad = COMP_IDX['Probabilidad empl.'] ?? -1;
+      cGrupoAlt   = COMP_IDX['GrPosAlternat'] ?? -1;
+      cRelevFab   = COMP_IDX['Relevancia p.fabr.'] ?? -1;
+
+      if(cMaterial === undefined || cAlt === undefined || cComponente === undefined) return false;
+
+      buildComponentMap();
+      return true;
+    }catch(e){
+      console.error('Error cargando Componentes desde Supabase', e);
+      return false;
+    }
+  }
 
   function buildComponentMap(){
     COMP_MAP = new Map();
@@ -1216,6 +1430,22 @@ function isSuspendedCode(v){
   function getComponentsFor(material, alt){
     const key = normKey(material, alt);
     return COMP_MAP.get(key) || [];
+  }
+
+  function hasHv1Pending(row){
+    if(!window.MM_OLDCODE_MAP) return false;
+    const material = iMaterial !== -1 ? row[iMaterial] : '';
+    const altVal = iAlt !== -1 ? row[iAlt] : '';
+    const comps = getComponentsFor(material, altVal);
+    for(const c of comps){
+      const matches = getOldCodeMatches(c[cComponente]);
+      if(matches){
+        for(const m of matches){
+          if(isHv1(m.texto)) return true;
+        }
+      }
+    }
+    return false;
   }
 
   function resetApp() {
@@ -1487,7 +1717,8 @@ function isSuspendedCode(v){
       const cells = TABLE_COLS.map(col=>`<td class="${col.cls||''}">${renderCell(col,row)}</td>`).join('');
       const hasComp = COMP_MAP.size>0 && getComponentsFor(row[iMaterial], iAlt!==-1?row[iAlt]:'').length>0;
       const suspendido = isSuspendedCode(estadoCodeOf(row));
-      const rowClasses = [hasComp?'has-comp':'', suspendido?'suspendido':''].filter(Boolean).join(' ');
+      const pendingHv1 = hasComp && hasHv1Pending(row);
+      const rowClasses = [hasComp?'has-comp':'', suspendido?'suspendido':'', pendingHv1?'pending-hv1':''].filter(Boolean).join(' ');
       return `<tr data-ridx="${row.__ridx}" class="${rowClasses}">${cells}</tr>`;
     }).join('');
   }
@@ -1526,6 +1757,7 @@ function isSuspendedCode(v){
     const lima = iCentro !== -1 ? filtered.filter(r=>r[iCentro]==='PLANTA LIMA').length : 0;
     const uniqueMats = iMaterial !== -1 ? new Set(filtered.map(r=>r[iMaterial])).size : 0;
     const suspendidos = filtered.filter(r=>isSuspendedCode(estadoCodeOf(r))).length;
+    const pendientesHv1 = (window.MM_OLDCODE_MAP && COMP_MAP.size>0) ? filtered.filter(r=>hasHv1Pending(r)).length : 0;
     document.getElementById('bomStatActivos').textContent = activos.toLocaleString('es-PE');
     document.getElementById('bomStatInactivos').textContent = inactivos.toLocaleString('es-PE');
     document.getElementById('bomStatAte').textContent = ate.toLocaleString('es-PE');
@@ -1533,6 +1765,7 @@ function isSuspendedCode(v){
     document.getElementById('bomStatUnicos').textContent = uniqueMats.toLocaleString('es-PE');
     document.getElementById('bomStatComponentes').textContent = COMP_ROWS.length.toLocaleString('es-PE');
     document.getElementById('bomStatSuspendidos').textContent = suspendidos.toLocaleString('es-PE');
+    document.getElementById('bomStatHv1').textContent = pendientesHv1.toLocaleString('es-PE');
   }
 
   function updateFilterButtonStates(){
@@ -1571,6 +1804,7 @@ function isSuspendedCode(v){
       document.getElementById('bomStatUnicos').textContent = '0';
       document.getElementById('bomStatComponentes').textContent = COMP_ROWS.length.toLocaleString('es-PE');
       document.getElementById('bomStatSuspendidos').textContent = '0';
+      document.getElementById('bomStatHv1').textContent = '0';
       document.getElementById('bomMetaShowing').textContent = '0';
       document.getElementById('bomMetaTotal').textContent = '0';
       document.getElementById('bomMetaOfAll').textContent = '';
@@ -1657,18 +1891,28 @@ function isSuspendedCode(v){
     const groupsHtml = [...groups.entries()].map(([pos, items])=>{
       const isAlternateGroup = items.length > 1;
       const itemsHtml = items.map(c=>{
-        const codigo = esc(c[cComponente]);
+        const codigoRaw = c[cComponente];
+        const codigo = esc(codigoRaw);
         const desc = cDenom!==-1 ? esc(c[cDenom]) : '';
         const cant = cCantidad!==-1 ? fmtNum(c[cCantidad]) : '—';
         const um = cUM!==-1 ? esc(c[cUM]) : '';
         const prob = cProbabilidad!==-1 && c[cProbabilidad]!=='' && c[cProbabilidad]!==null && Number(c[cProbabilidad])!==100 && Number(c[cProbabilidad])!==0
           ? `Probabilidad de empleo: ${esc(c[cProbabilidad])}%` : '';
+        const matches = getOldCodeMatches(codigoRaw);
+        const vigenteHtml = matches ? matches.map(m=>{
+          const hv = isHv1(m.texto);
+          return `<div class="c-vigente${hv?' c-vigente-hv1':''}">
+            <span class="c-vigente-label">Código antiguo → material vigente</span>
+            <span class="c-vigente-value"><strong>${esc(m.material)}</strong> — ${esc(m.texto)}${hv?`<span class="hv-badge">Hv.1</span>`:''}</span>
+          </div>`;
+        }).join('') : '';
         return `
           <div class="comp-item">
             <span class="c-code">${codigo}</span>
             <span class="c-qty">${cant}${um?` ${um}`:''}</span>
             <span class="c-desc">${desc}</span>
             ${prob?`<span class="c-prob">${prob}</span>`:''}
+            ${vigenteHtml}
           </div>
         `;
       }).join('');
@@ -1683,12 +1927,22 @@ function isSuspendedCode(v){
       `;
     }).join('');
 
+    const pendingHv1 = comps.some(c=>{
+      const matches = getOldCodeMatches(c[cComponente]);
+      return matches && matches.some(m=>isHv1(m.texto));
+    });
+    const noCrossRefHint = !window.MM_OLDCODE_MAP
+      ? `<div class="comp-empty" style="margin-bottom:10px;">Carga el Maestro de Materiales para cruzar los códigos antiguos de estos componentes con su material vigente.</div>`
+      : '';
+
     return `
       <div class="field-group">
         <div class="field-group-title">
           Componentes de la lista
           <span class="fg-count">${comps.length} ítem${comps.length!==1?'s':''} · ${groups.size} posición${groups.size!==1?'es':''}${altVal!==''&&altVal!==undefined?` · alternativa ${esc(altVal)}`:''}</span>
         </div>
+        ${pendingHv1?`<div class="hv1-banner">Esta lista de materiales está pendiente de actualizar con materiales Humanova (Hv.1).</div>`:''}
+        ${noCrossRefHint}
         ${groupsHtml}
       </div>
     `;
@@ -1697,6 +1951,18 @@ function isSuspendedCode(v){
   function openDrawer(row){
     document.getElementById('bomDrawerMaterial').textContent = iMaterial !== -1 ? row[iMaterial] : '—';
     document.getElementById('bomDrawerDesc').textContent = iDesc !== -1 ? row[iDesc] : '—';
+
+    const bomDStamp = document.getElementById('bomDStamp');
+    if(bomDStamp){
+      if(hasHv1Pending(row)){
+        bomDStamp.style.display = 'block';
+        bomDStamp.textContent = 'Hv.1';
+        bomDStamp.style.borderColor = 'var(--violet)';
+        bomDStamp.style.color = 'var(--violet)';
+      } else {
+        bomDStamp.style.display = 'none';
+      }
+    }
 
     const groups = [
       {title:'Identificación', fields:[
@@ -1900,7 +2166,15 @@ function isSuspendedCode(v){
     emptyStateLoadBtn.addEventListener('click', ()=> document.getElementById('bomFileInput').click());
   }
 
+  window.__refreshBomView = updateAll;
+
   updateAll();
+
+  (async function initFromSupabase(){
+    const bomLoaded = await loadBomFromSupabase();
+    const compLoaded = await loadComponentesFromSupabase();
+    if(bomLoaded || compLoaded){ updateAll(); }
+  })();
 })();
 </script>
 </body>

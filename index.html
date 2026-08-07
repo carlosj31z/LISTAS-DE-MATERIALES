@@ -382,8 +382,8 @@
 <div class="suite-bar">
   <p class="suite-eyebrow"><span class="dot"></span>SAP · SUITE MM · Materiales &amp; Listas de materiales</p>
   <div class="suite-tabs">
-    <button class="suite-tab active" data-tab="mm" id="tabBtnMM">Fichero de Materiales <span class="tab-badge" id="tabBadgeMM">0</span></button>
-    <button class="suite-tab" data-tab="bom" id="tabBtnBOM">Explorador BOM <span class="tab-badge" id="tabBadgeBOM">0</span></button>
+    <button class="suite-tab active" data-tab="mm" id="tabBtnMM">Maestro de Materiales <span class="tab-badge" id="tabBadgeMM">0</span></button>
+    <button class="suite-tab" data-tab="bom" id="tabBtnBOM">Listas de Materiales <span class="tab-badge" id="tabBadgeBOM">0</span></button>
   </div>
 </div>
 
@@ -392,7 +392,7 @@
 
   <header class="top">
     <p class="eyebrow"><span class="dot"></span>MAESTRO DE MATERIALES · EXPORT SAP MM</p>
-    <h1 class="title">Fichero de Materiales</h1>
+    <h1 class="title">Maestro de Materiales</h1>
     <p class="subtitle">Carga el export del maestro de materiales y organiza cada registro como una ficha consultable: vista general al frente, detalle completo al reverso.</p>
     <div class="status-strip" id="mmStatStrip">
       <div class="status-cell"><div class="status-label"><span class="tick" style="background:#4FD1C5"></span>Materiales</div><div class="status-value" id="mmStatTotal">0</div></div>
@@ -461,7 +461,7 @@
       </div>
     </div>
 
-    <footer class="page-footer">FICHERO DE MATERIALES — Datos según exportación de SAP</footer>
+    <footer class="page-footer">MAESTRO DE MATERIALES — Datos según exportación de SAP</footer>
   </main>
 
 </section>
@@ -483,7 +483,7 @@
 
   <header class="top">
     <p class="eyebrow"><span class="dot"></span>SAP · EXPORT · MAESTRO DE LISTAS DE MATERIALES</p>
-    <h1 class="title">Explorador BOM</h1>
+    <h1 class="title">Listas de Materiales</h1>
     <p class="subtitle">Búsqueda y filtrado del maestro de listas de materiales (BOM) exportado de SAP — Planta Ate y Planta Lima. Haz clic en una lista para ver sus componentes.</p>
     <div class="status-strip" id="bomStatusStrip">
       <div class="status-cell"><div class="status-label"><span class="tick" style="background:#4FD1C5"></span>Registros</div><div class="status-value" id="bomStatTotal">0</div></div>
@@ -544,7 +544,7 @@
         MM (Muestras médicas)
       </button>
 
-      <button id="bomToggleSuspendidos" class="filter-btn btn-brick" title="Filtrar solo registros con estado Z1/Z2/Z3 (suspendidos)">Solo suspendidos (Z)</button>
+      <button id="bomToggleOmitInactivos" class="filter-btn btn-brick" title="Excluir registros con Estado = Inactivo">Omitir Inactivos</button>
 
       <div class="toolbar-divider"></div>
 
@@ -610,7 +610,7 @@
       </div>
     </div>
 
-    <footer class="page-footer">EXPLORADOR BOM — Maestro de listas de materiales · Datos según exportación de SAP</footer>
+    <footer class="page-footer">LISTAS DE MATERIALES — Maestro de listas de materiales · Datos según exportación de SAP</footer>
   </main>
 
 </section>
@@ -1048,7 +1048,7 @@ function isSuspendedCode(v){
   let dateHasta = '';
   let searchTerm = '';
   let filterMM = false;
-  let filterSuspendidos = false;
+  let filterOmitInactivos = false;
   let sortCol = null;
   let sortDir = 1;
   let currentPage = 1;
@@ -1092,7 +1092,6 @@ function isSuspendedCode(v){
       }
 
       COLUMNS = Object.keys(jsonData[0]);
-      ROWS = jsonData.map(row => COLUMNS.map(col => row[col] ?? ''));
 
       const colMaterial = COLUMNS.indexOf('Material');
       const colCentro = COLUMNS.indexOf('Centro-instalación');
@@ -1101,8 +1100,21 @@ function isSuspendedCode(v){
         return;
       }
 
+      const colUtil = COLUMNS.indexOf('Utilización LMat');
+      let jsonDataFiltrada = jsonData;
+      let omitidosUtil = 0;
+      if(colUtil !== -1){
+        jsonDataFiltrada = jsonData.filter(row => String(row['Utilización LMat']).trim() === '1');
+        omitidosUtil = jsonData.length - jsonDataFiltrada.length;
+      }
+
+      ROWS = jsonDataFiltrada.map(row => COLUMNS.map(col => row[col] ?? ''));
+
       resetApp();
-      alert(`Se cargaron ${ROWS.length.toLocaleString('es-PE')} registros correctamente.`);
+      let msg = `Se cargaron ${ROWS.length.toLocaleString('es-PE')} registros correctamente (utilización = 1).`;
+      if(omitidosUtil > 0) msg += `\nSe omitieron ${omitidosUtil.toLocaleString('es-PE')} registro(s) con utilización distinta de 1 (incluye utilización 8).`;
+      if(colUtil === -1) msg += `\nAviso: no se encontró la columna "Utilización LMat"; no se aplicó el filtro de utilización.`;
+      alert(msg);
 
     } catch(err) {
       console.error(err);
@@ -1216,8 +1228,8 @@ function isSuspendedCode(v){
     document.getElementById('bomSearchInput').value = '';
     filterMM = false;
     document.getElementById('bomToggleMM').classList.remove('active');
-    filterSuspendidos = false;
-    document.getElementById('bomToggleSuspendidos').classList.remove('active');
+    filterOmitInactivos = false;
+    document.getElementById('bomToggleOmitInactivos').classList.remove('active');
     sortCol = null;
     sortDir = 1;
     currentPage = 1;
@@ -1371,8 +1383,8 @@ function isSuspendedCode(v){
       const desc = String(row[iDesc] || '').toUpperCase();
       if(!desc.includes('MM')) return false;
     }
-    if(filterSuspendidos) {
-      if(!isSuspendedCode(estadoCodeOf(row))) return false;
+    if(filterOmitInactivos) {
+      if(iEstado !== -1 && String(row[iEstado]||'').trim().toLowerCase() === 'inactivo') return false;
     }
 
     for(const def of FILTER_DEFS) {
@@ -1535,8 +1547,8 @@ function isSuspendedCode(v){
     const mmBtn = document.getElementById('bomToggleMM');
     if(mmBtn) mmBtn.classList.toggle('active', filterMM);
 
-    const suspBtn = document.getElementById('bomToggleSuspendidos');
-    if(suspBtn) suspBtn.classList.toggle('active', filterSuspendidos);
+    const omitBtn = document.getElementById('bomToggleOmitInactivos');
+    if(omitBtn) omitBtn.classList.toggle('active', filterOmitInactivos);
 
     const compBtn = document.getElementById('bomLoadComponentesBtn');
     if(compBtn){
@@ -1851,9 +1863,9 @@ function isSuspendedCode(v){
       updateAll();
     }
 
-    if(e.target.closest('#bomToggleSuspendidos')) {
-      filterSuspendidos = !filterSuspendidos;
-      document.getElementById('bomToggleSuspendidos').classList.toggle('active', filterSuspendidos);
+    if(e.target.closest('#bomToggleOmitInactivos')) {
+      filterOmitInactivos = !filterOmitInactivos;
+      document.getElementById('bomToggleOmitInactivos').classList.toggle('active', filterOmitInactivos);
       currentPage = 1;
       updateAll();
     }
@@ -1877,8 +1889,8 @@ function isSuspendedCode(v){
     document.getElementById('bomSearchInput').value='';
     filterMM = false;
     document.getElementById('bomToggleMM').classList.remove('active');
-    filterSuspendidos = false;
-    document.getElementById('bomToggleSuspendidos').classList.remove('active');
+    filterOmitInactivos = false;
+    document.getElementById('bomToggleOmitInactivos').classList.remove('active');
     currentPage=1;
     updateAll();
   }

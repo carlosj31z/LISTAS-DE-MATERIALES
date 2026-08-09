@@ -125,6 +125,23 @@
   h1.title{ font-family:var(--display); font-weight:700; font-size:26px; letter-spacing:-0.01em; margin:0 0 5px; }
   .subtitle{ color:#B7C6CE; font-size:13px; max-width:680px; margin:0; }
 
+  /* Encabezado colapsable: por defecto se muestra compacto (solo el título) para
+     dejar la mayor parte de la pantalla a la tabla; "Mostrar detalles" lo expande. */
+  header.top{ transition: padding .15s ease; }
+  header.top.top-collapsed{ padding-top:12px; padding-bottom:12px; }
+  header.top.top-collapsed .subtitle,
+  header.top.top-collapsed .status-strip,
+  header.top.top-collapsed .eyebrow{ display:none; }
+  header.top.top-collapsed h1.title{ margin:0; font-size:17px; padding-right:34px; }
+  .header-toggle{
+    position:absolute; top:14px; right:14px; width:26px; height:26px; border-radius:7px;
+    background:rgba(255,255,255,0.1); border:none; color:#fff; cursor:pointer;
+    display:flex; align-items:center; justify-content:center; transition:background .15s, transform .18s var(--ease);
+  }
+  .header-toggle:hover{ background:rgba(255,255,255,0.2); }
+  .header-toggle svg{ width:14px; height:14px; transition:transform .18s var(--ease); }
+  header.top.top-collapsed .header-toggle svg{ transform:rotate(-90deg); }
+
   .status-strip{
     margin-top:18px; display:flex; flex-wrap:wrap; gap:0; border:1px solid rgba(255,255,255,0.14);
     border-radius:var(--radius-lg); overflow:hidden; background:rgba(255,255,255,0.03);
@@ -164,6 +181,7 @@
   }
   .filter-btn:hover{border-color:var(--ink-faint); transform:translateY(-1px);}
   .filter-btn.active{ border-color:var(--teal); background:var(--teal-soft); color:var(--navy-deep); }
+  .filter-btn.active-hv1{ border-color:var(--violet); background:var(--violet-soft); color:var(--violet); font-weight:600; }
   .filter-btn .count{ background:var(--teal); color:#fff; font-family:var(--mono); font-size:10.5px; padding:1px 6px; border-radius:10px; line-height:1.5; }
   .filter-btn svg.chev{width:11px;height:11px; opacity:0.6; transition:transform .18s var(--ease);}
   .filter-group:has(.filter-panel.open) svg.chev{transform:rotate(180deg);}
@@ -220,19 +238,19 @@
   .table-wrap::-webkit-scrollbar-thumb{background:#C4CDD1; border-radius:20px; border:2px solid var(--surface);}
   table{ border-collapse:collapse; width:100%; min-width:1200px; font-size:12.8px; }
   thead th{
-    position:sticky; top:0; background:var(--navy); color:#EAF1F3; text-align:left; padding:10px 12px;
-    font-family:var(--mono); font-weight:500; font-size:11px; letter-spacing:0.03em; text-transform:uppercase;
-    cursor:pointer; user-select:none; white-space:nowrap; z-index:10; border-right:1px solid rgba(255,255,255,0.08);
+    position:sticky; top:0; background:var(--navy); color:#EAF1F3; text-align:left; padding:5px 10px;
+    font-family:var(--mono); font-weight:500; font-size:9.5px; letter-spacing:0.02em; text-transform:uppercase;
+    line-height:1.2; cursor:pointer; user-select:none; white-space:nowrap; z-index:10; border-right:1px solid rgba(255,255,255,0.08);
     border-bottom:2px solid rgba(79,209,197,0.35); transition:background .12s;
   }
   thead th:hover{background:var(--navy-deep);}
-  thead th .arrow{opacity:0.5; margin-left:4px; font-size:10px;}
+  thead th .arrow{opacity:0.5; margin-left:4px; font-size:9px;}
   thead th.sorted{background:var(--navy-deep);}
   thead th.sorted .arrow{opacity:1; color:#4FD1C5;}
   thead th.col-material{position:sticky; left:0; z-index:12;}
   thead th.col-desc{position:sticky; left:110px; z-index:12; box-shadow:2px 0 4px rgba(0,0,0,0.08);}
 
-  tbody td{ padding:8px 12px; border-bottom:1px solid var(--border-soft); white-space:nowrap; color:var(--ink); vertical-align:middle; max-width:230px; overflow:hidden; text-overflow:ellipsis; }
+  tbody td{ padding:6px 10px; border-bottom:1px solid var(--border-soft); white-space:nowrap; color:var(--ink); vertical-align:middle; max-width:230px; overflow:hidden; text-overflow:ellipsis; user-select:none; cursor:cell; }
   tbody td.wrap{white-space:normal;}
   tbody td.col-material{ position:sticky; left:0; background:inherit; z-index:5; font-family:var(--mono); font-weight:500; color:var(--navy-deep); }
   tbody td.col-desc{ position:sticky; left:110px; background:inherit; z-index:5; white-space:normal; min-width:220px; max-width:280px; box-shadow:2px 0 4px rgba(0,0,0,0.04); }
@@ -243,6 +261,7 @@
   tbody tr:hover td.col-material, tbody tr:hover td.col-desc{background:var(--teal-soft) !important;}
   tbody tr.selected{background:#DCEEED !important; box-shadow:inset 3px 0 0 var(--teal);}
   tbody tr.selected td.col-material, tbody tr.selected td.col-desc{background:#DCEEED !important;}
+  tbody td.cell-selected{ background:rgba(14,124,123,0.20) !important; box-shadow:inset 0 0 0 1px var(--teal); }
   tbody tr.suspendido td.col-material::after{
     content:'Z'; display:inline-flex; align-items:center; justify-content:center;
     width:15px; height:15px; margin-left:6px; border-radius:3px; background:var(--brick); color:#fff;
@@ -364,8 +383,11 @@
   .comp-item .c-vigente .c-vigente-label{ font-family:var(--mono); font-size:9.5px; text-transform:uppercase; letter-spacing:0.05em; opacity:0.8; }
   .comp-item .c-vigente .c-vigente-value{ color:var(--ink); font-size:12px; }
   .comp-item .c-vigente.c-vigente-hv1{ border-color:var(--violet); background:#EFEAF7; }
+  .comp-item .c-vigente.c-vigente-ok{ border-color:var(--teal); background:var(--teal-soft); color:#0A5352; }
   .hv-badge{ display:inline-flex; align-items:center; justify-content:center; padding:1px 7px; margin-left:4px; border-radius:10px; background:var(--violet); color:#fff; font-family:var(--mono); font-size:10px; font-weight:700; vertical-align:middle; }
+  .hv-badge.hv-badge-ok{ background:var(--teal); }
   .hv1-banner{ background:var(--violet-soft); border:1px solid var(--violet); color:var(--violet); font-size:12px; padding:9px 12px; border-radius:8px; margin-bottom:10px; font-weight:500; }
+  .susp-banner{ background:var(--brick-soft); border:1px solid var(--brick); color:var(--brick); font-size:12px; padding:9px 12px; border-radius:8px; margin-bottom:10px; font-weight:500; }
   tbody tr.pending-hv1 td.col-material::before{
     content:'H'; display:inline-flex; align-items:center; justify-content:center;
     width:15px; height:15px; margin-right:6px; border-radius:3px; background:var(--violet); color:#fff;
@@ -402,7 +424,10 @@
 <!-- ========================= VISTA 1: FICHERO DE MATERIALES ========================= -->
 <section class="app-view active" id="view-mm">
 
-  <header class="top">
+  <header class="top top-collapsed" id="mmHeaderTop">
+    <button class="header-toggle" id="mmHeaderToggle" title="Mostrar/ocultar detalles del encabezado" aria-label="Mostrar/ocultar detalles del encabezado">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M6 9l6 6 6-6"/></svg>
+    </button>
     <p class="eyebrow"><span class="dot"></span>MAESTRO DE MATERIALES · EXPORT SAP MM</p>
     <h1 class="title">Maestro de Materiales</h1>
     <p class="subtitle">Carga el export del maestro de materiales y organiza cada registro como una ficha consultable: vista general al frente, detalle completo al reverso.</p>
@@ -442,6 +467,10 @@
       <select id="mmFilterCreador"><option value="">Creado por: todos</option></select>
       <div class="toolbar-divider"></div>
       <button class="btn filter-btn btn-brick" id="mmToggleSuspendidos" title="Mostrar solo materiales con estado Z1/Z2/Z3 (suspendidos)">Solo suspendidos (Z)</button>
+      <button class="btn btn-primary" id="mmExportXlsx">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        Exportar XLSX
+      </button>
       <span class="count" id="mmResultCount" style="margin-left:auto; font-family:var(--mono); font-size:12px; color:var(--ink-soft); white-space:nowrap;"></span>
     </div>
   </div>
@@ -493,7 +522,10 @@
 <!-- ========================= VISTA 2: EXPLORADOR BOM ========================= -->
 <section class="app-view" id="view-bom">
 
-  <header class="top">
+  <header class="top top-collapsed" id="bomHeaderTop">
+    <button class="header-toggle" id="bomHeaderToggle" title="Mostrar/ocultar detalles del encabezado" aria-label="Mostrar/ocultar detalles del encabezado">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M6 9l6 6 6-6"/></svg>
+    </button>
     <p class="eyebrow"><span class="dot"></span>SAP · EXPORT · MAESTRO DE LISTAS DE MATERIALES</p>
     <h1 class="title">Listas de Materiales</h1>
     <p class="subtitle">Búsqueda y filtrado del maestro de listas de materiales (BOM) exportado de SAP — Planta Ate y Planta Lima. Haz clic en una lista para ver sus componentes.</p>
@@ -540,7 +572,7 @@
         <div class="filter-panel" data-panel="estado"></div>
       </div>
       <div class="filter-group" data-filter="categoria">
-        <button class="filter-btn" data-toggle="categoria">Categoría <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M6 9l6 6 6-6"/></svg></button>
+        <button class="filter-btn" data-toggle="categoria">Etapa <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M6 9l6 6 6-6"/></svg></button>
         <div class="filter-panel" data-panel="categoria"></div>
       </div>
       <div class="filter-group" data-filter="unidad">
@@ -559,6 +591,9 @@
 
       <button id="bomToggleOmitInactivos" class="filter-btn btn-brick" title="Excluir registros con Estado = Inactivo">Omitir Inactivos</button>
 
+      <button id="bomToggleHv1Pendiente" class="filter-btn" title="Mostrar solo listas cuyos componentes aún referencian el código antiguo de un material Hv.1 (pendientes de actualizar)" style="border-color:var(--violet);">Pendientes Hv.1</button>
+      <button id="bomToggleHv1Actualizada" class="filter-btn" title="Mostrar solo listas cuyos componentes ya referencian directamente el material Hv.1 (ya actualizadas)" style="border-color:var(--violet);">Actualizadas Hv.1</button>
+
       <div class="toolbar-divider"></div>
 
       <button class="btn btn-ghost" id="bomToggleMoreFilters">Más filtros</button>
@@ -566,6 +601,10 @@
       <button class="btn btn-primary" id="bomExportCsv">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
         Exportar CSV
+      </button>
+      <button class="btn btn-primary" id="bomExportXlsx">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        Exportar XLSX
       </button>
     </div>
 
@@ -588,7 +627,7 @@
   </div>
 
   <main class="view-main">
-    <div class="table-wrap">
+    <div class="table-wrap" id="bomTableWrap">
       <table id="bomDataTable">
         <thead><tr id="bomHeaderRow"></tr></thead>
         <tbody id="bomTableBody"></tbody>
@@ -668,6 +707,15 @@ function isSuspendedCode(v){
   }
   tabBtnMM.addEventListener('click', function(){ activate('mm'); });
   tabBtnBOM.addEventListener('click', function(){ activate('bom'); });
+
+  ['mm', 'bom'].forEach(function(prefix){
+    var header = document.getElementById(prefix + 'HeaderTop');
+    var toggle = document.getElementById(prefix + 'HeaderToggle');
+    if(!header || !toggle) return;
+    toggle.addEventListener('click', function(){
+      header.classList.toggle('top-collapsed');
+    });
+  });
 })();
 </script>
 
@@ -690,7 +738,116 @@ function isSuspendedCode(v){
   }catch(e){
     console.error('Error inicializando Supabase', e);
   }
+
+  /* Trae TODAS las filas de una tabla, paginando en bloques de 1000 (el límite
+     por defecto que aplica Supabase/PostgREST a cada respuesta) hasta agotar
+     los resultados, en vez de quedarse solo con el primer bloque. */
+  window.__sbFetchAll = async function(table, selectCols){
+    if(!window.__sb) return [];
+    var pageSize = 1000;
+    var from = 0;
+    var all = [];
+    while(true){
+      var res = await window.__sb.from(table).select(selectCols).order('id', {ascending:true}).range(from, from + pageSize - 1);
+      if(res.error){ console.error('Supabase select error ('+table+')', res.error); break; }
+      var batch = res.data || [];
+      all = all.concat(batch);
+      if(batch.length < pageSize) break;
+      from += pageSize;
+    }
+    return all;
+  };
 })();
+</script>
+
+<script>
+/* ============================================================
+   SELECCIÓN DE CELDAS ESTILO EXCEL (compartido por ambas tablas)
+   Arrastrar con el click presionado selecciona un rango de celdas;
+   Ctrl+C (o Cmd+C) copia ese rango como texto separado por tabs,
+   listo para pegar en Excel.
+   ============================================================ */
+window.__setupCellRangeSelection = function(container){
+  if(!container) return { wasDragged: function(){ return false; } };
+  var selecting = false;
+  var dragged = false;
+  var startR = null, startC = null, endR = null, endC = null;
+
+  function clearSelection(){
+    var sel = container.querySelectorAll('td.cell-selected');
+    for(var i=0; i<sel.length; i++){ sel[i].classList.remove('cell-selected'); }
+  }
+  function applySelection(){
+    clearSelection();
+    if(startR===null) return;
+    var r1 = Math.min(startR, endR), r2 = Math.max(startR, endR);
+    var c1 = Math.min(startC, endC), c2 = Math.max(startC, endC);
+    var cells = container.querySelectorAll('tbody td[data-r]');
+    for(var i=0; i<cells.length; i++){
+      var td = cells[i];
+      var r = parseInt(td.getAttribute('data-r'), 10);
+      var c = parseInt(td.getAttribute('data-c'), 10);
+      if(r>=r1 && r<=r2 && c>=c1 && c<=c2){ td.classList.add('cell-selected'); }
+    }
+  }
+
+  container.addEventListener('mousedown', function(e){
+    if(e.button !== 0) return;
+    var td = e.target.closest('td[data-r]');
+    if(!td) return;
+    selecting = true;
+    dragged = false;
+    startR = parseInt(td.getAttribute('data-r'), 10);
+    startC = parseInt(td.getAttribute('data-c'), 10);
+    endR = startR; endC = startC;
+    applySelection();
+  });
+  container.addEventListener('mousemove', function(e){
+    if(!selecting) return;
+    var td = e.target.closest('td[data-r]');
+    if(!td) return;
+    var r = parseInt(td.getAttribute('data-r'), 10);
+    var c = parseInt(td.getAttribute('data-c'), 10);
+    if(r !== endR || c !== endC){
+      dragged = true;
+      endR = r; endC = c;
+      applySelection();
+    }
+  });
+  document.addEventListener('mouseup', function(){
+    selecting = false;
+  });
+
+  document.addEventListener('keydown', function(e){
+    var isCopy = (e.key==='c' || e.key==='C') && (e.ctrlKey || e.metaKey);
+    if(!isCopy) return;
+    var selectedTds = container.querySelectorAll('td.cell-selected');
+    if(selectedTds.length===0) return;
+    var r1=Infinity, r2=-Infinity, c1=Infinity, c2=-Infinity;
+    for(var i=0; i<selectedTds.length; i++){
+      var td = selectedTds[i];
+      var r = parseInt(td.getAttribute('data-r'), 10), c = parseInt(td.getAttribute('data-c'), 10);
+      if(r<r1) r1=r; if(r>r2) r2=r; if(c<c1) c1=c; if(c>c2) c2=c;
+    }
+    var lines = [];
+    for(var r=r1; r<=r2; r++){
+      var vals = [];
+      for(var c=c1; c<=c2; c++){
+        var cell = container.querySelector('tbody td[data-r="'+r+'"][data-c="'+c+'"]');
+        vals.push(cell ? cell.innerText.trim() : '');
+      }
+      lines.push(vals.join('\t'));
+    }
+    var text = lines.join('\n');
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(text).catch(function(){});
+    }
+  });
+
+  return {
+    wasDragged: function(){ return dragged; }
+  };
+};
 </script>
 
 <script>
@@ -758,6 +915,8 @@ function isSuspendedCode(v){
       dMat = $('mmDMat'), dName = $('mmDName'), dStamp = $('mmDStamp'), drawerClose = $('mmDrawerClose'),
       toggleSuspendidos = $('mmToggleSuspendidos'), tabBadgeMM = $('tabBadgeMM');
 
+  var mmCellSelection = window.__setupCellRangeSelection(tableWrap);
+
   btnSelect.addEventListener('click', function(){ fileInput.click(); });
   btnChange.addEventListener('click', function(){ fileInput.click(); });
   dropzone.addEventListener('click', function(){ fileInput.click(); });
@@ -782,6 +941,25 @@ function isSuspendedCode(v){
     state.onlySuspendidos = !state.onlySuspendidos;
     toggleSuspendidos.classList.toggle('active', state.onlySuspendidos);
     applyFilters();
+  });
+
+  $('mmExportXlsx').addEventListener('click', function(){
+    if(state.rows.length === 0){
+      alert('No hay datos para exportar. Carga un archivo Excel primero.');
+      return;
+    }
+    var headers = SUMMARY_COLS.map(function(c){ return c.label; });
+    var aoa = [headers];
+    state.filtered.forEach(function(r){
+      aoa.push(SUMMARY_COLS.map(function(c){
+        var v = r[c.key];
+        return (v==null) ? '' : v;
+      }));
+    });
+    var ws = XLSX.utils.aoa_to_sheet(aoa);
+    var wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Maestro de Materiales');
+    XLSX.writeFile(wb, 'maestro_materiales_filtrado_' + new Date().toISOString().slice(0,10) + '.xlsx');
   });
 
   function showError(msg){ dzError.textContent = msg; dzError.style.display = 'block'; }
@@ -845,16 +1023,29 @@ function isSuspendedCode(v){
 
   /* Cruce de código antiguo (Nro. antiguo de material) -> material vigente (Material) y su
      descripción (Texto Material), para que Listas de Materiales pueda resolver componentes
-     referenciados por su código antiguo. Se publica en window para que la app BOM lo consuma. */
+     referenciados por su código antiguo. También publica Material -> Estado (detecta Z) y
+     Material -> Texto Material (detecta si un componente ya referencia directamente el
+     material Hv.1, es decir que esa lista ya fue actualizada). Todo se publica en window
+     para que la app BOM lo consuma. */
   function buildOldCodeMap(){
     var map = {};
+    var estadoMap = {};
+    var textoMap = {};
     state.rows.forEach(function(r){
       var old = (r['Nro. antiguo de material']||'').toString().trim();
-      if(!old) return;
-      if(!map[old]) map[old] = [];
-      map[old].push({ material: r['Material'], texto: r['Texto Material'] || r['Denom.estándar'] || '' });
+      if(old){
+        if(!map[old]) map[old] = [];
+        map[old].push({ material: r['Material'], texto: r['Texto Material'] || r['Denom.estándar'] || '' });
+      }
+      var matKey = (r['Material']||'').toString().trim();
+      if(matKey){
+        estadoMap[matKey] = r['Estado mat.todos ce'];
+        textoMap[matKey] = r['Texto Material'] || r['Denom.estándar'] || '';
+      }
     });
     window.MM_OLDCODE_MAP = map;
+    window.MM_ESTADO_MAP = estadoMap;
+    window.MM_TEXTO_MAP = textoMap;
     if(window.__refreshBomView){
       try{ window.__refreshBomView(); }catch(e){}
     }
@@ -882,33 +1073,40 @@ function isSuspendedCode(v){
 
   async function saveToSupabaseMM(){
     if(!window.__sb) return;
+    var cargaId = 'c' + Date.now() + '_' + Math.random().toString(36).slice(2,8);
     try{
-      await window.__sb.from('mm_materiales').delete().neq('id', -1);
       var records = state.rows.map(function(r){
         return {
           material: String(r['Material']||''),
           texto_material: String(r['Texto Material']||''),
           old_code: String(r['Nro. antiguo de material']||''),
-          data: r
+          data: r,
+          carga_id: cargaId
         };
       });
       for(var i=0; i<records.length; i+=500){
         var chunk = records.slice(i, i+500);
         var res = await window.__sb.from('mm_materiales').insert(chunk);
-        if(res.error){ console.error('Supabase insert mm_materiales error', res.error); break; }
+        if(res.error){
+          console.error('Supabase insert mm_materiales error', res.error);
+          alert('No se pudo guardar el Maestro de Materiales en Supabase (los datos que ya estaban guardados NO se perdieron). Detalle: ' + res.error.message);
+          return;
+        }
       }
+      var delRes = await window.__sb.from('mm_materiales').delete().neq('carga_id', cargaId);
+      if(delRes.error){ console.error('Supabase delete (limpieza carga anterior) mm_materiales error', delRes.error); }
     }catch(e){
       console.error('Error guardando Maestro de Materiales en Supabase', e);
+      alert('No se pudo guardar el Maestro de Materiales en Supabase (los datos que ya estaban guardados NO se perdieron). Revisa la consola para más detalle.');
     }
   }
 
   async function loadFromSupabaseMM(){
     if(!window.__sb) return false;
     try{
-      var res = await window.__sb.from('mm_materiales').select('data').order('id', {ascending:true});
-      if(res.error){ console.error('Supabase select mm_materiales error', res.error); return false; }
-      if(!res.data || res.data.length===0) return false;
-      var rows = res.data.map(function(r){ return r.data; });
+      var data = await window.__sbFetchAll('mm_materiales', 'data');
+      if(!data || data.length===0) return false;
+      var rows = data.map(function(r){ return r.data; });
       state.headers = Object.keys(rows[0]);
       state.rows = rows;
       onDataLoaded('Datos guardados en Supabase', {skipSave:true});
@@ -1017,7 +1215,7 @@ function isSuspendedCode(v){
     if(total === 0){
       tbody.innerHTML = '<tr class="no-results"><td colspan="'+SUMMARY_COLS.length+'"><div style="text-align:center;padding:50px 20px;color:var(--ink-faint);font-size:13.5px;">Ningún material coincide con estos filtros. Ajusta la búsqueda o limpia los filtros.</div></td></tr>';
     } else {
-      tbody.innerHTML = pageRows.map(function(r){
+      tbody.innerHTML = pageRows.map(function(r, ri){
         var flag = (r['Ind.Borrado']||'').toString().trim().toUpperCase() === 'X';
         var suspendido = isSuspendedCode(r['Estado mat.todos ce']);
         var cells = SUMMARY_COLS.map(function(c, ci){
@@ -1037,13 +1235,14 @@ function isSuspendedCode(v){
           }
           if(ci===0 && flag){ content = '<span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--brick);margin-right:6px;vertical-align:middle;" title="Marcado para borrado"></span>' + content; }
           var cls = c.cls ? ' class="'+c.cls+'"' : '';
-          return '<td'+cls+' title="'+escapeAttr(display)+'">'+content+'</td>';
+          return '<td'+cls+' data-r="'+ri+'" data-c="'+ci+'" title="'+escapeAttr(display)+'">'+content+'</td>';
         }).join('');
         return '<tr data-mat="'+escapeAttr(r['Material'])+'"'+(suspendido?' class="suspendido"':'')+'>'+cells+'</tr>';
       }).join('');
 
       Array.prototype.forEach.call(tbody.querySelectorAll('tr[data-mat]'), function(tr){
         tr.addEventListener('click', function(){
+          if(mmCellSelection.wasDragged()) return;
           var mat = tr.getAttribute('data-mat');
           var row = state.filtered.find(function(r){ return String(r['Material']) === mat; });
           if(row) openDrawer(row);
@@ -1146,6 +1345,7 @@ function isSuspendedCode(v){
   let searchTerm = '';
   let filterMM = false;
   let filterOmitInactivos = false;
+  let filterHv1 = null; // null | 'pendiente' | 'actualizada'
   let sortCol = null;
   let sortDir = 1;
   let currentPage = 1;
@@ -1180,6 +1380,23 @@ function isSuspendedCode(v){
 
   function isHv1(texto){
     return typeof texto === 'string' && /HV\.?\s*1\s*$/i.test(texto.trim());
+  }
+
+  /* Estado del material según el Maestro de Materiales (window.MM_ESTADO_MAP, publicado por
+     esa app). Permite detectar materiales suspendidos (Z1/Z2/Z3…) aunque el propio registro
+     de la lista de materiales no traiga ese estado. */
+  function estadoEnMaestro(material){
+    const map = window.MM_ESTADO_MAP;
+    if(!map) return undefined;
+    const key = String(material||'').trim();
+    if(!key) return undefined;
+    return map[key];
+  }
+
+  function isRowSuspendida(row){
+    if(isSuspendedCode(estadoCodeOf(row))) return true;
+    const material = iMaterial !== -1 ? row[iMaterial] : '';
+    return isSuspendedCode(estadoEnMaestro(material));
   }
 
   document.getElementById('bomLoadExcelBtn').addEventListener('click', ()=>{
@@ -1310,32 +1527,39 @@ function isSuspendedCode(v){
   /* ---------- Persistencia en Supabase: Listas de Materiales (BOM) ---------- */
   async function saveBomToSupabase(jsonDataArr){
     if(!window.__sb) return;
+    const cargaId = 'c' + Date.now() + '_' + Math.random().toString(36).slice(2,8);
     try{
-      await window.__sb.from('mm_bom').delete().neq('id', -1);
       const records = jsonDataArr.map(row => ({
         material: String(row['Material']||''),
         lista_alt: String(row['Lista mat.alternat.']??''),
         centro: String(row['Centro-instalación']||''),
         estado: String(row['Stat.txt.breve']||row['Estado de LMat']||''),
-        data: row
+        data: row,
+        carga_id: cargaId
       }));
       for(let i=0; i<records.length; i+=500){
         const chunk = records.slice(i, i+500);
         const res = await window.__sb.from('mm_bom').insert(chunk);
-        if(res.error){ console.error('Supabase insert mm_bom error', res.error); break; }
+        if(res.error){
+          console.error('Supabase insert mm_bom error', res.error);
+          alert('No se pudo guardar Listas de Materiales en Supabase (los datos que ya estaban guardados NO se perdieron). Detalle: ' + res.error.message);
+          return;
+        }
       }
+      const delRes = await window.__sb.from('mm_bom').delete().neq('carga_id', cargaId);
+      if(delRes.error){ console.error('Supabase delete (limpieza carga anterior) mm_bom error', delRes.error); }
     }catch(e){
       console.error('Error guardando Listas de Materiales en Supabase', e);
+      alert('No se pudo guardar Listas de Materiales en Supabase (los datos que ya estaban guardados NO se perdieron). Revisa la consola para más detalle.');
     }
   }
 
   async function loadBomFromSupabase(){
     if(!window.__sb) return false;
     try{
-      const res = await window.__sb.from('mm_bom').select('data').order('id', {ascending:true});
-      if(res.error){ console.error('Supabase select mm_bom error', res.error); return false; }
-      if(!res.data || res.data.length===0) return false;
-      const jsonDataArr = res.data.map(r=>r.data);
+      const data = await window.__sbFetchAll('mm_bom', 'data');
+      if(!data || data.length===0) return false;
+      const jsonDataArr = data.map(r=>r.data);
       COLUMNS = Object.keys(jsonDataArr[0]);
       const colMaterial = COLUMNS.indexOf('Material');
       const colCentro = COLUMNS.indexOf('Centro-instalación');
@@ -1352,31 +1576,38 @@ function isSuspendedCode(v){
   /* ---------- Persistencia en Supabase: Componentes ---------- */
   async function saveComponentesToSupabase(jsonDataArr){
     if(!window.__sb) return;
+    const cargaId = 'c' + Date.now() + '_' + Math.random().toString(36).slice(2,8);
     try{
-      await window.__sb.from('mm_bom_componentes').delete().neq('id', -1);
       const records = jsonDataArr.map(row => ({
         material: String(row['Material']||''),
         lista_alt: String(row['Lista mat.alternat.']??''),
         componente: String(row['Componente']||''),
-        data: row
+        data: row,
+        carga_id: cargaId
       }));
       for(let i=0; i<records.length; i+=500){
         const chunk = records.slice(i, i+500);
         const res = await window.__sb.from('mm_bom_componentes').insert(chunk);
-        if(res.error){ console.error('Supabase insert mm_bom_componentes error', res.error); break; }
+        if(res.error){
+          console.error('Supabase insert mm_bom_componentes error', res.error);
+          alert('No se pudo guardar Componentes en Supabase (los datos que ya estaban guardados NO se perdieron). Detalle: ' + res.error.message);
+          return;
+        }
       }
+      const delRes = await window.__sb.from('mm_bom_componentes').delete().neq('carga_id', cargaId);
+      if(delRes.error){ console.error('Supabase delete (limpieza carga anterior) mm_bom_componentes error', delRes.error); }
     }catch(e){
       console.error('Error guardando Componentes en Supabase', e);
+      alert('No se pudo guardar Componentes en Supabase (los datos que ya estaban guardados NO se perdieron). Revisa la consola para más detalle.');
     }
   }
 
   async function loadComponentesFromSupabase(){
     if(!window.__sb) return false;
     try{
-      const res = await window.__sb.from('mm_bom_componentes').select('data').order('id', {ascending:true});
-      if(res.error){ console.error('Supabase select mm_bom_componentes error', res.error); return false; }
-      if(!res.data || res.data.length===0) return false;
-      const jsonDataArr = res.data.map(r=>r.data);
+      const data = await window.__sbFetchAll('mm_bom_componentes', 'data');
+      if(!data || data.length===0) return false;
+      const jsonDataArr = data.map(r=>r.data);
 
       COMP_COLUMNS = Object.keys(jsonDataArr[0]);
       COMP_ROWS = jsonDataArr.map(row => COMP_COLUMNS.map(col => row[col] ?? ''));
@@ -1437,13 +1668,35 @@ function isSuspendedCode(v){
     const material = iMaterial !== -1 ? row[iMaterial] : '';
     const altVal = iAlt !== -1 ? row[iAlt] : '';
     const comps = getComponentsFor(material, altVal);
+    const compCodes = new Set(comps.map(c => String(c[cComponente]||'').trim()));
     for(const c of comps){
       const matches = getOldCodeMatches(c[cComponente]);
       if(matches){
         for(const m of matches){
-          if(isHv1(m.texto)) return true;
+          if(isHv1(m.texto)){
+            // Si el material vigente YA figura como componente en otra posición de esta
+            // misma lista (típico en cajas/cintas de embalaje), la lista ya está
+            // actualizada aunque conserve también el código antiguo — no es pendiente.
+            const vigenteCode = String(m.material||'').trim();
+            if(!compCodes.has(vigenteCode)) return true;
+          }
         }
       }
+    }
+    return false;
+  }
+
+  /* true cuando algún componente de la lista ya referencia directamente (por su propio
+     código, no por el código antiguo) un material cuya descripción en el Maestro termina
+     en Hv.1 — es decir, esa lista ya fue actualizada con material Humanova. */
+  function hasHv1Updated(row){
+    if(!window.MM_TEXTO_MAP) return false;
+    const material = iMaterial !== -1 ? row[iMaterial] : '';
+    const altVal = iAlt !== -1 ? row[iAlt] : '';
+    const comps = getComponentsFor(material, altVal);
+    for(const c of comps){
+      const texto = window.MM_TEXTO_MAP[String(c[cComponente]||'').trim()];
+      if(isHv1(texto)) return true;
     }
     return false;
   }
@@ -1460,6 +1713,9 @@ function isSuspendedCode(v){
     document.getElementById('bomToggleMM').classList.remove('active');
     filterOmitInactivos = false;
     document.getElementById('bomToggleOmitInactivos').classList.remove('active');
+    filterHv1 = null;
+    document.getElementById('bomToggleHv1Pendiente').classList.remove('active-hv1');
+    document.getElementById('bomToggleHv1Actualizada').classList.remove('active-hv1');
     sortCol = null;
     sortDir = 1;
     currentPage = 1;
@@ -1509,16 +1765,16 @@ function isSuspendedCode(v){
     addCol(iDesc, 'Descripción', 'col-desc');
     addCol(iCentro, 'Centro', '', 'centro');
     addCol(iEstado, 'Estado', '', 'estado');
-    addCol(iTexto, 'Categoría (Texto alternativa)');
+    addCol(iTexto, 'Etapa');
     addCol(iAlt, 'Lista alt.');
-    addCol(iCant, 'Cantidad base', '', 'num');
+    addCol(iCant, 'Cant. base', '', 'num');
     addCol(iUM, 'Unidad');
-    addCol(iUtil, 'Utilización');
+    addCol(iUtil, 'Utiliz.');
     addCol(iCreadoEl, 'Creado el', '', 'date');
     addCol(iCreadoPor, 'Creado por');
     addCol(iValidoDe, 'Válido de', '', 'date');
-    addCol(iModEl, 'Modificado el', '', 'date');
-    addCol(iModPor, 'Modificado por');
+    addCol(iModEl, 'Modif. el', '', 'date');
+    addCol(iModPor, 'Modif. por');
     addCol(iNumMod, 'N.º modificación');
   }
 
@@ -1532,7 +1788,7 @@ function isSuspendedCode(v){
 
     addFilter('centro', iCentro, 'Centro');
     addFilter('estado', iEstado, 'Estado');
-    addFilter('categoria', iTexto, 'Categoría');
+    addFilter('categoria', iTexto, 'Etapa');
     addFilter('unidad', iUM, 'Unidad medida');
     addFilter('creadopor', iCreadoPor, 'Creado por');
     addFilter('utilizacion', iUtil, 'Utilización');
@@ -1587,8 +1843,18 @@ function isSuspendedCode(v){
     return String(v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
   }
 
+  /* Reconoce la planta tanto por el texto ("PLANTA ATE"/"PLANTA LIMA") como por el
+     código numérico de centro (Ate = 1020, Lima = 1021), según venga en el export. */
+  function centroKind(v){
+    const s = String(v||'').trim().toUpperCase();
+    if(s==='PLANTA ATE' || s==='1020') return 'ATE';
+    if(s==='PLANTA LIMA' || s==='1021') return 'LIMA';
+    return null;
+  }
+
   function centroBadge(v){
-    const cls = v==='PLANTA ATE' ? 'badge-ate' : (v==='PLANTA LIMA' ? 'badge-lima' : '');
+    const kind = centroKind(v);
+    const cls = kind==='ATE' ? 'badge-ate' : (kind==='LIMA' ? 'badge-lima' : '');
     return `<span class="badge ${cls}"><span class="dot"></span>${esc(v)||'—'}</span>`;
   }
 
@@ -1616,6 +1882,8 @@ function isSuspendedCode(v){
     if(filterOmitInactivos) {
       if(iEstado !== -1 && String(row[iEstado]||'').trim().toLowerCase() === 'inactivo') return false;
     }
+    if(filterHv1 === 'pendiente' && !hasHv1Pending(row)) return false;
+    if(filterHv1 === 'actualizada' && !hasHv1Updated(row)) return false;
 
     for(const def of FILTER_DEFS) {
       if(def.key === exceptKey) continue;
@@ -1713,17 +1981,20 @@ function isSuspendedCode(v){
       return;
     }
     emptyState.style.display = 'none';
-    tableBody.innerHTML = pageRows.map((row)=>{
-      const cells = TABLE_COLS.map(col=>`<td class="${col.cls||''}">${renderCell(col,row)}</td>`).join('');
+    tableBody.innerHTML = pageRows.map((row, ri)=>{
+      const cells = TABLE_COLS.map((col, ci)=>`<td class="${col.cls||''}" data-r="${ri}" data-c="${ci}">${renderCell(col,row)}</td>`).join('');
       const hasComp = COMP_MAP.size>0 && getComponentsFor(row[iMaterial], iAlt!==-1?row[iAlt]:'').length>0;
-      const suspendido = isSuspendedCode(estadoCodeOf(row));
+      const suspendido = isRowSuspendida(row);
       const pendingHv1 = hasComp && hasHv1Pending(row);
       const rowClasses = [hasComp?'has-comp':'', suspendido?'suspendido':'', pendingHv1?'pending-hv1':''].filter(Boolean).join(' ');
       return `<tr data-ridx="${row.__ridx}" class="${rowClasses}">${cells}</tr>`;
     }).join('');
   }
 
+  const bomCellSelection = window.__setupCellRangeSelection(document.getElementById('bomTableWrap'));
+
   tableBody.addEventListener('click', (e)=>{
+    if(bomCellSelection.wasDragged()) return;
     const tr = e.target.closest('tr');
     if(!tr) return;
     const ridx = parseInt(tr.getAttribute('data-ridx'),10);
@@ -1753,10 +2024,10 @@ function isSuspendedCode(v){
     tabBadgeBOM.textContent = ROWS.length.toLocaleString('es-PE');
     const activos = iEstado !== -1 ? filtered.filter(r=>r[iEstado]==='Activo').length : 0;
     const inactivos = filtered.length - activos;
-    const ate = iCentro !== -1 ? filtered.filter(r=>r[iCentro]==='PLANTA ATE').length : 0;
-    const lima = iCentro !== -1 ? filtered.filter(r=>r[iCentro]==='PLANTA LIMA').length : 0;
+    const ate = iCentro !== -1 ? filtered.filter(r=>centroKind(r[iCentro])==='ATE').length : 0;
+    const lima = iCentro !== -1 ? filtered.filter(r=>centroKind(r[iCentro])==='LIMA').length : 0;
     const uniqueMats = iMaterial !== -1 ? new Set(filtered.map(r=>r[iMaterial])).size : 0;
-    const suspendidos = filtered.filter(r=>isSuspendedCode(estadoCodeOf(r))).length;
+    const suspendidos = filtered.filter(r=>isRowSuspendida(r)).length;
     const pendientesHv1 = (window.MM_OLDCODE_MAP && COMP_MAP.size>0) ? filtered.filter(r=>hasHv1Pending(r)).length : 0;
     document.getElementById('bomStatActivos').textContent = activos.toLocaleString('es-PE');
     document.getElementById('bomStatInactivos').textContent = inactivos.toLocaleString('es-PE');
@@ -1782,6 +2053,11 @@ function isSuspendedCode(v){
 
     const omitBtn = document.getElementById('bomToggleOmitInactivos');
     if(omitBtn) omitBtn.classList.toggle('active', filterOmitInactivos);
+
+    const hv1PendBtn = document.getElementById('bomToggleHv1Pendiente');
+    if(hv1PendBtn) hv1PendBtn.classList.toggle('active-hv1', filterHv1==='pendiente');
+    const hv1ActBtn = document.getElementById('bomToggleHv1Actualizada');
+    if(hv1ActBtn) hv1ActBtn.classList.toggle('active-hv1', filterHv1==='actualizada');
 
     const compBtn = document.getElementById('bomLoadComponentesBtn');
     if(compBtn){
@@ -1835,8 +2111,6 @@ function isSuspendedCode(v){
       renderFilterPanel(def, subset);
     });
 
-    document.querySelectorAll('#view-bom .filter-panel.open').forEach(p => p.classList.remove('open'));
-
     const totalPages = Math.max(1, Math.ceil(sorted.length / pageSize));
     if(currentPage===Infinity || currentPage>totalPages) currentPage = totalPages;
     const start = (currentPage-1)*pageSize;
@@ -1881,6 +2155,8 @@ function isSuspendedCode(v){
       `;
     }
 
+    const compCodes = new Set(comps.map(c => String(c[cComponente]||'').trim()));
+
     const groups = new Map();
     comps.forEach(c=>{
       const pos = cPos!==-1 ? String(c[cPos]||'—') : '—';
@@ -1901,9 +2177,12 @@ function isSuspendedCode(v){
         const matches = getOldCodeMatches(codigoRaw);
         const vigenteHtml = matches ? matches.map(m=>{
           const hv = isHv1(m.texto);
-          return `<div class="c-vigente${hv?' c-vigente-hv1':''}">
+          const yaPresente = hv && compCodes.has(String(m.material||'').trim());
+          let tag = '';
+          if(hv){ tag = yaPresente ? `<span class="hv-badge hv-badge-ok">Hv.1 · ya en la lista</span>` : `<span class="hv-badge">Hv.1 · pendiente</span>`; }
+          return `<div class="c-vigente${hv?(yaPresente?' c-vigente-ok':' c-vigente-hv1'):''}">
             <span class="c-vigente-label">Código antiguo → material vigente</span>
-            <span class="c-vigente-value"><strong>${esc(m.material)}</strong> — ${esc(m.texto)}${hv?`<span class="hv-badge">Hv.1</span>`:''}</span>
+            <span class="c-vigente-value"><strong>${esc(m.material)}</strong> — ${esc(m.texto)}${tag}</span>
           </div>`;
         }).join('') : '';
         return `
@@ -1927,10 +2206,7 @@ function isSuspendedCode(v){
       `;
     }).join('');
 
-    const pendingHv1 = comps.some(c=>{
-      const matches = getOldCodeMatches(c[cComponente]);
-      return matches && matches.some(m=>isHv1(m.texto));
-    });
+    const pendingHv1 = hasHv1Pending(row);
     const noCrossRefHint = !window.MM_OLDCODE_MAP
       ? `<div class="comp-empty" style="margin-bottom:10px;">Carga el Maestro de Materiales para cruzar los códigos antiguos de estos componentes con su material vigente.</div>`
       : '';
@@ -1952,13 +2228,25 @@ function isSuspendedCode(v){
     document.getElementById('bomDrawerMaterial').textContent = iMaterial !== -1 ? row[iMaterial] : '—';
     document.getElementById('bomDrawerDesc').textContent = iDesc !== -1 ? row[iDesc] : '—';
 
+    const pendingHv1 = hasHv1Pending(row);
+    const materialCode = iMaterial !== -1 ? row[iMaterial] : '';
+    const ownEstado = estadoCodeOf(row);
+    const maestroEstado = estadoEnMaestro(materialCode);
+    const suspendidoOwn = isSuspendedCode(ownEstado);
+    const suspendidoMaestro = isSuspendedCode(maestroEstado);
+
     const bomDStamp = document.getElementById('bomDStamp');
     if(bomDStamp){
-      if(hasHv1Pending(row)){
+      if(pendingHv1){
         bomDStamp.style.display = 'block';
         bomDStamp.textContent = 'Hv.1';
         bomDStamp.style.borderColor = 'var(--violet)';
         bomDStamp.style.color = 'var(--violet)';
+      } else if(suspendidoOwn || suspendidoMaestro){
+        bomDStamp.style.display = 'block';
+        bomDStamp.textContent = suspendidoOwn ? String(ownEstado) : String(maestroEstado);
+        bomDStamp.style.borderColor = 'var(--brick)';
+        bomDStamp.style.color = 'var(--brick)';
       } else {
         bomDStamp.style.display = 'none';
       }
@@ -2005,7 +2293,11 @@ function isSuspendedCode(v){
       </div>
     `).join('');
 
-    document.getElementById('bomDrawerBody').innerHTML = groupsHtml + renderComponentesSection(row);
+    const suspBanner = (suspendidoOwn || suspendidoMaestro)
+      ? `<div class="susp-banner">Este material figura con estado <strong>${esc(suspendidoOwn?ownEstado:maestroEstado)}</strong> (suspendido)${(suspendidoMaestro && !suspendidoOwn)?' según el Maestro de Materiales':''}.</div>`
+      : '';
+
+    document.getElementById('bomDrawerBody').innerHTML = suspBanner + groupsHtml + renderComponentesSection(row);
 
     const drawerLoadCompBtn = document.getElementById('bomDrawerLoadCompBtn');
     if(drawerLoadCompBtn){
@@ -2053,6 +2345,27 @@ function isSuspendedCode(v){
     URL.revokeObjectURL(url);
   });
 
+  document.getElementById('bomExportXlsx').addEventListener('click', ()=>{
+    if(ROWS.length === 0) {
+      alert('No hay datos para exportar. Carga un archivo Excel primero.');
+      return;
+    }
+    const filtered = window.__bomLastFiltered || getFiltered();
+    const headers = TABLE_COLS.map(c=>c.label);
+    const aoa = [headers];
+    filtered.forEach(row=>{
+      aoa.push(TABLE_COLS.map(c=>{
+        let v = row[c.i];
+        if(v===null||v===undefined) v='';
+        return v;
+      }));
+    });
+    const ws = XLSX.utils.aoa_to_sheet(aoa);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Listas de Materiales');
+    XLSX.writeFile(wb, `bom_export_filtrado_${new Date().toISOString().slice(0,10)}.xlsx`);
+  });
+
   document.querySelectorAll('#view-bom [data-toggle]').forEach(btn=>{
     btn.addEventListener('click', (e)=>{
       e.stopPropagation();
@@ -2067,6 +2380,11 @@ function isSuspendedCode(v){
   document.addEventListener('click', (e)=>{
     if(e.target.closest('#view-bom .filter-group')) return;
     document.querySelectorAll('#view-bom .filter-panel.open').forEach(p=>p.classList.remove('open'));
+  });
+  document.addEventListener('keydown', (e)=>{
+    if(e.key==='Escape'){
+      document.querySelectorAll('#view-bom .filter-panel.open').forEach(p=>p.classList.remove('open'));
+    }
   });
   document.querySelectorAll('#view-bom .filter-panel').forEach(p=>p.addEventListener('click', e=>e.stopPropagation()));
 
@@ -2135,6 +2453,18 @@ function isSuspendedCode(v){
       currentPage = 1;
       updateAll();
     }
+
+    if(e.target.closest('#bomToggleHv1Pendiente')) {
+      filterHv1 = (filterHv1==='pendiente') ? null : 'pendiente';
+      currentPage = 1;
+      updateAll();
+    }
+
+    if(e.target.closest('#bomToggleHv1Actualizada')) {
+      filterHv1 = (filterHv1==='actualizada') ? null : 'actualizada';
+      currentPage = 1;
+      updateAll();
+    }
   });
 
   document.getElementById('bomToggleMoreFilters').addEventListener('click', ()=>{
@@ -2157,6 +2487,9 @@ function isSuspendedCode(v){
     document.getElementById('bomToggleMM').classList.remove('active');
     filterOmitInactivos = false;
     document.getElementById('bomToggleOmitInactivos').classList.remove('active');
+    filterHv1 = null;
+    document.getElementById('bomToggleHv1Pendiente').classList.remove('active-hv1');
+    document.getElementById('bomToggleHv1Actualizada').classList.remove('active-hv1');
     currentPage=1;
     updateAll();
   }

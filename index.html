@@ -1857,10 +1857,19 @@ window.__setupCellRangeSelection = function(container){
     return COMP_MAP.get(key) || [];
   }
 
+  /* Las alternativas de lista de 2 dígitos que empiezan por 6 (66, 67, 68, 69…) son en sí
+     mismas listas de materiales de CONCILIACIÓN — no deben marcarse como pendientes de
+     Hv.1 ni de conciliación, sin importar qué código antiguo referencien sus componentes. */
+  function isConciliacionAltList(altVal){
+    const s = String(altVal===null||altVal===undefined?'':altVal).trim();
+    return /^6\d$/.test(s);
+  }
+
   function hasHv1Pending(row){
     if(!window.MM_OLDCODE_MAP) return false;
-    const material = iMaterial !== -1 ? row[iMaterial] : '';
     const altVal = iAlt !== -1 ? row[iAlt] : '';
+    if(isConciliacionAltList(altVal)) return false;
+    const material = iMaterial !== -1 ? row[iMaterial] : '';
     const comps = getComponentsFor(material, altVal);
     const compCodes = new Set(comps.map(c => String(c[cComponente]||'').trim()));
     for(const c of comps){
@@ -1885,8 +1894,9 @@ window.__setupCellRangeSelection = function(container){
      en Hv.1 — es decir, esa lista ya fue actualizada con material Humanova. */
   function hasHv1Updated(row){
     if(!window.MM_TEXTO_MAP) return false;
-    const material = iMaterial !== -1 ? row[iMaterial] : '';
     const altVal = iAlt !== -1 ? row[iAlt] : '';
+    if(isConciliacionAltList(altVal)) return false;
+    const material = iMaterial !== -1 ? row[iMaterial] : '';
     const comps = getComponentsFor(material, altVal);
     for(const c of comps){
       const texto = window.MM_TEXTO_MAP[String(c[cComponente]||'').trim()];
@@ -1902,8 +1912,9 @@ window.__setupCellRangeSelection = function(container){
      de la misma lista, ya no está pendiente. */
   function hasConciliacionPending(row){
     if(!window.MM_OLDCODE_MAP) return false;
-    const material = iMaterial !== -1 ? row[iMaterial] : '';
     const altVal = iAlt !== -1 ? row[iAlt] : '';
+    if(isConciliacionAltList(altVal)) return false;
+    const material = iMaterial !== -1 ? row[iMaterial] : '';
     const comps = getComponentsFor(material, altVal);
     const compCodes = new Set(comps.map(c => String(c[cComponente]||'').trim()));
     for(const c of comps){
@@ -2408,6 +2419,7 @@ window.__setupCellRangeSelection = function(container){
     }
 
     const compCodes = new Set(comps.map(c => String(c[cComponente]||'').trim()));
+    const esListaConciliacion = isConciliacionAltList(altVal);
 
     const groups = new Map();
     comps.forEach(c=>{
@@ -2432,9 +2444,13 @@ window.__setupCellRangeSelection = function(container){
           const conc = needsConciliacion(m);
           const yaPresente = (hv||conc) && compCodes.has(String(m.material||'').trim());
           let tag = '';
-          if(hv){ tag = yaPresente ? `<span class="hv-badge hv-badge-ok">Hv.1 · ya en la lista</span>` : `<span class="hv-badge">Hv.1 · pendiente</span>`; }
+          if(esListaConciliacion && (hv||conc)){
+            // Esta alternativa (66/67/68/69…) es en sí misma una lista de conciliación:
+            // se informa el cruce con el material vigente sin marcarlo como pendiente.
+            tag = `<span class="hv-badge hv-badge-ok">Lista de conciliación</span>`;
+          } else if(hv){ tag = yaPresente ? `<span class="hv-badge hv-badge-ok">Hv.1 · ya en la lista</span>` : `<span class="hv-badge">Hv.1 · pendiente</span>`; }
           else if(conc){ tag = yaPresente ? `<span class="hv-badge hv-badge-ok">Envase/Empaque · ya en la lista</span>` : `<span class="hv-badge hv-badge-conc">Envase/Empaque · pendiente conciliación</span>`; }
-          const cssClass = hv ? (yaPresente?' c-vigente-ok':' c-vigente-hv1') : (conc ? (yaPresente?' c-vigente-ok':' c-vigente-conc') : '');
+          const cssClass = esListaConciliacion ? ' c-vigente-ok' : (hv ? (yaPresente?' c-vigente-ok':' c-vigente-hv1') : (conc ? (yaPresente?' c-vigente-ok':' c-vigente-conc') : ''));
           return `<div class="c-vigente${cssClass}">
             <span class="c-vigente-label">Código antiguo → material vigente</span>
             <span class="c-vigente-value"><strong>${esc(m.material)}</strong> — ${esc(m.texto)}${tag}</span>

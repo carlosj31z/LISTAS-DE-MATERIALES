@@ -1938,11 +1938,14 @@ function isSuspendedCode(v){
   }
 
   /* Las alternativas de lista de 2 dígitos que empiezan por 6 (66, 67, 68, 69…) son en sí
-     mismas listas de materiales de CONCILIACIÓN — no deben marcarse como pendientes de
-     Hv.1 ni de conciliación, sin importar qué código antiguo referencien sus componentes. */
+     mismas listas de materiales de CONCILIACIÓN, y las alternativas 95, 96, 97, 98 y 99
+     tampoco deben generar conciliaciones — no deben marcarse como pendientes de Hv.1 ni de
+     conciliación, sin importar qué código antiguo referencien sus componentes. */
   function isConciliacionAltList(altVal){
     const s = String(altVal===null||altVal===undefined?'':altVal).trim();
-    return /^6\d$/.test(s);
+    if(/^6\d$/.test(s)) return true;
+    if(['95','96','97','98','99'].indexOf(s) !== -1) return true;
+    return false;
   }
 
   function hasHv1Pending(row){

@@ -787,6 +787,11 @@ function isSuspendedCode(v){
   tabBtnMM.addEventListener('click', function(){ activate('mm'); });
   tabBtnBOM.addEventListener('click', function(){ activate('bom'); });
 
+  /* Expuesto globalmente para que otras vistas (p.ej. el Maestro de Materiales, al saltar
+     a una lista de materiales donde un código aparece como componente) puedan cambiar de
+     pestaña hacia Listas de Materiales de forma programática. */
+  window.__activateSuiteTab = activate;
+
   ['mm', 'bom'].forEach(function(prefix){
     var header = document.getElementById(prefix + 'HeaderTop');
     var toggle = document.getElementById(prefix + 'HeaderToggle');
@@ -1489,6 +1494,46 @@ function isSuspendedCode(v){
     var t; return function(){ var args=arguments, ctx=this; clearTimeout(t); t=setTimeout(function(){ fn.apply(ctx,args); }, ms); };
   }
 
+  function renderListasQueLoContienen(materialCode){
+    if(typeof window.__bomFindListsContainingMaterial !== 'function'){
+      return '';
+    }
+    var results = window.__bomFindListsContainingMaterial(materialCode);
+    if(!results || results.length === 0){
+      return '<div class="field-group">'+
+        '<div class="field-group-title">Listas de materiales que lo contienen</div>'+
+        '<div class="comp-empty">Este código no aparece como componente en ninguna lista de materiales cargada (recuerda cargar tanto "Cargar Excel" como "Cargar Componentes" en la pestaña Listas de Materiales).</div>'+
+      '</div>';
+    }
+
+    var itemsHtml = results.map(function(r){
+      var cantTxt = (r.cantidad!==null && !isNaN(r.cantidad)) ? r.cantidad.toLocaleString('es') : '';
+      var descTxt = r.descripcion || '';
+      var badges = '';
+      if(r.centro) badges += '<span class="badge badge-neutro" style="margin-right:4px;">'+escapeHtml(r.centro)+'</span>';
+      if(r.estado){
+        var estCls = isSuspendedCode(r.estado) ? 'badge-suspendido' : (r.estado==='Activo' ? 'badge-activo' : 'badge-inactivo');
+        badges += '<span class="badge '+estCls+'"><span class="dot"></span>'+escapeHtml(r.estado)+'</span>';
+      }
+      if(!r.enBom){
+        badges += '<span class="badge badge-neutro" title="Este componente fue cargado, pero la lista dueña no está en el Excel de Listas de Materiales cargado actualmente">Sin datos de LMat</span>';
+      }
+
+      return '<div class="comp-item" style="cursor:pointer;" data-bom-material="'+escapeAttr(r.material)+'" data-bom-alt="'+escapeAttr(r.alt)+'">'+
+        '<span class="c-code">'+escapeHtml(r.material)+(r.alt&&r.alt!=='1'?' <span class="alt-tag" style="margin-left:4px;">alt. '+escapeHtml(r.alt)+'</span>':'')+'</span>'+
+        (cantTxt?'<span class="c-qty">'+cantTxt+(r.unidad?' '+escapeHtml(r.unidad):'')+'</span>':'<span class="c-qty">&nbsp;</span>')+
+        (descTxt?'<span class="c-desc">'+escapeHtml(descTxt)+'</span>':'')+
+        (r.posicion || badges ? '<span class="c-prob" style="color:var(--ink-faint); display:flex; align-items:center; gap:4px; flex-wrap:wrap;">'+(r.posicion?'Posición '+escapeHtml(r.posicion)+(r.totalPosiciones>1?' (+'+(r.totalPosiciones-1)+' más)':'')+' · ':'')+badges+'</span>' : '')+
+      '</div>';
+    }).join('');
+
+    return '<div class="field-group">'+
+      '<div class="field-group-title">Listas de materiales que lo contienen <span class="fg-count">'+results.length+' lista'+(results.length!==1?'s':'')+'</span></div>'+
+      '<div class="comp-group">'+itemsHtml+'</div>'+
+      '<p style="margin:8px 2px 0; font-size:11.5px; color:var(--ink-faint);">Clic en una lista para abrir su detalle en Listas de Materiales.</p>'+
+    '</div>';
+  }
+
   function openDrawer(row){
     dMat.textContent = row['Material'] || '—';
     dName.textContent = row['Texto Material'] || row['Denom.estándar'] || 'Sin descripción';
@@ -1503,7 +1548,9 @@ function isSuspendedCode(v){
       dStamp.style.display = 'none';
     }
 
-    drawerBody.innerHTML = DETAIL_GROUPS.map(function(g){
+    var listasHtml = renderListasQueLoContienen(row['Material']);
+
+    drawerBody.innerHTML = listasHtml + DETAIL_GROUPS.map(function(g){
       var fieldsHtml = g.fields.map(function(f){
         var v = row[f];
         var display = (v==null || v==='') ? '' : String(v);
@@ -1518,6 +1565,18 @@ function isSuspendedCode(v){
         '<div class="field-grid">'+fieldsHtml+'</div>'+
       '</div>';
     }).join('');
+
+    Array.prototype.forEach.call(drawerBody.querySelectorAll('[data-bom-material]'), function(el){
+      el.addEventListener('click', function(){
+        var mat = el.getAttribute('data-bom-material');
+        var alt = el.getAttribute('data-bom-alt');
+        if(window.__bomOpenListByKey){
+          var opened = window.__bomOpenListByKey(mat, alt);
+          if(opened){ closeDrawer(); }
+          else { alert('No se pudo abrir esa lista de materiales. Verifica que el archivo Excel de Listas de Materiales esté cargado en la pestaña correspondiente.'); }
+        }
+      });
+    });
 
     drawer.classList.add('open');
     scrim.classList.add('open');
@@ -1577,6 +1636,7 @@ function isSuspendedCode(v){
   let COMP_IDX = {};
   let cMaterial, cAlt, cPos, cComponente, cDenom, cUM, cCantidad, cPosAlt, cProbabilidad, cGrupoAlt, cTipoPos, cListaMat, cRelevFab;
   let COMP_MAP = new Map();
+  let COMP_BY_CODE_MAP = new Map();
 
   function normKey(material, alt){
     const a = (alt===''||alt===null||alt===undefined) ? '1' : String(alt).trim();
@@ -1915,10 +1975,21 @@ function isSuspendedCode(v){
 
   function buildComponentMap(){
     COMP_MAP = new Map();
+    COMP_BY_CODE_MAP = new Map();
     for(const r of COMP_ROWS){
       const key = normKey(r[cMaterial], r[cAlt]);
       if(!COMP_MAP.has(key)) COMP_MAP.set(key, []);
       COMP_MAP.get(key).push(r);
+
+      /* Índice inverso: código de componente -> conjunto de claves (Material||Alt) de las
+         listas que lo contienen. Permite, desde el Maestro de Materiales, responder "¿en
+         qué listas de materiales aparece este código como componente?" sin recorrer todo
+         COMP_ROWS cada vez. */
+      const compCode = String(r[cComponente]||'').trim();
+      if(compCode){
+        if(!COMP_BY_CODE_MAP.has(compCode)) COMP_BY_CODE_MAP.set(compCode, new Set());
+        COMP_BY_CODE_MAP.get(compCode).add(key);
+      }
     }
     for(const arr of COMP_MAP.values()){
       arr.sort((a,b)=>{
@@ -1936,6 +2007,54 @@ function isSuspendedCode(v){
     const key = normKey(material, alt);
     return COMP_MAP.get(key) || [];
   }
+
+  /* Dado un código de material (p.ej. un ZMEE del Maestro), devuelve las listas de
+     materiales (BOM) donde aparece como componente: una entrada por cada lista (Material +
+     Lista mat.alternat.) que lo referencia, con campos ya resueltos por nombre (descripción,
+     centro, estado, posición, cantidad, unidad) para que quien consuma esto (el Maestro de
+     Materiales) no necesite conocer los índices internos de columna de este módulo. */
+  window.__bomFindListsContainingMaterial = function(materialCode){
+    const code = String(materialCode||'').trim();
+    if(!code || !COMP_BY_CODE_MAP.has(code)) return [];
+
+    // Índice Material||Alt -> fila(s) de ROWS, para poder mostrar descripción/centro/estado.
+    const rowsByKey = new Map();
+    if(iMaterial !== -1){
+      ROWS.forEach(row=>{
+        const key = normKey(row[iMaterial], iAlt!==-1?row[iAlt]:'');
+        if(!rowsByKey.has(key)) rowsByKey.set(key, []);
+        rowsByKey.get(key).push(row);
+      });
+    }
+
+    const keys = COMP_BY_CODE_MAP.get(code);
+    const results = [];
+    keys.forEach(key=>{
+      const parts = key.split('||');
+      const material = parts[0];
+      const alt = parts[1];
+      const comps = COMP_MAP.get(key) || [];
+      const ownComps = comps.filter(c => String(c[cComponente]||'').trim() === code);
+      const bomRowsForKey = rowsByKey.get(key) || [];
+      const bomRow = bomRowsForKey[0] || null;
+      const firstComp = ownComps[0] || null;
+
+      results.push({
+        material: material,
+        alt: alt,
+        enBom: !!bomRow,
+        descripcion: bomRow && iDesc!==-1 ? String(bomRow[iDesc]||'') : '',
+        centro: bomRow && iCentro!==-1 ? String(bomRow[iCentro]||'') : '',
+        estado: bomRow ? String(estadoCodeOf(bomRow)||'') : '',
+        posicion: firstComp && cPos!==-1 ? String(firstComp[cPos]||'') : '',
+        cantidad: firstComp && cCantidad!==-1 && firstComp[cCantidad]!=='' ? Number(firstComp[cCantidad]) : null,
+        unidad: firstComp && cUM!==-1 ? String(firstComp[cUM]||'') : '',
+        totalPosiciones: ownComps.length
+      });
+    });
+    results.sort((a,b)=> a.material.localeCompare(b.material,'es') || a.alt.localeCompare(b.alt,'es'));
+    return results;
+  };
 
   /* Las alternativas de lista de 2 dígitos que empiezan por 6 (66, 67, 68, 69…) son en sí
      mismas listas de materiales de CONCILIACIÓN, y las alternativas 95, 96, 97, 98 y 99
@@ -2901,6 +3020,23 @@ function isSuspendedCode(v){
   }
 
   window.__refreshBomView = updateAll;
+
+  /* Permite abrir directamente el drawer de detalle de una lista de materiales dado su
+     Material + Lista mat.alternat., desde fuera de este módulo (usado por el Maestro de
+     Materiales para saltar a "en qué listas está contenido" un código). Si hay filtros
+     activos que ocultarían esa fila, se limpian primero para garantizar que se encuentre. */
+  window.__bomOpenListByKey = function(material, alt){
+    const mat = String(material||'').trim();
+    const altStr = String(alt===null||alt===undefined?'':alt).trim();
+    const targetKey = normKey(mat, altStr);
+    const row = ROWS.find(r => normKey(r[iMaterial], iAlt!==-1?r[iAlt]:'') === targetKey);
+    if(!row) return false;
+
+    clearAllFilters();
+    if(window.__activateSuiteTab) window.__activateSuiteTab('bom');
+    openDrawer(row);
+    return true;
+  };
 
   updateAll();
 

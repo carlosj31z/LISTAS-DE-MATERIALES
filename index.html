@@ -867,88 +867,168 @@ function isSuspendedCode(v){
 <script>
 /* ============================================================
    SELECCIÓN DE CELDAS ESTILO EXCEL (compartido por ambas tablas)
+   Arrastrar con el click presionado selecciona un rango de celdas;
+   Ctrl+C (o Cmd+C) copia ese rango como texto separado por tabs,
+   listo para pegar en Excel.
    ============================================================ */
-window.__setupCellRangeSelection = function(container){
-  if(!container) return { wasDragged: function(){ return false; } };
-  var selecting = false;
-  var dragged = false;
-  var startR = null, startC = null, endR = null, endC = null;
-
-  function clearSelection(){
-    var sel = container.querySelectorAll('td.cell-selected');
-    for(var i=0; i<sel.length; i++){ sel[i].classList.remove('cell-selected'); }
+(function(){
+  /* Aviso flotante breve de confirmación ("Copiado") para que el usuario sepa que el
+     Ctrl+C sí funcionó — antes no había ningún indicio visual de que algo se copiara. */
+  var toastEl = null;
+  function showCopyToast(msg){
+    if(!toastEl){
+      toastEl = document.createElement('div');
+      toastEl.style.cssText = 'position:fixed;z-index:99999;left:50%;bottom:28px;transform:translateX(-50%) translateY(10px);'+
+        'background:#122132;color:#fff;font-family:IBM Plex Mono,ui-monospace,monospace;font-size:12.5px;'+
+        'padding:9px 16px;border-radius:8px;box-shadow:0 8px 24px rgba(18,33,50,0.35);opacity:0;'+
+        'transition:opacity .15s ease, transform .15s ease;pointer-events:none;display:flex;align-items:center;gap:8px;';
+      toastEl.innerHTML = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#4FD1C5" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg><span></span>';
+      document.body.appendChild(toastEl);
+    }
+    toastEl.querySelector('span').textContent = msg;
+    clearTimeout(toastEl.__hideTimer);
+    toastEl.style.opacity = '1';
+    toastEl.style.transform = 'translateX(-50%) translateY(0)';
+    toastEl.__hideTimer = setTimeout(function(){
+      toastEl.style.opacity = '0';
+      toastEl.style.transform = 'translateX(-50%) translateY(10px)';
+    }, 1200);
   }
-  function applySelection(){
-    clearSelection();
-    if(startR===null) return;
-    var r1 = Math.min(startR, endR), r2 = Math.max(startR, endR);
-    var c1 = Math.min(startC, endC), c2 = Math.max(startC, endC);
-    var cells = container.querySelectorAll('tbody td[data-r]');
-    for(var i=0; i<cells.length; i++){
-      var td = cells[i];
+
+  /* Fallback de copiado cuando navigator.clipboard no está disponible o falla
+     (contexto no seguro/HTTP, documento sin foco, permisos denegados, etc.):
+     usa el método clásico de un textarea oculto + document.execCommand('copy'). */
+  function fallbackCopy(text){
+    var ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.cssText = 'position:fixed;top:0;left:0;width:1px;height:1px;padding:0;border:none;opacity:0;';
+    document.body.appendChild(ta);
+    ta.focus();
+    ta.select();
+    try{ ta.setSelectionRange(0, text.length); }catch(e){}
+    var ok = false;
+    try{ ok = document.execCommand('copy'); }catch(e){ ok = false; }
+    document.body.removeChild(ta);
+    return ok;
+  }
+
+  function copyText(text){
+    if(navigator.clipboard && navigator.clipboard.writeText && window.isSecureContext){
+      navigator.clipboard.writeText(text).then(function(){
+        showCopyToast('Copiado');
+      }).catch(function(){
+        if(fallbackCopy(text)) showCopyToast('Copiado');
+      });
+    } else {
+      if(fallbackCopy(text)) showCopyToast('Copiado');
+    }
+  }
+
+  window.__setupCellRangeSelection = function(container){
+    if(!container) return { wasDragged: function(){ return false; } };
+    var selecting = false;
+    var dragged = false;
+    var startR = null, startC = null, endR = null, endC = null;
+
+    function clearSelection(){
+      var sel = container.querySelectorAll('td.cell-selected');
+      for(var i=0; i<sel.length; i++){ sel[i].classList.remove('cell-selected'); }
+    }
+    function applySelection(){
+      clearSelection();
+      if(startR===null) return;
+      var r1 = Math.min(startR, endR), r2 = Math.max(startR, endR);
+      var c1 = Math.min(startC, endC), c2 = Math.max(startC, endC);
+      var cells = container.querySelectorAll('tbody td[data-r]');
+      for(var i=0; i<cells.length; i++){
+        var td = cells[i];
+        var r = parseInt(td.getAttribute('data-r'), 10);
+        var c = parseInt(td.getAttribute('data-c'), 10);
+        if(r>=r1 && r<=r2 && c>=c1 && c<=c2){ td.classList.add('cell-selected'); }
+      }
+    }
+
+    container.addEventListener('mousedown', function(e){
+      if(e.button !== 0) return;
+      var td = e.target.closest('td[data-r]');
+      if(!td) return;
+      selecting = true;
+      dragged = false;
+      startR = parseInt(td.getAttribute('data-r'), 10);
+      startC = parseInt(td.getAttribute('data-c'), 10);
+      endR = startR; endC = startC;
+      applySelection();
+    });
+    container.addEventListener('mousemove', function(e){
+      if(!selecting) return;
+      var td = e.target.closest('td[data-r]');
+      if(!td) return;
       var r = parseInt(td.getAttribute('data-r'), 10);
       var c = parseInt(td.getAttribute('data-c'), 10);
-      if(r>=r1 && r<=r2 && c>=c1 && c<=c2){ td.classList.add('cell-selected'); }
-    }
-  }
-
-  container.addEventListener('mousedown', function(e){
-    if(e.button !== 0) return;
-    var td = e.target.closest('td[data-r]');
-    if(!td) return;
-    selecting = true;
-    dragged = false;
-    startR = parseInt(td.getAttribute('data-r'), 10);
-    startC = parseInt(td.getAttribute('data-c'), 10);
-    endR = startR; endC = startC;
-    applySelection();
-  });
-  container.addEventListener('mousemove', function(e){
-    if(!selecting) return;
-    var td = e.target.closest('td[data-r]');
-    if(!td) return;
-    var r = parseInt(td.getAttribute('data-r'), 10);
-    var c = parseInt(td.getAttribute('data-c'), 10);
-    if(r !== endR || c !== endC){
-      dragged = true;
-      endR = r; endC = c;
-      applySelection();
-    }
-  });
-  document.addEventListener('mouseup', function(){
-    selecting = false;
-  });
-
-  document.addEventListener('keydown', function(e){
-    var isCopy = (e.key==='c' || e.key==='C') && (e.ctrlKey || e.metaKey);
-    if(!isCopy) return;
-    var selectedTds = container.querySelectorAll('td.cell-selected');
-    if(selectedTds.length===0) return;
-    var r1=Infinity, r2=-Infinity, c1=Infinity, c2=-Infinity;
-    for(var i=0; i<selectedTds.length; i++){
-      var td = selectedTds[i];
-      var r = parseInt(td.getAttribute('data-r'), 10), c = parseInt(td.getAttribute('data-c'), 10);
-      if(r<r1) r1=r; if(r>r2) r2=r; if(c<c1) c1=c; if(c>c2) c2=c;
-    }
-    var lines = [];
-    for(var r=r1; r<=r2; r++){
-      var vals = [];
-      for(var c=c1; c<=c2; c++){
-        var cell = container.querySelector('tbody td[data-r="'+r+'"][data-c="'+c+'"]');
-        vals.push(cell ? cell.innerText.trim() : '');
+      if(r !== endR || c !== endC){
+        dragged = true;
+        endR = r; endC = c;
+        applySelection();
       }
-      lines.push(vals.join('\t'));
-    }
-    var text = lines.join('\n');
-    if(navigator.clipboard && navigator.clipboard.writeText){
-      navigator.clipboard.writeText(text).catch(function(){});
-    }
-  });
+    });
+    document.addEventListener('mouseup', function(){
+      selecting = false;
+    });
 
-  return {
-    wasDragged: function(){ return dragged; }
+    document.addEventListener('keydown', function(e){
+      var isCopy = (e.key==='c' || e.key==='C') && (e.ctrlKey || e.metaKey);
+      if(!isCopy) return;
+
+      /* Si el usuario tiene una selección de texto normal activa (arrastrando el mouse
+         para resaltar texto, como en el drawer de detalle o dentro de una celda), se debe
+         respetar el Ctrl+C nativo del navegador y NO interceptarlo. Antes, si alguna vez
+         quedaba una celda marcada como "cell-selected" de un arrastre anterior en la tabla
+         (esa marca no se limpiaba al hacer clic fuera), el código robaba el Ctrl+C con
+         preventDefault() aunque el usuario estuviera seleccionando texto en otro lugar —
+         por eso solo funcionaba el copiado vía clic derecho. */
+      var textSel = window.getSelection ? window.getSelection() : null;
+      if(textSel && !textSel.isCollapsed && String(textSel).length > 0) return;
+
+      var selectedTds = container.querySelectorAll('td.cell-selected');
+      if(selectedTds.length===0) return;
+      /* Si el foco está en un input/textarea/campo editable (p.ej. el buscador), se
+         respeta el copiado nativo del navegador para ese campo en vez de interceptarlo. */
+      var active = document.activeElement;
+      if(active && (active.tagName==='INPUT' || active.tagName==='TEXTAREA' || active.isContentEditable)) return;
+
+      e.preventDefault();
+      var r1=Infinity, r2=-Infinity, c1=Infinity, c2=-Infinity;
+      for(var i=0; i<selectedTds.length; i++){
+        var td = selectedTds[i];
+        var r = parseInt(td.getAttribute('data-r'), 10), c = parseInt(td.getAttribute('data-c'), 10);
+        if(r<r1) r1=r; if(r>r2) r2=r; if(c<c1) c1=c; if(c>c2) c2=c;
+      }
+      var lines = [];
+      for(var r=r1; r<=r2; r++){
+        var vals = [];
+        for(var c=c1; c<=c2; c++){
+          var cell = container.querySelector('tbody td[data-r="'+r+'"][data-c="'+c+'"]');
+          vals.push(cell ? cell.innerText.trim() : '');
+        }
+        lines.push(vals.join('\t'));
+      }
+      var text = lines.join('\n');
+      copyText(text);
+    });
+
+    /* Limpia la selección de celdas cuando el usuario hace clic fuera de este contenedor
+       (por ejemplo, para seleccionar texto en el drawer de detalle). Sin esto, la marca
+       "cell-selected" podía quedar persistiendo indefinidamente y confundir el siguiente
+       intento de copiar texto normal en otra parte de la página. */
+    document.addEventListener('mousedown', function(e){
+      if(!container.contains(e.target)){ clearSelection(); startR = null; }
+    });
+
+    return {
+      wasDragged: function(){ return dragged; }
+    };
   };
-};
+})();
 </script>
 
 <script>

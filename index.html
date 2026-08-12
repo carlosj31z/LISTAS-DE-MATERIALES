@@ -27,6 +27,8 @@
     --violet-soft:#EAE6F5;
     --amber:#8A6D1E;
     --amber-soft:#F3EBD3;
+    --orange:#B85C1E;
+    --orange-soft:#F6E4D3;
     --border:#D8DEE1;
     --border-soft:#E6EAEC;
     --mono: 'IBM Plex Mono', ui-monospace, 'SFMono-Regular', monospace;
@@ -125,8 +127,6 @@
   h1.title{ font-family:var(--display); font-weight:700; font-size:26px; letter-spacing:-0.01em; margin:0 0 5px; }
   .subtitle{ color:#B7C6CE; font-size:13px; max-width:680px; margin:0; }
 
-  /* Encabezado colapsable: por defecto se muestra compacto (solo el título) para
-     dejar la mayor parte de la pantalla a la tabla; "Mostrar detalles" lo expande. */
   header.top{ transition: padding .15s ease; }
   header.top.top-collapsed{ padding-top:12px; padding-bottom:12px; }
   header.top.top-collapsed .subtitle,
@@ -182,6 +182,7 @@
   .filter-btn:hover{border-color:var(--ink-faint); transform:translateY(-1px);}
   .filter-btn.active{ border-color:var(--teal); background:var(--teal-soft); color:var(--navy-deep); }
   .filter-btn.active-hv1{ border-color:var(--violet); background:var(--violet-soft); color:var(--violet); font-weight:600; }
+  .filter-btn.active-conc{ border-color:var(--orange); background:var(--orange-soft); color:var(--orange); font-weight:600; }
   .filter-btn .count{ background:var(--teal); color:#fff; font-family:var(--mono); font-size:10.5px; padding:1px 6px; border-radius:10px; line-height:1.5; }
   .filter-btn svg.chev{width:11px;height:11px; opacity:0.6; transition:transform .18s var(--ease);}
   .filter-group:has(.filter-panel.open) svg.chev{transform:rotate(180deg);}
@@ -339,9 +340,6 @@
   }
   #bomDrawer{ width:480px; }
 
-  /* Panel de componentes: en vez de un drawer de altura completa, es una tarjeta
-     centrada que se ajusta al número de componentes (con scroll interno si son
-     muchos), ubicada en el espacio libre a la izquierda del panel de identificación. */
   .comp-modal-overlay{
     position:fixed; top:0; left:0; right:480px; height:100%;
     display:flex; align-items:center; justify-content:center;
@@ -422,14 +420,27 @@
   .comp-item .c-vigente .c-vigente-value{ color:var(--ink); font-size:12px; }
   .comp-item .c-vigente.c-vigente-hv1{ border-color:var(--violet); background:#EFEAF7; }
   .comp-item .c-vigente.c-vigente-ok{ border-color:var(--teal); background:var(--teal-soft); color:#0A5352; }
+  .comp-item .c-vigente.c-vigente-conc{ border-color:var(--orange); background:var(--orange-soft); color:var(--orange); }
   .hv-badge{ display:inline-flex; align-items:center; justify-content:center; padding:1px 7px; margin-left:4px; border-radius:10px; background:var(--violet); color:#fff; font-family:var(--mono); font-size:10px; font-weight:700; vertical-align:middle; }
   .hv-badge.hv-badge-ok{ background:var(--teal); }
+  .hv-badge.hv-badge-conc{ background:var(--orange); }
   .hv1-banner{ background:var(--violet-soft); border:1px solid var(--violet); color:var(--violet); font-size:12px; padding:9px 12px; border-radius:8px; margin-bottom:10px; font-weight:500; }
+  .conc-banner{ background:var(--orange-soft); border:1px solid var(--orange); color:var(--orange); font-size:12px; padding:9px 12px; border-radius:8px; margin-bottom:10px; font-weight:500; }
   .susp-banner{ background:var(--brick-soft); border:1px solid var(--brick); color:var(--brick); font-size:12px; padding:9px 12px; border-radius:8px; margin-bottom:10px; font-weight:500; }
   tbody tr.pending-hv1 td.col-material::before{
     content:'H'; display:inline-flex; align-items:center; justify-content:center;
     width:15px; height:15px; margin-right:6px; border-radius:3px; background:var(--violet); color:#fff;
     font-size:9px; font-weight:700; vertical-align:middle;
+  }
+  tbody tr.pending-conc td.col-material::before{
+    content:'C'; display:inline-flex; align-items:center; justify-content:center;
+    width:15px; height:15px; margin-right:6px; border-radius:3px; background:var(--orange); color:#fff;
+    font-size:9px; font-weight:700; vertical-align:middle;
+  }
+  tbody tr.pending-hv1.pending-conc td.col-material::before{
+    content:'H·C';
+    width:auto; padding:0 4px;
+    background: linear-gradient(90deg, var(--violet) 50%, var(--orange) 50%);
   }
 
   footer.page-footer{ text-align:center; padding:18px; color:var(--ink-faint); font-size:11.5px; font-family:var(--mono); }
@@ -628,6 +639,7 @@
       <div class="status-cell"><div class="status-label"><span class="tick" style="background:#8A6D1E"></span>Componentes cargados</div><div class="status-value" id="bomStatComponentes">0</div></div>
       <div class="status-cell flag-cell"><div class="status-label"><span class="tick" style="background:#963B32"></span>Suspendidos (Z)</div><div class="status-value" id="bomStatSuspendidos">0</div></div>
       <div class="status-cell flag-cell" style="background:rgba(91,75,138,0.14);"><div class="status-label"><span class="tick" style="background:#5B4B8A"></span>Pendientes Hv.1</div><div class="status-value" id="bomStatHv1">0</div></div>
+      <div class="status-cell flag-cell" style="background:rgba(184,92,30,0.14);"><div class="status-label"><span class="tick" style="background:#B85C1E"></span>Pendientes conciliación</div><div class="status-value" id="bomStatConc">0</div></div>
     </div>
   </header>
 
@@ -661,6 +673,8 @@
 
       <button id="bomToggleHv1Pendiente" class="filter-btn" title="Mostrar solo listas cuyos componentes aún referencian el código antiguo de un material Hv.1 (pendientes de actualizar)" style="border-color:var(--violet);">Pendientes Hv.1</button>
       <button id="bomToggleHv1Actualizada" class="filter-btn" title="Mostrar solo listas cuyos componentes ya referencian directamente el material Hv.1 (ya actualizadas)" style="border-color:var(--violet);">Actualizadas Hv.1</button>
+
+      <button id="bomToggleConcPendiente" class="filter-btn" title="Mostrar solo listas cuyos componentes referencian el código antiguo de un material nuevo de Envase y Empaque (ZMEE) — pendientes de generar conciliación" style="border-color:var(--orange);">Pendientes conciliación</button>
 
       <div class="toolbar-divider"></div>
 
@@ -804,9 +818,6 @@ function isSuspendedCode(v){
     console.error('Error inicializando Supabase', e);
   }
 
-  /* Trae TODAS las filas de una tabla, paginando en bloques de 1000 (el límite
-     por defecto que aplica Supabase/PostgREST a cada respuesta) hasta agotar
-     los resultados, en vez de quedarse solo con el primer bloque. */
   window.__sbFetchAll = async function(table, selectCols){
     if(!window.__sb) return [];
     var pageSize = 1000;
@@ -828,11 +839,6 @@ function isSuspendedCode(v){
 <script>
 /* ============================================================
    COORDINADOR DE LA VENTANA DE CARGA INICIAL
-   Se muestra al iniciar la página; cada app (Maestro de Materiales,
-   Listas de Materiales) avisa cuándo empieza y termina de intentar
-   restaurar sus datos guardados en Supabase. Cuando todas terminan,
-   se oculta. Si alguna encuentra datos, cambia el mensaje para
-   avisar al usuario que espere y no cargue otro archivo por error.
    ============================================================ */
 (function(){
   var overlay = document.getElementById('globalLoadingOverlay');
@@ -861,9 +867,6 @@ function isSuspendedCode(v){
 <script>
 /* ============================================================
    SELECCIÓN DE CELDAS ESTILO EXCEL (compartido por ambas tablas)
-   Arrastrar con el click presionado selecciona un rango de celdas;
-   Ctrl+C (o Cmd+C) copia ese rango como texto separado por tabs,
-   listo para pegar en Excel.
    ============================================================ */
 window.__setupCellRangeSelection = function(container){
   if(!container) return { wasDragged: function(){ return false; } };
@@ -1001,7 +1004,8 @@ window.__setupCellRangeSelection = function(container){
     ]}
   ];
 
-  var state = { headers: [], rows: [], filtered: [], page: 1, pageSize: 50, sortKey: 'Material', sortDir: 1, onlySuspendidos:false };
+  /* Orden por defecto: fecha de creación descendente (más recientes primero). */
+  var state = { headers: [], rows: [], filtered: [], page: 1, pageSize: 50, sortKey: 'Fecha creación material', sortDir: -1, onlySuspendidos:false };
 
   var $ = function(id){ return document.getElementById(id); };
   var dropzone = $('mmDropzone'), fileInput = $('mmFileInput'), btnSelect = $('mmBtnSelect'),
@@ -1121,29 +1125,33 @@ window.__setupCellRangeSelection = function(container){
 
   /* Cruce de código antiguo (Nro. antiguo de material) -> material vigente (Material) y su
      descripción (Texto Material), para que Listas de Materiales pueda resolver componentes
-     referenciados por su código antiguo. También publica Material -> Estado (detecta Z) y
+     referenciados por su código antiguo. También publica Material -> Estado (detecta Z),
      Material -> Texto Material (detecta si un componente ya referencia directamente el
-     material Hv.1, es decir que esa lista ya fue actualizada). Todo se publica en window
-     para que la app BOM lo consuma. */
+     material Hv.1) y Material -> Tipo material (detecta si el material vigente es ZMEE,
+     para la lógica de conciliaciones). Todo se publica en window para que la app BOM lo
+     consuma. */
   function buildOldCodeMap(){
     var map = {};
     var estadoMap = {};
     var textoMap = {};
+    var tipoMap = {};
     state.rows.forEach(function(r){
       var old = (r['Nro. antiguo de material']||'').toString().trim();
       if(old){
         if(!map[old]) map[old] = [];
-        map[old].push({ material: r['Material'], texto: r['Texto Material'] || r['Denom.estándar'] || '' });
+        map[old].push({ material: r['Material'], texto: r['Texto Material'] || r['Denom.estándar'] || '', tipo: r['Tipo material'] || '' });
       }
       var matKey = (r['Material']||'').toString().trim();
       if(matKey){
         estadoMap[matKey] = r['Estado mat.todos ce'];
         textoMap[matKey] = r['Texto Material'] || r['Denom.estándar'] || '';
+        tipoMap[matKey] = r['Tipo material'] || '';
       }
     });
     window.MM_OLDCODE_MAP = map;
     window.MM_ESTADO_MAP = estadoMap;
     window.MM_TEXTO_MAP = textoMap;
+    window.MM_TIPO_MAP = tipoMap;
     if(window.__refreshBomView){
       try{ window.__refreshBomView(); }catch(e){}
     }
@@ -1173,6 +1181,17 @@ window.__setupCellRangeSelection = function(container){
     if(!window.__sb) return;
     var cargaId = 'c' + Date.now() + '_' + Math.random().toString(36).slice(2,8);
     try{
+      /* Se borra TODO lo existente antes de insertar la carga nueva. Insertar primero y
+         borrar después dejaba, durante esa ventana (o si el delete fallaba), dos cargas
+         convivendo en la tabla — y como la carga se lee completa sin filtrar por carga_id,
+         eso se traducía en filas y componentes duplicados en la interfaz. */
+      var delRes = await window.__sb.from('mm_materiales').delete().neq('carga_id', '__nunca__');
+      if(delRes.error){
+        console.error('Supabase delete (limpieza previa) mm_materiales error', delRes.error);
+        alert('No se pudo limpiar el Maestro de Materiales anterior en Supabase antes de guardar el nuevo. No se guardó nada para evitar duplicados. Detalle: ' + delRes.error.message);
+        return;
+      }
+
       var records = state.rows.map(function(r){
         return {
           material: String(r['Material']||''),
@@ -1187,15 +1206,13 @@ window.__setupCellRangeSelection = function(container){
         var res = await window.__sb.from('mm_materiales').insert(chunk);
         if(res.error){
           console.error('Supabase insert mm_materiales error', res.error);
-          alert('No se pudo guardar el Maestro de Materiales en Supabase (los datos que ya estaban guardados NO se perdieron). Detalle: ' + res.error.message);
+          alert('Se limpió el Maestro de Materiales anterior en Supabase, pero ocurrió un error guardando el nuevo (quedó incompleto). Vuelve a cargar el archivo. Detalle: ' + res.error.message);
           return;
         }
       }
-      var delRes = await window.__sb.from('mm_materiales').delete().neq('carga_id', cargaId);
-      if(delRes.error){ console.error('Supabase delete (limpieza carga anterior) mm_materiales error', delRes.error); }
     }catch(e){
       console.error('Error guardando Maestro de Materiales en Supabase', e);
-      alert('No se pudo guardar el Maestro de Materiales en Supabase (los datos que ya estaban guardados NO se perdieron). Revisa la consola para más detalle.');
+      alert('No se pudo guardar el Maestro de Materiales en Supabase. Revisa la consola para más detalle.');
     }
   }
 
@@ -1204,7 +1221,18 @@ window.__setupCellRangeSelection = function(container){
     try{
       var data = await window.__sbFetchAll('mm_materiales', 'data');
       if(!data || data.length===0) return false;
-      var rows = data.map(function(r){ return r.data; });
+      var rowsRaw = data.map(function(r){ return r.data; });
+      /* Salvaguarda: si por alguna carga anterior (antes de la corrección del orden
+         borrar->insertar) quedaron filas duplicadas del mismo Material en la tabla,
+         se deduplican aquí quedándose con la última aparición, para no mostrar
+         materiales repetidos mientras el usuario no vuelva a cargar el Excel. */
+      var seen = {};
+      var rows = [];
+      rowsRaw.forEach(function(r){
+        var key = String((r && r['Material']) || '');
+        if(!(key in seen)){ seen[key] = rows.length; rows.push(r); }
+        else { rows[seen[key]] = r; }
+      });
       state.headers = Object.keys(rows[0]);
       state.rows = rows;
       onDataLoaded('Datos guardados en Supabase', {skipSave:true});
@@ -1269,6 +1297,16 @@ window.__setupCellRangeSelection = function(container){
 
     var key = state.sortKey, dir = state.sortDir;
     out.sort(function(a,b){
+      /* Orden especializado para fechas dd/mm/aaaa (p.ej. "Fecha creación material"),
+         de modo que "más reciente primero" funcione realmente por fecha y no como texto. */
+      if(key === 'Fecha creación material' || key === 'Última modificación'){
+        var da = parseDMY(a[key]);
+        var db = parseDMY(b[key]);
+        if(da && db) return (da - db) * dir;
+        if(da && !db) return -1;
+        if(!da && db) return 1;
+        return 0;
+      }
       var av = (a[key]==null?'':a[key]).toString();
       var bv = (b[key]==null?'':b[key]).toString();
       var an = parseFloat(av), bn = parseFloat(bv);
@@ -1448,6 +1486,7 @@ window.__setupCellRangeSelection = function(container){
   let filterMM = false;
   let filterOmitInactivos = false;
   let filterHv1 = null; // null | 'pendiente' | 'actualizada'
+  let filterConc = false; // pendientes de conciliación (ZMEE)
   let sortCol = null;
   let sortDir = 1;
   let currentPage = 1;
@@ -1470,7 +1509,7 @@ window.__setupCellRangeSelection = function(container){
     return '';
   }
 
-  /* Cruce con el Maestro de Materiales: window.MM_OLDCODE_MAP (código antiguo -> [{material, texto}])
+  /* Cruce con el Maestro de Materiales: window.MM_OLDCODE_MAP (código antiguo -> [{material, texto, tipo}])
      lo publica la app de Maestro de Materiales al cargar su Excel. */
   function getOldCodeMatches(componentCode){
     const map = window.MM_OLDCODE_MAP;
@@ -1482,6 +1521,17 @@ window.__setupCellRangeSelection = function(container){
 
   function isHv1(texto){
     return typeof texto === 'string' && /HV\.?\s*1\s*$/i.test(texto.trim());
+  }
+
+  /* Un material vigente cuenta para "conciliación" cuando su tipo de material es
+     MAT. DE ENVASE Y EMPAQUE (código ZMEE) y su descripción NO termina en Hv.1 —
+     ese caso ya se cubre por la lógica de Hv.1 y no debe duplicarse aquí. */
+  function isZmeeTipo(tipo){
+    return typeof tipo === 'string' && /ZMEE/i.test(tipo.trim());
+  }
+  function needsConciliacion(match){
+    if(!match) return false;
+    return isZmeeTipo(match.tipo) && !isHv1(match.texto);
   }
 
   /* Estado del material según el Maestro de Materiales (window.MM_ESTADO_MAP, publicado por
@@ -1631,6 +1681,16 @@ window.__setupCellRangeSelection = function(container){
     if(!window.__sb) return;
     const cargaId = 'c' + Date.now() + '_' + Math.random().toString(36).slice(2,8);
     try{
+      /* Se borra TODO lo existente antes de insertar la carga nueva (ver nota equivalente
+         en saveToSupabaseMM): insertar antes de borrar dejaba dos cargas convivendo y
+         producía filas duplicadas al leer. */
+      const delRes = await window.__sb.from('mm_bom').delete().neq('carga_id', '__nunca__');
+      if(delRes.error){
+        console.error('Supabase delete (limpieza previa) mm_bom error', delRes.error);
+        alert('No se pudo limpiar Listas de Materiales anterior en Supabase antes de guardar el nuevo. No se guardó nada para evitar duplicados. Detalle: ' + delRes.error.message);
+        return;
+      }
+
       const records = jsonDataArr.map(row => ({
         material: String(row['Material']||''),
         lista_alt: String(row['Lista mat.alternat.']??''),
@@ -1644,15 +1704,13 @@ window.__setupCellRangeSelection = function(container){
         const res = await window.__sb.from('mm_bom').insert(chunk);
         if(res.error){
           console.error('Supabase insert mm_bom error', res.error);
-          alert('No se pudo guardar Listas de Materiales en Supabase (los datos que ya estaban guardados NO se perdieron). Detalle: ' + res.error.message);
+          alert('Se limpió Listas de Materiales anterior en Supabase, pero ocurrió un error guardando el nuevo (quedó incompleto). Vuelve a cargar el archivo. Detalle: ' + res.error.message);
           return;
         }
       }
-      const delRes = await window.__sb.from('mm_bom').delete().neq('carga_id', cargaId);
-      if(delRes.error){ console.error('Supabase delete (limpieza carga anterior) mm_bom error', delRes.error); }
     }catch(e){
       console.error('Error guardando Listas de Materiales en Supabase', e);
-      alert('No se pudo guardar Listas de Materiales en Supabase (los datos que ya estaban guardados NO se perdieron). Revisa la consola para más detalle.');
+      alert('No se pudo guardar Listas de Materiales en Supabase. Revisa la consola para más detalle.');
     }
   }
 
@@ -1661,7 +1719,17 @@ window.__setupCellRangeSelection = function(container){
     try{
       const data = await window.__sbFetchAll('mm_bom', 'data');
       if(!data || data.length===0) return false;
-      const jsonDataArr = data.map(r=>r.data);
+      const jsonDataArrRaw = data.map(r=>r.data);
+      /* Salvaguarda: deduplica por Material + Lista mat.alternat. + Centro-instalación
+         por si quedaron cargas superpuestas de antes de la corrección del orden
+         borrar->insertar (ver nota en saveBomToSupabase). Se conserva la última aparición. */
+      const seen = new Map();
+      const jsonDataArr = [];
+      jsonDataArrRaw.forEach(row=>{
+        const key = String(row['Material']||'') + '||' + String(row['Lista mat.alternat.']??'') + '||' + String(row['Centro-instalación']||'');
+        if(seen.has(key)){ jsonDataArr[seen.get(key)] = row; }
+        else { seen.set(key, jsonDataArr.length); jsonDataArr.push(row); }
+      });
       COLUMNS = Object.keys(jsonDataArr[0]);
       const colMaterial = COLUMNS.indexOf('Material');
       const colCentro = COLUMNS.indexOf('Centro-instalación');
@@ -1680,6 +1748,17 @@ window.__setupCellRangeSelection = function(container){
     if(!window.__sb) return;
     const cargaId = 'c' + Date.now() + '_' + Math.random().toString(36).slice(2,8);
     try{
+      /* Se borra TODO lo existente antes de insertar la carga nueva (ver nota equivalente
+         en saveToSupabaseMM): insertar antes de borrar dejaba dos cargas convivendo y
+         producía componentes duplicados al leer (exactamente el síntoma reportado: cada
+         posición mostraba el mismo componente dos veces). */
+      const delRes = await window.__sb.from('mm_bom_componentes').delete().neq('carga_id', '__nunca__');
+      if(delRes.error){
+        console.error('Supabase delete (limpieza previa) mm_bom_componentes error', delRes.error);
+        alert('No se pudo limpiar Componentes anterior en Supabase antes de guardar el nuevo. No se guardó nada para evitar duplicados. Detalle: ' + delRes.error.message);
+        return;
+      }
+
       const records = jsonDataArr.map(row => ({
         material: String(row['Material']||''),
         lista_alt: String(row['Lista mat.alternat.']??''),
@@ -1692,15 +1771,13 @@ window.__setupCellRangeSelection = function(container){
         const res = await window.__sb.from('mm_bom_componentes').insert(chunk);
         if(res.error){
           console.error('Supabase insert mm_bom_componentes error', res.error);
-          alert('No se pudo guardar Componentes en Supabase (los datos que ya estaban guardados NO se perdieron). Detalle: ' + res.error.message);
+          alert('Se limpió Componentes anterior en Supabase, pero ocurrió un error guardando el nuevo (quedó incompleto). Vuelve a cargar el archivo. Detalle: ' + res.error.message);
           return;
         }
       }
-      const delRes = await window.__sb.from('mm_bom_componentes').delete().neq('carga_id', cargaId);
-      if(delRes.error){ console.error('Supabase delete (limpieza carga anterior) mm_bom_componentes error', delRes.error); }
     }catch(e){
       console.error('Error guardando Componentes en Supabase', e);
-      alert('No se pudo guardar Componentes en Supabase (los datos que ya estaban guardados NO se perdieron). Revisa la consola para más detalle.');
+      alert('No se pudo guardar Componentes en Supabase. Revisa la consola para más detalle.');
     }
   }
 
@@ -1709,7 +1786,22 @@ window.__setupCellRangeSelection = function(container){
     try{
       const data = await window.__sbFetchAll('mm_bom_componentes', 'data');
       if(!data || data.length===0) return false;
-      const jsonDataArr = data.map(r=>r.data);
+      const jsonDataArrRaw = data.map(r=>r.data);
+      /* Salvaguarda: deduplica por Material + Lista mat.alternat. + Núm.posición +
+         Posición alternativa + Componente (era exactamente este el síntoma reportado:
+         cada posición mostraba el mismo componente dos veces). Se conserva la última
+         aparición. Si el export no trae alguna de estas columnas, se usa cadena vacía
+         para esa parte de la clave, así que sigue deduplicando por lo disponible. */
+      const seenComp = new Map();
+      const jsonDataArr = [];
+      jsonDataArrRaw.forEach(row=>{
+        const key = [
+          row['Material']||'', row['Lista mat.alternat.']??'', row['Núm.posición']??'',
+          row['Posición alternativa']??'', row['Componente']||''
+        ].map(String).join('||');
+        if(seenComp.has(key)){ jsonDataArr[seenComp.get(key)] = row; }
+        else { seenComp.set(key, jsonDataArr.length); jsonDataArr.push(row); }
+      });
 
       COMP_COLUMNS = Object.keys(jsonDataArr[0]);
       COMP_ROWS = jsonDataArr.map(row => COMP_COLUMNS.map(col => row[col] ?? ''));
@@ -1803,6 +1895,31 @@ window.__setupCellRangeSelection = function(container){
     return false;
   }
 
+  /* Pendiente de CONCILIACIÓN: algún componente de la lista referencia (por su código
+     antiguo) un material nuevo del Maestro cuyo Tipo material es ZMEE (Mat. de Envase y
+     Empaque) y cuya descripción NO termina en Hv.1 (ese caso ya es "Hv.1", no conciliación).
+     Igual que en Hv.1, si el material vigente ya figura como componente en otra posición
+     de la misma lista, ya no está pendiente. */
+  function hasConciliacionPending(row){
+    if(!window.MM_OLDCODE_MAP) return false;
+    const material = iMaterial !== -1 ? row[iMaterial] : '';
+    const altVal = iAlt !== -1 ? row[iAlt] : '';
+    const comps = getComponentsFor(material, altVal);
+    const compCodes = new Set(comps.map(c => String(c[cComponente]||'').trim()));
+    for(const c of comps){
+      const matches = getOldCodeMatches(c[cComponente]);
+      if(matches){
+        for(const m of matches){
+          if(needsConciliacion(m)){
+            const vigenteCode = String(m.material||'').trim();
+            if(!compCodes.has(vigenteCode)) return true;
+          }
+        }
+      }
+    }
+    return false;
+  }
+
   function resetApp() {
     FILTER_DEFS.forEach(f => filterState[f.key] = new Set());
     dateDesde = ''; dateHasta = '';
@@ -1815,6 +1932,8 @@ window.__setupCellRangeSelection = function(container){
     filterHv1 = null;
     document.getElementById('bomToggleHv1Pendiente').classList.remove('active-hv1');
     document.getElementById('bomToggleHv1Actualizada').classList.remove('active-hv1');
+    filterConc = false;
+    document.getElementById('bomToggleConcPendiente').classList.remove('active-conc');
     sortCol = null;
     sortDir = 1;
     currentPage = 1;
@@ -2005,6 +2124,7 @@ window.__setupCellRangeSelection = function(container){
     }
     if(filterHv1 === 'pendiente' && !hasHv1Pending(row)) return false;
     if(filterHv1 === 'actualizada' && !hasHv1Updated(row)) return false;
+    if(filterConc && !hasConciliacionPending(row)) return false;
 
     for(const def of FILTER_DEFS) {
       if(def.key === exceptKey) continue;
@@ -2108,7 +2228,8 @@ window.__setupCellRangeSelection = function(container){
       const hasComp = COMP_MAP.size>0 && getComponentsFor(row[iMaterial], iAlt!==-1?row[iAlt]:'').length>0;
       const suspendido = isRowSuspendida(row);
       const pendingHv1 = hasComp && hasHv1Pending(row);
-      const rowClasses = [hasComp?'has-comp':'', suspendido?'suspendido':'', pendingHv1?'pending-hv1':''].filter(Boolean).join(' ');
+      const pendingConc = hasComp && hasConciliacionPending(row);
+      const rowClasses = [hasComp?'has-comp':'', suspendido?'suspendido':'', pendingHv1?'pending-hv1':'', pendingConc?'pending-conc':''].filter(Boolean).join(' ');
       return `<tr data-ridx="${row.__ridx}" class="${rowClasses}">${cells}</tr>`;
     }).join('');
   }
@@ -2151,6 +2272,7 @@ window.__setupCellRangeSelection = function(container){
     const uniqueMats = iMaterial !== -1 ? new Set(filtered.map(r=>r[iMaterial])).size : 0;
     const suspendidos = filtered.filter(r=>isRowSuspendida(r)).length;
     const pendientesHv1 = (window.MM_OLDCODE_MAP && COMP_MAP.size>0) ? filtered.filter(r=>hasHv1Pending(r)).length : 0;
+    const pendientesConc = (window.MM_OLDCODE_MAP && COMP_MAP.size>0) ? filtered.filter(r=>hasConciliacionPending(r)).length : 0;
     document.getElementById('bomStatActivos').textContent = activos.toLocaleString('es-PE');
     document.getElementById('bomStatInactivos').textContent = inactivos.toLocaleString('es-PE');
     document.getElementById('bomStatAte').textContent = ate.toLocaleString('es-PE');
@@ -2159,6 +2281,7 @@ window.__setupCellRangeSelection = function(container){
     document.getElementById('bomStatComponentes').textContent = COMP_ROWS.length.toLocaleString('es-PE');
     document.getElementById('bomStatSuspendidos').textContent = suspendidos.toLocaleString('es-PE');
     document.getElementById('bomStatHv1').textContent = pendientesHv1.toLocaleString('es-PE');
+    document.getElementById('bomStatConc').textContent = pendientesConc.toLocaleString('es-PE');
   }
 
   function updateFilterButtonStates(){
@@ -2184,6 +2307,9 @@ window.__setupCellRangeSelection = function(container){
     const hv1ActBtn = document.getElementById('bomToggleHv1Actualizada');
     if(hv1ActBtn) hv1ActBtn.classList.toggle('active-hv1', filterHv1==='actualizada');
 
+    const concBtn = document.getElementById('bomToggleConcPendiente');
+    if(concBtn) concBtn.classList.toggle('active-conc', filterConc);
+
     const compBtn = document.getElementById('bomLoadComponentesBtn');
     if(compBtn){
       compBtn.classList.toggle('loaded', COMP_ROWS.length>0);
@@ -2206,6 +2332,7 @@ window.__setupCellRangeSelection = function(container){
       document.getElementById('bomStatComponentes').textContent = COMP_ROWS.length.toLocaleString('es-PE');
       document.getElementById('bomStatSuspendidos').textContent = '0';
       document.getElementById('bomStatHv1').textContent = '0';
+      document.getElementById('bomStatConc').textContent = '0';
       document.getElementById('bomMetaShowing').textContent = '0';
       document.getElementById('bomMetaTotal').textContent = '0';
       document.getElementById('bomMetaOfAll').textContent = '';
@@ -2302,10 +2429,13 @@ window.__setupCellRangeSelection = function(container){
         const matches = getOldCodeMatches(codigoRaw);
         const vigenteHtml = matches ? matches.map(m=>{
           const hv = isHv1(m.texto);
-          const yaPresente = hv && compCodes.has(String(m.material||'').trim());
+          const conc = needsConciliacion(m);
+          const yaPresente = (hv||conc) && compCodes.has(String(m.material||'').trim());
           let tag = '';
           if(hv){ tag = yaPresente ? `<span class="hv-badge hv-badge-ok">Hv.1 · ya en la lista</span>` : `<span class="hv-badge">Hv.1 · pendiente</span>`; }
-          return `<div class="c-vigente${hv?(yaPresente?' c-vigente-ok':' c-vigente-hv1'):''}">
+          else if(conc){ tag = yaPresente ? `<span class="hv-badge hv-badge-ok">Envase/Empaque · ya en la lista</span>` : `<span class="hv-badge hv-badge-conc">Envase/Empaque · pendiente conciliación</span>`; }
+          const cssClass = hv ? (yaPresente?' c-vigente-ok':' c-vigente-hv1') : (conc ? (yaPresente?' c-vigente-ok':' c-vigente-conc') : '');
+          return `<div class="c-vigente${cssClass}">
             <span class="c-vigente-label">Código antiguo → material vigente</span>
             <span class="c-vigente-value"><strong>${esc(m.material)}</strong> — ${esc(m.texto)}${tag}</span>
           </div>`;
@@ -2332,6 +2462,7 @@ window.__setupCellRangeSelection = function(container){
     }).join('');
 
     const pendingHv1 = hasHv1Pending(row);
+    const pendingConc = hasConciliacionPending(row);
     const noCrossRefHint = !window.MM_OLDCODE_MAP
       ? `<div class="comp-empty" style="margin-bottom:10px;">Carga el Maestro de Materiales para cruzar los códigos antiguos de estos componentes con su material vigente.</div>`
       : '';
@@ -2343,6 +2474,7 @@ window.__setupCellRangeSelection = function(container){
           <span class="fg-count">${comps.length} ítem${comps.length!==1?'s':''} · ${groups.size} posición${groups.size!==1?'es':''}${altVal!==''&&altVal!==undefined?` · alternativa ${esc(altVal)}`:''}</span>
         </div>
         ${pendingHv1?`<div class="hv1-banner">Esta lista de materiales está pendiente de actualizar con materiales Humanova (Hv.1).</div>`:''}
+        ${pendingConc?`<div class="conc-banner">Esta lista de materiales está pendiente de generar conciliación con un nuevo material de Envase y Empaque (ZMEE).</div>`:''}
         ${noCrossRefHint}
         ${groupsHtml}
       </div>
@@ -2354,6 +2486,7 @@ window.__setupCellRangeSelection = function(container){
     document.getElementById('bomDrawerDesc').textContent = iDesc !== -1 ? row[iDesc] : '—';
 
     const pendingHv1 = hasHv1Pending(row);
+    const pendingConc = hasConciliacionPending(row);
     const materialCode = iMaterial !== -1 ? row[iMaterial] : '';
     const ownEstado = estadoCodeOf(row);
     const maestroEstado = estadoEnMaestro(materialCode);
@@ -2362,11 +2495,21 @@ window.__setupCellRangeSelection = function(container){
 
     const bomDStamp = document.getElementById('bomDStamp');
     if(bomDStamp){
-      if(pendingHv1){
+      if(pendingHv1 && pendingConc){
+        bomDStamp.style.display = 'block';
+        bomDStamp.textContent = 'Hv.1 · C';
+        bomDStamp.style.borderColor = 'var(--violet)';
+        bomDStamp.style.color = 'var(--violet)';
+      } else if(pendingHv1){
         bomDStamp.style.display = 'block';
         bomDStamp.textContent = 'Hv.1';
         bomDStamp.style.borderColor = 'var(--violet)';
         bomDStamp.style.color = 'var(--violet)';
+      } else if(pendingConc){
+        bomDStamp.style.display = 'block';
+        bomDStamp.textContent = 'C';
+        bomDStamp.style.borderColor = 'var(--orange)';
+        bomDStamp.style.color = 'var(--orange)';
       } else if(suspendidoOwn || suspendidoMaestro){
         bomDStamp.style.display = 'block';
         bomDStamp.textContent = suspendidoOwn ? String(ownEstado) : String(maestroEstado);
@@ -2613,6 +2756,12 @@ window.__setupCellRangeSelection = function(container){
       updateAll();
     }
 
+    if(e.target.closest('#bomToggleConcPendiente')) {
+      filterConc = !filterConc;
+      currentPage = 1;
+      updateAll();
+    }
+
     if(e.target.closest('#bomClearFecha')) {
       dateDesde = ''; dateHasta = '';
       const d1 = document.getElementById('bomCreadoDesde'); if(d1) d1.value = '';
@@ -2641,6 +2790,8 @@ window.__setupCellRangeSelection = function(container){
     filterHv1 = null;
     document.getElementById('bomToggleHv1Pendiente').classList.remove('active-hv1');
     document.getElementById('bomToggleHv1Actualizada').classList.remove('active-hv1');
+    filterConc = false;
+    document.getElementById('bomToggleConcPendiente').classList.remove('active-conc');
     currentPage=1;
     updateAll();
   }

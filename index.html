@@ -848,6 +848,31 @@ function isZ3Code(v){
     }
     return all;
   };
+
+  /* Borra TODAS las filas de una tabla, pero en bloques pequeños en vez de un único
+     DELETE masivo: un "DELETE FROM tabla WHERE ..." sobre decenas de miles de filas en una
+     sola sentencia puede exceder el statement_timeout de Postgres/Supabase ("canceling
+     statement due to statement timeout"), sobre todo en el plan gratuito. Se trae un lote
+     de ids y se borra ese lote, repitiendo hasta que no queden filas. Devuelve {error}
+     (null si todo salió bien) para que el llamador decida cómo informar al usuario. */
+  window.__sbDeleteAll = async function(table){
+    if(!window.__sb) return { error: null };
+    var batchSize = 500;
+    try{
+      while(true){
+        var selRes = await window.__sb.from(table).select('id').limit(batchSize);
+        if(selRes.error) return { error: selRes.error };
+        var ids = (selRes.data || []).map(function(r){ return r.id; });
+        if(ids.length === 0) break;
+        var delRes = await window.__sb.from(table).delete().in('id', ids);
+        if(delRes.error) return { error: delRes.error };
+        if(ids.length < batchSize) break;
+      }
+      return { error: null };
+    }catch(e){
+      return { error: e };
+    }
+  };
 })();
 </script>
 
@@ -1288,11 +1313,13 @@ function isZ3Code(v){
     if(!window.__sb) return;
     var cargaId = 'c' + Date.now() + '_' + Math.random().toString(36).slice(2,8);
     try{
-      /* Se borra TODO lo existente antes de insertar la carga nueva. Insertar primero y
-         borrar después dejaba, durante esa ventana (o si el delete fallaba), dos cargas
-         convivendo en la tabla — y como la carga se lee completa sin filtrar por carga_id,
-         eso se traducía en filas y componentes duplicados en la interfaz. */
-      var delRes = await window.__sb.from('mm_materiales').delete().neq('carga_id', '__nunca__');
+      /* Se borra TODO lo existente antes de insertar la carga nueva (en bloques pequeños
+         vía __sbDeleteAll, no con un único DELETE masivo que puede exceder el timeout de
+         Postgres/Supabase con decenas de miles de filas). Insertar primero y borrar después
+         dejaba, durante esa ventana (o si el delete fallaba), dos cargas convivendo en la
+         tabla — y como la carga se lee completa sin filtrar por carga_id, eso se traducía
+         en filas y componentes duplicados en la interfaz. */
+      var delRes = await window.__sbDeleteAll('mm_materiales');
       if(delRes.error){
         console.error('Supabase delete (limpieza previa) mm_materiales error', delRes.error);
         alert('No se pudo limpiar el Maestro de Materiales anterior en Supabase antes de guardar el nuevo. No se guardó nada para evitar duplicados. Detalle: ' + delRes.error.message);
@@ -1867,10 +1894,11 @@ function isZ3Code(v){
     if(!window.__sb) return;
     const cargaId = 'c' + Date.now() + '_' + Math.random().toString(36).slice(2,8);
     try{
-      /* Se borra TODO lo existente antes de insertar la carga nueva (ver nota equivalente
-         en saveToSupabaseMM): insertar antes de borrar dejaba dos cargas convivendo y
-         producía filas duplicadas al leer. */
-      const delRes = await window.__sb.from('mm_bom').delete().neq('carga_id', '__nunca__');
+      /* Se borra TODO lo existente antes de insertar la carga nueva (en bloques pequeños
+         vía __sbDeleteAll, ver nota equivalente en saveToSupabaseMM): insertar antes de
+         borrar dejaba dos cargas convivendo y producía filas duplicadas al leer, y un
+         DELETE masivo en una sola sentencia puede exceder el statement_timeout. */
+      const delRes = await window.__sbDeleteAll('mm_bom');
       if(delRes.error){
         console.error('Supabase delete (limpieza previa) mm_bom error', delRes.error);
         alert('No se pudo limpiar Listas de Materiales anterior en Supabase antes de guardar el nuevo. No se guardó nada para evitar duplicados. Detalle: ' + delRes.error.message);
@@ -1934,11 +1962,14 @@ function isZ3Code(v){
     if(!window.__sb) return;
     const cargaId = 'c' + Date.now() + '_' + Math.random().toString(36).slice(2,8);
     try{
-      /* Se borra TODO lo existente antes de insertar la carga nueva (ver nota equivalente
-         en saveToSupabaseMM): insertar antes de borrar dejaba dos cargas convivendo y
-         producía componentes duplicados al leer (exactamente el síntoma reportado: cada
-         posición mostraba el mismo componente dos veces). */
-      const delRes = await window.__sb.from('mm_bom_componentes').delete().neq('carga_id', '__nunca__');
+      /* Se borra TODO lo existente antes de insertar la carga nueva (en bloques pequeños
+         vía __sbDeleteAll, ver nota equivalente en saveToSupabaseMM): insertar antes de
+         borrar dejaba dos cargas convivendo y producía componentes duplicados al leer
+         (exactamente el síntoma reportado antes: cada posición mostraba el mismo
+         componente dos veces). Esta es normalmente la tabla más grande de las tres, así
+         que el borrado en un único DELETE es el que con más facilidad excede el
+         statement_timeout de Postgres/Supabase — de ahí que se borre en bloques. */
+      const delRes = await window.__sbDeleteAll('mm_bom_componentes');
       if(delRes.error){
         console.error('Supabase delete (limpieza previa) mm_bom_componentes error', delRes.error);
         alert('No se pudo limpiar Componentes anterior en Supabase antes de guardar el nuevo. No se guardó nada para evitar duplicados. Detalle: ' + delRes.error.message);

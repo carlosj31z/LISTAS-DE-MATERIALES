@@ -2212,6 +2212,9 @@ function isZ3Code(v){
     if(!window.MM_OLDCODE_MAP) return false;
     const altVal = iAlt !== -1 ? row[iAlt] : '';
     if(isAltListExcluida(altVal)) return false;
+    // Z3 = bloqueo definitivo: tampoco se marca como pendiente de conciliación una lista
+    // cuyo material dueño está bloqueado en definitiva.
+    if(isRowZ3Bloqueada(row)) return false;
     const material = iMaterial !== -1 ? row[iMaterial] : '';
     const comps = getComponentsFor(material, altVal);
     const compCodes = new Set(comps.map(c => String(c[cComponente]||'').trim()));
@@ -2719,7 +2722,7 @@ function isZ3Code(v){
     const compCodes = new Set(comps.map(c => String(c[cComponente]||'').trim()));
     const esListaConciliacion = isConciliacionAltList(altVal);
     const esListaZ3Bloqueada = isRowZ3Bloqueada(row);
-    const etiquetaListaExcluida = esListaConciliacion ? 'Lista de conciliación' : 'Material bloqueado (Z3)';
+    const etiquetaListaExcluida = esListaConciliacion ? 'Lista de conciliación' : 'Código de la LMat se encuentra bloqueada';
 
     const groups = new Map();
     comps.forEach(c=>{
@@ -2743,11 +2746,12 @@ function isZ3Code(v){
           const hv = isHv1(m.texto);
           const conc = needsConciliacion(m);
           const yaPresente = (hv||conc) && compCodes.has(String(m.material||'').trim());
-          // El Z3 (bloqueo definitivo) solo excluye el caso Hv.1/actualización, no el de
-          // conciliación. Las listas de conciliación (alternativa 60-69) excluyen ambos.
-          // Las de reacondicionado (95-99) NO se excluyen: sí deben poder marcarse como
-          // pendientes de Hv.1 y de conciliación con normalidad.
-          const excluidoAqui = esListaConciliacion || (esListaZ3Bloqueada && hv);
+          // El Z3 (bloqueo definitivo) excluye tanto el caso Hv.1/actualización como el de
+          // conciliación — no tiene sentido marcar como pendiente algo bloqueado en
+          // definitiva. Las listas de conciliación (alternativa 60-69) también excluyen
+          // ambos. Las de reacondicionado (95-99) NO se excluyen: sí deben poder marcarse
+          // como pendientes de Hv.1 y de conciliación con normalidad.
+          const excluidoAqui = esListaConciliacion || esListaZ3Bloqueada;
           let tag = '';
           if(excluidoAqui && (hv||conc)){
             // Se informa el cruce con el material vigente sin marcarlo como pendiente.
@@ -2782,6 +2786,7 @@ function isZ3Code(v){
 
     const pendingHv1 = hasHv1Pending(row);
     const pendingConc = hasConciliacionPending(row);
+    const esListaZ3BloqueadaBanner = isRowZ3Bloqueada(row);
     const noCrossRefHint = !window.MM_OLDCODE_MAP
       ? `<div class="comp-empty" style="margin-bottom:10px;">Carga el Maestro de Materiales para cruzar los códigos antiguos de estos componentes con su material vigente.</div>`
       : '';
@@ -2792,6 +2797,7 @@ function isZ3Code(v){
           Componentes de la lista
           <span class="fg-count">${comps.length} ítem${comps.length!==1?'s':''} · ${groups.size} posición${groups.size!==1?'es':''}${altVal!==''&&altVal!==undefined?` · alternativa ${esc(altVal)}`:''}</span>
         </div>
+        ${esListaZ3BloqueadaBanner?`<div class="susp-banner">Código de la LMat se encuentra bloqueada — no se marca como pendiente de Hv.1 ni de conciliación.</div>`:''}
         ${pendingHv1?`<div class="hv1-banner">Esta lista de materiales está pendiente de actualizar con materiales Humanova (Hv.1).</div>`:''}
         ${pendingConc?`<div class="conc-banner">Esta lista de materiales está pendiente de generar conciliación con un nuevo material de Envase y Empaque (ZMEE).</div>`:''}
         ${noCrossRefHint}

@@ -567,6 +567,7 @@
       <select id="mmFilterCreador"><option value="">Creado por: todos</option></select>
       <div class="toolbar-divider"></div>
       <button class="btn filter-btn btn-brick" id="mmToggleSuspendidos" title="Mostrar solo materiales con estado Z1/Z2/Z3 (suspendidos)">Solo suspendidos (Z)</button>
+      <button class="btn filter-btn" id="mmToggleOmitSuspendidos" title="Excluir de la vista los materiales con cualquier estado Z (Z1/Z2/Z3…)" style="border-color:var(--brick);">Omitir suspendidos (Z)</button>
       <button class="btn btn-primary" id="mmExportXlsx">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
         Exportar XLSX
@@ -766,6 +767,15 @@
 function isSuspendedCode(v){
   if(v===null || v===undefined) return false;
   return /^Z\d/i.test(String(v).trim());
+}
+
+/* Z3 específicamente representa BLOQUEO DEFINITIVO (a diferencia de Z1/Z2, que son
+   suspensiones temporales/parciales). Un material o lista de materiales con estado Z3
+   no debe marcarse como pendiente de actualización/conciliación, porque no tiene sentido
+   actualizar algo que está bloqueado en definitiva. */
+function isZ3Code(v){
+  if(v===null || v===undefined) return false;
+  return /^Z3/i.test(String(v).trim());
 }
 
 /* ============================================================
@@ -1089,8 +1099,10 @@ function isSuspendedCode(v){
     ]}
   ];
 
-  /* Orden por defecto: fecha de creación descendente (más recientes primero). */
-  var state = { headers: [], rows: [], filtered: [], page: 1, pageSize: 50, sortKey: 'Fecha creación material', sortDir: -1, onlySuspendidos:false };
+  /* Orden por defecto: fecha de creación descendente (más recientes primero), priorizando
+     primero los materiales tipo ZMEE (Mat. de Envase y Empaque) por encima de los demás
+     tipos — dentro de cada grupo (ZMEE / no-ZMEE) se ordena por fecha de creación. */
+  var state = { headers: [], rows: [], filtered: [], page: 1, pageSize: 50, sortKey: 'Fecha creación material', sortDir: -1, onlySuspendidos:false, omitSuspendidos:false };
 
   var $ = function(id){ return document.getElementById(id); };
   var dropzone = $('mmDropzone'), fileInput = $('mmFileInput'), btnSelect = $('mmBtnSelect'),
@@ -1100,7 +1112,7 @@ function isSuspendedCode(v){
       searchInput = $('mmSearchInput'), filterTipo = $('mmFilterTipo'), filterEstado = $('mmFilterEstado'), filterCreador = $('mmFilterCreador'),
       pageSizeSel = $('mmPageSize'), scrim = $('mmScrim'), drawer = $('mmDrawer'), drawerBody = $('mmDrawerBody'),
       dMat = $('mmDMat'), dName = $('mmDName'), dStamp = $('mmDStamp'), drawerClose = $('mmDrawerClose'),
-      toggleSuspendidos = $('mmToggleSuspendidos'), tabBadgeMM = $('tabBadgeMM');
+      toggleSuspendidos = $('mmToggleSuspendidos'), toggleOmitSuspendidos = $('mmToggleOmitSuspendidos'), tabBadgeMM = $('tabBadgeMM');
 
   var mmCellSelection = window.__setupCellRangeSelection(tableWrap);
 
@@ -1124,9 +1136,19 @@ function isSuspendedCode(v){
     if(f) handleFile(f);
   });
 
+  /* "Solo suspendidos" y "Omitir suspendidos" son mutuamente excluyentes: activar uno
+     desactiva el otro, ya que pedir ambos a la vez no tiene sentido (mostraría vacío). */
   toggleSuspendidos.addEventListener('click', function(){
     state.onlySuspendidos = !state.onlySuspendidos;
+    if(state.onlySuspendidos){ state.omitSuspendidos = false; toggleOmitSuspendidos.classList.remove('active'); }
     toggleSuspendidos.classList.toggle('active', state.onlySuspendidos);
+    applyFilters();
+  });
+
+  toggleOmitSuspendidos.addEventListener('click', function(){
+    state.omitSuspendidos = !state.omitSuspendidos;
+    if(state.omitSuspendidos){ state.onlySuspendidos = false; toggleSuspendidos.classList.remove('active'); }
+    toggleOmitSuspendidos.classList.toggle('active', state.omitSuspendidos);
     applyFilters();
   });
 
@@ -1364,6 +1386,12 @@ function isSuspendedCode(v){
     });
   }
 
+  /* Detecta si el campo "Tipo material" corresponde a ZMEE (Mat. de Envase y Empaque),
+     usado para priorizar estos materiales primero en el orden por defecto de la vista. */
+  function isZmeeTipoMM(tipo){
+    return typeof tipo === 'string' && /ZMEE/i.test(tipo.trim());
+  }
+
   function applyFilters(keepPage){
     var q = searchInput.value.trim().toLowerCase();
     var tipo = filterTipo.value, estado = filterEstado.value, creador = filterCreador.value;
@@ -1373,6 +1401,7 @@ function isSuspendedCode(v){
       if(estado && r['Estado mat.todos ce'] !== estado) return false;
       if(creador && r['Nombre creador'] !== creador) return false;
       if(state.onlySuspendidos && !isSuspendedCode(r['Estado mat.todos ce'])) return false;
+      if(state.omitSuspendidos && isSuspendedCode(r['Estado mat.todos ce'])) return false;
       if(q){
         var hay = (String(r['Material']||'') + ' ' + String(r['Texto Material']||'') + ' ' + String(r['Denom.estándar']||'')).toLowerCase();
         if(hay.indexOf(q) === -1) return false;
@@ -1382,6 +1411,14 @@ function isSuspendedCode(v){
 
     var key = state.sortKey, dir = state.sortDir;
     out.sort(function(a,b){
+      /* Cuando el orden activo es por fecha de creación (el orden por defecto de la vista),
+         los materiales tipo ZMEE (Mat. de Envase y Empaque) se priorizan primero, y dentro
+         de cada grupo (ZMEE / no-ZMEE) se ordena por fecha como corresponda. */
+      if(key === 'Fecha creación material'){
+        var za = isZmeeTipoMM(a['Tipo material']) ? 0 : 1;
+        var zb = isZmeeTipoMM(b['Tipo material']) ? 0 : 1;
+        if(za !== zb) return za - zb;
+      }
       /* Orden especializado para fechas dd/mm/aaaa (p.ej. "Fecha creación material"),
          de modo que "más reciente primero" funcione realmente por fecha y no como texto. */
       if(key === 'Fecha creación material' || key === 'Última modificación'){
@@ -1689,6 +1726,15 @@ function isSuspendedCode(v){
     if(isSuspendedCode(estadoCodeOf(row))) return true;
     const material = iMaterial !== -1 ? row[iMaterial] : '';
     return isSuspendedCode(estadoEnMaestro(material));
+  }
+
+  /* true cuando la lista de materiales (o el material dueño en el Maestro) tiene estado Z3
+     — bloqueo definitivo. Se usa para excluir estas listas de las marcas de pendiente de
+     Hv.1/actualización, ya que no tiene sentido actualizar algo bloqueado en definitiva. */
+  function isRowZ3Bloqueada(row){
+    if(isZ3Code(estadoCodeOf(row))) return true;
+    const material = iMaterial !== -1 ? row[iMaterial] : '';
+    return isZ3Code(estadoEnMaestro(material));
   }
 
   document.getElementById('bomLoadExcelBtn').addEventListener('click', ()=>{
@@ -2082,6 +2128,9 @@ function isSuspendedCode(v){
     if(!window.MM_OLDCODE_MAP) return false;
     const altVal = iAlt !== -1 ? row[iAlt] : '';
     if(isAltListExcluida(altVal)) return false;
+    // Z3 = bloqueo definitivo: no tiene sentido marcar como pendiente de actualizar
+    // Hv.1 una lista cuyo material dueño está bloqueado en definitiva.
+    if(isRowZ3Bloqueada(row)) return false;
     const material = iMaterial !== -1 ? row[iMaterial] : '';
     const comps = getComponentsFor(material, altVal);
     const compCodes = new Set(comps.map(c => String(c[cComponente]||'').trim()));
@@ -2109,6 +2158,9 @@ function isSuspendedCode(v){
     if(!window.MM_TEXTO_MAP) return false;
     const altVal = iAlt !== -1 ? row[iAlt] : '';
     if(isAltListExcluida(altVal)) return false;
+    // Z3 = bloqueo definitivo: tampoco se marca como "ya actualizada" una lista bloqueada
+    // en definitiva, ya que el estado de actualización deja de ser relevante para ella.
+    if(isRowZ3Bloqueada(row)) return false;
     const material = iMaterial !== -1 ? row[iMaterial] : '';
     const comps = getComponentsFor(material, altVal);
     for(const c of comps){
@@ -2634,8 +2686,9 @@ function isSuspendedCode(v){
     const compCodes = new Set(comps.map(c => String(c[cComponente]||'').trim()));
     const esListaConciliacion = isConciliacionAltList(altVal);
     const esListaReacondicionado = isReacondicionadoAltList(altVal);
-    const esListaExcluida = esListaConciliacion || esListaReacondicionado;
-    const etiquetaListaExcluida = esListaConciliacion ? 'Lista de conciliación' : 'Lista de reacondicionado';
+    const esListaZ3Bloqueada = isRowZ3Bloqueada(row);
+    const esListaExcluida = esListaConciliacion || esListaReacondicionado || esListaZ3Bloqueada;
+    const etiquetaListaExcluida = esListaConciliacion ? 'Lista de conciliación' : (esListaReacondicionado ? 'Lista de reacondicionado' : 'Material bloqueado (Z3)');
 
     const groups = new Map();
     comps.forEach(c=>{
@@ -2659,17 +2712,17 @@ function isSuspendedCode(v){
           const hv = isHv1(m.texto);
           const conc = needsConciliacion(m);
           const yaPresente = (hv||conc) && compCodes.has(String(m.material||'').trim());
+          // El Z3 (bloqueo definitivo) solo excluye el caso Hv.1/actualización, no el de
+          // conciliación — la exclusión por conciliación/reacondicionado sí aplica a ambos.
+          const excluidoAqui = (esListaConciliacion || esListaReacondicionado) || (esListaZ3Bloqueada && hv);
           let tag = '';
-          if(esListaExcluida && (hv||conc)){
-            // Esta alternativa (66/67/68/69… de conciliación, o 95-99 de reacondicionado)
-            // no debe marcarse como pendiente: se informa el cruce con el material vigente
-            // sin marcarlo como pendiente.
+          if(excluidoAqui && (hv||conc)){
+            // Se informa el cruce con el material vigente sin marcarlo como pendiente.
             tag = `<span class="hv-badge hv-badge-ok">${etiquetaListaExcluida}</span>`;
           } else if(hv){ tag = yaPresente ? `<span class="hv-badge hv-badge-ok">Hv.1 · ya en la lista</span>` : `<span class="hv-badge">Hv.1 · pendiente</span>`; }
           else if(conc){ tag = yaPresente ? `<span class="hv-badge hv-badge-ok">Envase/Empaque · ya en la lista</span>` : `<span class="hv-badge hv-badge-conc">Envase/Empaque · pendiente conciliación</span>`; }
-          const cssClass = esListaExcluida ? ' c-vigente-ok' : (hv ? (yaPresente?' c-vigente-ok':' c-vigente-hv1') : (conc ? (yaPresente?' c-vigente-ok':' c-vigente-conc') : ''));
-          return `<div class="c-vigente${cssClass}">
-            <span class="c-vigente-label">Código antiguo → material vigente</span>
+          const cssClass = excluidoAqui ? ' c-vigente-ok' : (hv ? (yaPresente?' c-vigente-ok':' c-vigente-hv1') : (conc ? (yaPresente?' c-vigente-ok':' c-vigente-conc') : ''));
+          return `<div class="c-vigente${cssClass}">            <span class="c-vigente-label">Código antiguo → material vigente</span>
             <span class="c-vigente-value"><strong>${esc(m.material)}</strong> — ${esc(m.texto)}${tag}</span>
           </div>`;
         }).join('') : '';

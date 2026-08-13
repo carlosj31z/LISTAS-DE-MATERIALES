@@ -1419,6 +1419,16 @@ function isZ3Code(v){
     return typeof tipo === 'string' && /ZMEE/i.test(tipo.trim());
   }
 
+  /* Usuario(s) creador(es) que se priorizan primero (dentro de cada grupo ZMEE/no-ZMEE)
+     en el orden por defecto por fecha de creación, para ubicar rápido lo más reciente
+     creado por ellos. Comparación case-insensitive. */
+  var CREADORES_PRIORITARIOS = ['DQUIROZT'];
+  function isCreadorPrioritario(creador){
+    if(typeof creador !== 'string') return false;
+    var c = creador.trim().toUpperCase();
+    return CREADORES_PRIORITARIOS.indexOf(c) !== -1;
+  }
+
   function applyFilters(keepPage){
     var q = searchInput.value.trim().toLowerCase();
     var tipo = filterTipo.value, estado = filterEstado.value, creador = filterCreador.value;
@@ -1438,13 +1448,19 @@ function isZ3Code(v){
 
     var key = state.sortKey, dir = state.sortDir;
     out.sort(function(a,b){
-      /* Cuando el orden activo es por fecha de creación (el orden por defecto de la vista),
-         los materiales tipo ZMEE (Mat. de Envase y Empaque) se priorizan primero, y dentro
-         de cada grupo (ZMEE / no-ZMEE) se ordena por fecha como corresponda. */
+      /* Cuando el orden activo es por fecha de creación (el orden por defecto de la vista):
+         1) los materiales tipo ZMEE (Mat. de Envase y Empaque) se priorizan primero,
+         2) dentro de ese mismo grupo (ZMEE o no-ZMEE), los creados por DQUIROZT van
+            primero — para ubicar rápido los ZMEE creados recientemente por ese usuario,
+         3) y dentro de cada subgrupo se ordena por fecha como corresponda. */
       if(key === 'Fecha creación material'){
         var za = isZmeeTipoMM(a['Tipo material']) ? 0 : 1;
         var zb = isZmeeTipoMM(b['Tipo material']) ? 0 : 1;
         if(za !== zb) return za - zb;
+
+        var ca = isCreadorPrioritario(a['Nombre creador']) ? 0 : 1;
+        var cb = isCreadorPrioritario(b['Nombre creador']) ? 0 : 1;
+        if(ca !== cb) return ca - cb;
       }
       /* Orden especializado para fechas dd/mm/aaaa (p.ej. "Fecha creación material"),
          de modo que "más reciente primero" funcione realmente por fecha y no como texto. */

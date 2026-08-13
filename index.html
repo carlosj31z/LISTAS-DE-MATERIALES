@@ -2057,20 +2057,31 @@ function isSuspendedCode(v){
   };
 
   /* Las alternativas de lista de 2 dígitos que empiezan por 6 (66, 67, 68, 69…) son en sí
-     mismas listas de materiales de CONCILIACIÓN, y las alternativas 95, 96, 97, 98 y 99
-     tampoco deben generar conciliaciones — no deben marcarse como pendientes de Hv.1 ni de
-     conciliación, sin importar qué código antiguo referencien sus componentes. */
+     mismas listas de materiales de CONCILIACIÓN. */
   function isConciliacionAltList(altVal){
     const s = String(altVal===null||altVal===undefined?'':altVal).trim();
-    if(/^6\d$/.test(s)) return true;
-    if(['95','96','97','98','99'].indexOf(s) !== -1) return true;
-    return false;
+    return /^6\d$/.test(s);
+  }
+
+  /* Las alternativas 95, 96, 97, 98 y 99 son listas de materiales de REACONDICIONADO
+     (no de conciliación) — se excluyen por el mismo motivo: no tiene sentido marcarlas
+     como pendientes de Hv.1 ni de conciliación por lo que referencien sus componentes. */
+  function isReacondicionadoAltList(altVal){
+    const s = String(altVal===null||altVal===undefined?'':altVal).trim();
+    return ['95','96','97','98','99'].indexOf(s) !== -1;
+  }
+
+  /* Alternativas especiales (conciliación o reacondicionado) que quedan excluidas de la
+     detección de pendientes de Hv.1 y de conciliación, sin importar qué código antiguo
+     referencien sus componentes. */
+  function isAltListExcluida(altVal){
+    return isConciliacionAltList(altVal) || isReacondicionadoAltList(altVal);
   }
 
   function hasHv1Pending(row){
     if(!window.MM_OLDCODE_MAP) return false;
     const altVal = iAlt !== -1 ? row[iAlt] : '';
-    if(isConciliacionAltList(altVal)) return false;
+    if(isAltListExcluida(altVal)) return false;
     const material = iMaterial !== -1 ? row[iMaterial] : '';
     const comps = getComponentsFor(material, altVal);
     const compCodes = new Set(comps.map(c => String(c[cComponente]||'').trim()));
@@ -2097,7 +2108,7 @@ function isSuspendedCode(v){
   function hasHv1Updated(row){
     if(!window.MM_TEXTO_MAP) return false;
     const altVal = iAlt !== -1 ? row[iAlt] : '';
-    if(isConciliacionAltList(altVal)) return false;
+    if(isAltListExcluida(altVal)) return false;
     const material = iMaterial !== -1 ? row[iMaterial] : '';
     const comps = getComponentsFor(material, altVal);
     for(const c of comps){
@@ -2115,7 +2126,7 @@ function isSuspendedCode(v){
   function hasConciliacionPending(row){
     if(!window.MM_OLDCODE_MAP) return false;
     const altVal = iAlt !== -1 ? row[iAlt] : '';
-    if(isConciliacionAltList(altVal)) return false;
+    if(isAltListExcluida(altVal)) return false;
     const material = iMaterial !== -1 ? row[iMaterial] : '';
     const comps = getComponentsFor(material, altVal);
     const compCodes = new Set(comps.map(c => String(c[cComponente]||'').trim()));
@@ -2622,6 +2633,9 @@ function isSuspendedCode(v){
 
     const compCodes = new Set(comps.map(c => String(c[cComponente]||'').trim()));
     const esListaConciliacion = isConciliacionAltList(altVal);
+    const esListaReacondicionado = isReacondicionadoAltList(altVal);
+    const esListaExcluida = esListaConciliacion || esListaReacondicionado;
+    const etiquetaListaExcluida = esListaConciliacion ? 'Lista de conciliación' : 'Lista de reacondicionado';
 
     const groups = new Map();
     comps.forEach(c=>{
@@ -2646,13 +2660,14 @@ function isSuspendedCode(v){
           const conc = needsConciliacion(m);
           const yaPresente = (hv||conc) && compCodes.has(String(m.material||'').trim());
           let tag = '';
-          if(esListaConciliacion && (hv||conc)){
-            // Esta alternativa (66/67/68/69…) es en sí misma una lista de conciliación:
-            // se informa el cruce con el material vigente sin marcarlo como pendiente.
-            tag = `<span class="hv-badge hv-badge-ok">Lista de conciliación</span>`;
+          if(esListaExcluida && (hv||conc)){
+            // Esta alternativa (66/67/68/69… de conciliación, o 95-99 de reacondicionado)
+            // no debe marcarse como pendiente: se informa el cruce con el material vigente
+            // sin marcarlo como pendiente.
+            tag = `<span class="hv-badge hv-badge-ok">${etiquetaListaExcluida}</span>`;
           } else if(hv){ tag = yaPresente ? `<span class="hv-badge hv-badge-ok">Hv.1 · ya en la lista</span>` : `<span class="hv-badge">Hv.1 · pendiente</span>`; }
           else if(conc){ tag = yaPresente ? `<span class="hv-badge hv-badge-ok">Envase/Empaque · ya en la lista</span>` : `<span class="hv-badge hv-badge-conc">Envase/Empaque · pendiente conciliación</span>`; }
-          const cssClass = esListaConciliacion ? ' c-vigente-ok' : (hv ? (yaPresente?' c-vigente-ok':' c-vigente-hv1') : (conc ? (yaPresente?' c-vigente-ok':' c-vigente-conc') : ''));
+          const cssClass = esListaExcluida ? ' c-vigente-ok' : (hv ? (yaPresente?' c-vigente-ok':' c-vigente-hv1') : (conc ? (yaPresente?' c-vigente-ok':' c-vigente-conc') : ''));
           return `<div class="c-vigente${cssClass}">
             <span class="c-vigente-label">Código antiguo → material vigente</span>
             <span class="c-vigente-value"><strong>${esc(m.material)}</strong> — ${esc(m.texto)}${tag}</span>

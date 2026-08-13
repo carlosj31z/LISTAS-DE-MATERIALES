@@ -1201,7 +1201,7 @@ function isZ3Code(v){
   function handleFile(file){
     dzError.style.display = 'none';
     var reader = new FileReader();
-    reader.onload = function(e){
+    reader.onload = async function(e){
       try{
         var data = new Uint8Array(e.target.result);
         var wb = XLSX.read(data, {type:'array', cellDates:true});
@@ -1233,7 +1233,7 @@ function isZ3Code(v){
 
         state.headers = headers.filter(function(h){ return EXCLUDE.indexOf(h)===-1; });
         state.rows = rows;
-        onDataLoaded(file.name);
+        await onDataLoaded(file.name);
       }catch(err){
         console.error(err);
         showError('No se pudo leer el archivo. Verifica que sea un export válido de SAP (.xlsx).');
@@ -1289,7 +1289,7 @@ function isZ3Code(v){
     }
   }
 
-  function onDataLoaded(fname, opts){
+  async function onDataLoaded(fname, opts){
     opts = opts || {};
     fnameText.textContent = fname + '  ·  ' + state.rows.length.toLocaleString('es') + ' registros';
     filebar.style.display = 'flex';
@@ -1306,7 +1306,21 @@ function isZ3Code(v){
     updateStats();
     buildOldCodeMap();
     applyFilters();
-    if(!opts.skipSave){ saveToSupabaseMM(); }
+    if(!opts.skipSave){
+      /* Se espera (await) el guardado en Supabase: el borrado ahora es por lotes (para
+         evitar el timeout de Postgres con tablas grandes) y puede tardar varios segundos.
+         Sin esperar, el usuario podía cargar otro archivo o cerrar la página mientras el
+         guardado anterior seguía en curso, dejando datos viejos mezclados con los nuevos. */
+      var originalBtnText = btnChange.textContent;
+      btnChange.disabled = true;
+      btnChange.textContent = 'Guardando…';
+      try{
+        await saveToSupabaseMM();
+      } finally {
+        btnChange.disabled = false;
+        btnChange.textContent = originalBtnText;
+      }
+    }
   }
 
   async function saveToSupabaseMM(){
@@ -1820,7 +1834,21 @@ function isZ3Code(v){
       ROWS = jsonDataFiltrada.map(row => COLUMNS.map(col => row[col] ?? ''));
 
       resetApp();
-      saveBomToSupabase(jsonDataFiltrada);
+
+      /* Se espera (await) el guardado en Supabase antes de mostrar el mensaje de éxito,
+         por la misma razón que en Componentes: el borrado ahora es por lotes (para evitar
+         el timeout de Postgres) y puede tardar; si no se esperaba, el usuario podía volver
+         a cargar el archivo o cerrar la página mientras el guardado anterior seguía en
+         curso, dejando datos viejos mezclados con los nuevos. */
+      const bomLoadBtnEl = document.getElementById('bomLoadExcelBtn');
+      const bomLoadBtnOriginalHtml = bomLoadBtnEl ? bomLoadBtnEl.innerHTML : '';
+      if(bomLoadBtnEl){ bomLoadBtnEl.disabled = true; bomLoadBtnEl.innerHTML = 'Guardando…'; }
+      try{
+        await saveBomToSupabase(jsonDataFiltrada);
+      } finally {
+        if(bomLoadBtnEl){ bomLoadBtnEl.disabled = false; bomLoadBtnEl.innerHTML = bomLoadBtnOriginalHtml; }
+      }
+
       let msg = `Se cargaron ${ROWS.length.toLocaleString('es-PE')} registros correctamente (utilización = 1).`;
       if(omitidosUtil > 0) msg += `\nSe omitieron ${omitidosUtil.toLocaleString('es-PE')} registro(s) con utilización distinta de 1 (incluye utilización 8).`;
       if(colUtil === -1) msg += `\nAviso: no se encontró la columna "Utilización LMat"; no se aplicó el filtro de utilización.`;
@@ -1892,7 +1920,28 @@ function isZ3Code(v){
 
       buildComponentMap();
       updateAll();
-      saveComponentesToSupabase(jsonDataFiltrada);
+
+      /* Se espera (await) a que termine el guardado en Supabase antes de mostrar el
+         mensaje de éxito: como el borrado ahora es por lotes (para evitar el timeout de
+         Postgres con tablas grandes), puede tardar varios segundos. Si no se esperaba,
+         el usuario podía ver "cargado correctamente" y recargar la página o volver a
+         cargar el archivo mientras el guardado anterior seguía en curso en segundo plano,
+         dejando los componentes viejos mezclados con los nuevos o directamente sin
+         reemplazar — que es exactamente el síntoma reportado ("los anteriores se mantienen"). */
+      const compBtnEl = document.getElementById('bomLoadComponentesBtn');
+      if(compBtnEl){
+        compBtnEl.disabled = true;
+        compBtnEl.innerHTML = 'Guardando componentes…';
+      }
+      try{
+        await saveComponentesToSupabase(jsonDataFiltrada);
+      } finally {
+        if(compBtnEl){ compBtnEl.disabled = false; }
+        // Restaura el label correcto del botón (ícono + conteo actualizado de COMP_ROWS),
+        // en vez de dejar "Guardando componentes…" o el texto de antes de esta carga.
+        updateFilterButtonStates();
+      }
+
       let msg = `Se cargaron ${COMP_ROWS.length.toLocaleString('es-PE')} componentes correctamente.`;
       if(descartados > 0) msg += `\nSe descartaron ${descartados.toLocaleString('es-PE')} fila(s) sin "Relevancia p.fabr." (no se cruzarán con el BOM).`;
       if(!tieneColRelevFab) msg += `\nAviso: el archivo no tiene la columna "Relevancia p.fabr.", no se aplicó el filtro.`;

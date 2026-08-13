@@ -2103,25 +2103,27 @@ function isZ3Code(v){
   };
 
   /* Las alternativas de lista de 2 dígitos que empiezan por 6 (66, 67, 68, 69…) son en sí
-     mismas listas de materiales de CONCILIACIÓN. */
+     mismas listas de materiales de CONCILIACIÓN — no deben marcarse como pendientes de
+     Hv.1 ni de conciliación, sin importar qué código antiguo referencien sus componentes. */
   function isConciliacionAltList(altVal){
     const s = String(altVal===null||altVal===undefined?'':altVal).trim();
     return /^6\d$/.test(s);
   }
 
-  /* Las alternativas 95, 96, 97, 98 y 99 son listas de materiales de REACONDICIONADO
-     (no de conciliación) — se excluyen por el mismo motivo: no tiene sentido marcarlas
-     como pendientes de Hv.1 ni de conciliación por lo que referencien sus componentes. */
+  /* Las alternativas 95, 96, 97, 98 y 99 son listas de materiales de REACONDICIONADO.
+     A diferencia de las de conciliación, estas SÍ deben poder marcarse como pendientes
+     de actualización Hv.1 y de conciliación con normalidad — solo se identifican para
+     mostrar la etiqueta correcta en el detalle de componentes. */
   function isReacondicionadoAltList(altVal){
     const s = String(altVal===null||altVal===undefined?'':altVal).trim();
     return ['95','96','97','98','99'].indexOf(s) !== -1;
   }
 
-  /* Alternativas especiales (conciliación o reacondicionado) que quedan excluidas de la
-     detección de pendientes de Hv.1 y de conciliación, sin importar qué código antiguo
-     referencien sus componentes. */
+  /* Alternativas de CONCILIACIÓN (60-69) que quedan excluidas de la detección de
+     pendientes de Hv.1 y de conciliación, sin importar qué código antiguo referencien sus
+     componentes. Las de reacondicionado (95-99) NO se excluyen aquí. */
   function isAltListExcluida(altVal){
-    return isConciliacionAltList(altVal) || isReacondicionadoAltList(altVal);
+    return isConciliacionAltList(altVal);
   }
 
   function hasHv1Pending(row){
@@ -2685,10 +2687,8 @@ function isZ3Code(v){
 
     const compCodes = new Set(comps.map(c => String(c[cComponente]||'').trim()));
     const esListaConciliacion = isConciliacionAltList(altVal);
-    const esListaReacondicionado = isReacondicionadoAltList(altVal);
     const esListaZ3Bloqueada = isRowZ3Bloqueada(row);
-    const esListaExcluida = esListaConciliacion || esListaReacondicionado || esListaZ3Bloqueada;
-    const etiquetaListaExcluida = esListaConciliacion ? 'Lista de conciliación' : (esListaReacondicionado ? 'Lista de reacondicionado' : 'Material bloqueado (Z3)');
+    const etiquetaListaExcluida = esListaConciliacion ? 'Lista de conciliación' : 'Material bloqueado (Z3)';
 
     const groups = new Map();
     comps.forEach(c=>{
@@ -2713,8 +2713,10 @@ function isZ3Code(v){
           const conc = needsConciliacion(m);
           const yaPresente = (hv||conc) && compCodes.has(String(m.material||'').trim());
           // El Z3 (bloqueo definitivo) solo excluye el caso Hv.1/actualización, no el de
-          // conciliación — la exclusión por conciliación/reacondicionado sí aplica a ambos.
-          const excluidoAqui = (esListaConciliacion || esListaReacondicionado) || (esListaZ3Bloqueada && hv);
+          // conciliación. Las listas de conciliación (alternativa 60-69) excluyen ambos.
+          // Las de reacondicionado (95-99) NO se excluyen: sí deben poder marcarse como
+          // pendientes de Hv.1 y de conciliación con normalidad.
+          const excluidoAqui = esListaConciliacion || (esListaZ3Bloqueada && hv);
           let tag = '';
           if(excluidoAqui && (hv||conc)){
             // Se informa el cruce con el material vigente sin marcarlo como pendiente.

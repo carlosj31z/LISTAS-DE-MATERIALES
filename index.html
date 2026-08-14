@@ -953,16 +953,23 @@ function isZ3Code(v){
   }
 
   function copyText(text){
+    var preview = text.length > 60 ? (text.slice(0, 60) + '…') : text;
+    var msg = text.indexOf('\n') === -1 && text.indexOf('\t') === -1 ? ('Copiado: ' + preview) : 'Copiado';
     if(navigator.clipboard && navigator.clipboard.writeText && window.isSecureContext){
       navigator.clipboard.writeText(text).then(function(){
-        showCopyToast('Copiado');
+        showCopyToast(msg);
       }).catch(function(){
-        if(fallbackCopy(text)) showCopyToast('Copiado');
+        if(fallbackCopy(text)) showCopyToast(msg);
       });
     } else {
-      if(fallbackCopy(text)) showCopyToast('Copiado');
+      if(fallbackCopy(text)) showCopyToast(msg);
     }
   }
+
+  /* Expuesta globalmente para que el clic-para-copiar sobre códigos de material (fuera de
+     las tablas con selección de celdas, p.ej. en los drawers de detalle y en los ítems de
+     componentes) reutilice el mismo mecanismo de copiado con fallback y confirmación visual. */
+  window.__copyTextToClipboard = copyText;
 
   window.__setupCellRangeSelection = function(container){
     if(!container) return { wasDragged: function(){ return false; } };
@@ -1007,12 +1014,17 @@ function isZ3Code(v){
       var c = parseInt(td.getAttribute('data-c'), 10);
       if(r !== endR || c !== endC){
         dragged = true;
+        window.__anyCellDragActive = true;
         endR = r; endC = c;
         applySelection();
       }
     });
     document.addEventListener('mouseup', function(){
       selecting = false;
+      // Se limpia en el siguiente tick para que el listener de click (que se dispara justo
+      // después del mouseup) todavía pueda leer que hubo un drag y así no interpretarlo
+      // como un clic-para-copiar sobre la celda donde terminó el arrastre.
+      setTimeout(function(){ window.__anyCellDragActive = false; }, 0);
     });
 
     document.addEventListener('keydown', function(e){
@@ -1068,8 +1080,34 @@ function isZ3Code(v){
       wasDragged: function(){ return dragged; }
     };
   };
+
+  /* ============================================================
+     CLIC-PARA-COPIAR sobre códigos (Material, Componente, etc.)
+     Cualquier elemento marcado con data-copy-code="VALOR" copia ese valor
+     al hacer clic, con confirmación visual (destello + toast). Delegado a
+     nivel de document para funcionar también sobre contenido que se
+     re-renderiza constantemente (tablas, drawers) sin re-enganchar listeners.
+     ============================================================ */
+  document.addEventListener('click', function(e){
+    var el = e.target.closest('[data-copy-code]');
+    if(!el) return;
+    // Si el clic es el resultado de haber arrastrado una selección de celdas (rango tipo
+    // Excel), no se interpreta como clic-para-copiar de un único código.
+    if(window.__anyCellDragActive) return;
+    var code = el.getAttribute('data-copy-code');
+    if(!code) return;
+    copyText(code);
+    el.classList.add('copy-flash');
+    setTimeout(function(){ el.classList.remove('copy-flash'); }, 350);
+  });
 })();
 </script>
+
+<style>
+  [data-copy-code]{ cursor:pointer; }
+  [data-copy-code]:hover{ text-decoration:underline dotted; text-underline-offset:2px; }
+  [data-copy-code].copy-flash{ background:rgba(14,124,123,0.22) !important; border-radius:3px; }
+</style>
 
 <script>
 /* ============================================================
@@ -1550,14 +1588,20 @@ function isZ3Code(v){
           }
           if(ci===0 && flag){ content = '<span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--brick);margin-right:6px;vertical-align:middle;" title="Marcado para borrado"></span>' + content; }
           var cls = c.cls ? ' class="'+c.cls+'"' : '';
-          return '<td'+cls+' data-r="'+ri+'" data-c="'+ci+'" title="'+escapeAttr(display)+'">'+content+'</td>';
+          // La primera columna (Material) permite copiar el código con un clic, sin abrir
+          // la ficha de detalle (el listener de clic-para-copiar detiene la propagación).
+          var copyAttr = ci===0 ? ' data-copy-code="'+escapeAttr(display)+'"' : '';
+          return '<td'+cls+copyAttr+' data-r="'+ri+'" data-c="'+ci+'" title="'+escapeAttr(display)+(ci===0?' — clic para copiar':'')+'">'+content+'</td>';
         }).join('');
         return '<tr data-mat="'+escapeAttr(r['Material'])+'"'+(suspendido?' class="suspendido"':'')+'>'+cells+'</tr>';
       }).join('');
 
       Array.prototype.forEach.call(tbody.querySelectorAll('tr[data-mat]'), function(tr){
-        tr.addEventListener('click', function(){
+        tr.addEventListener('click', function(e){
           if(mmCellSelection.wasDragged()) return;
+          // Si el clic fue sobre la celda de Material (que copia el código al portapapeles
+          // con este mismo clic), no se abre además la ficha de detalle.
+          if(e.target.closest('[data-copy-code]')) return;
           var mat = tr.getAttribute('data-mat');
           var row = state.filtered.find(function(r){ return String(r['Material']) === mat; });
           if(row) openDrawer(row);
@@ -1614,7 +1658,7 @@ function isZ3Code(v){
       }
 
       return '<div class="comp-item" style="cursor:pointer;" data-bom-material="'+escapeAttr(r.material)+'" data-bom-alt="'+escapeAttr(r.alt)+'">'+
-        '<span class="c-code">'+escapeHtml(r.material)+(r.alt&&r.alt!=='1'?' <span class="alt-tag" style="margin-left:4px;">alt. '+escapeHtml(r.alt)+'</span>':'')+'</span>'+
+        '<span class="c-code" data-copy-code="'+escapeAttr(r.material)+'" title="Clic para copiar el código">'+escapeHtml(r.material)+(r.alt&&r.alt!=='1'?' <span class="alt-tag" style="margin-left:4px;">alt. '+escapeHtml(r.alt)+'</span>':'')+'</span>'+
         (cantTxt?'<span class="c-qty">'+cantTxt+(r.unidad?' '+escapeHtml(r.unidad):'')+'</span>':'<span class="c-qty">&nbsp;</span>')+
         (descTxt?'<span class="c-desc">'+escapeHtml(descTxt)+'</span>':'')+
         (r.posicion || badges ? '<span class="c-prob" style="color:var(--ink-faint); display:flex; align-items:center; gap:4px; flex-wrap:wrap;">'+(r.posicion?'Posición '+escapeHtml(r.posicion)+(r.totalPosiciones>1?' (+'+(r.totalPosiciones-1)+' más)':'')+' · ':'')+badges+'</span>' : '')+
@@ -1630,6 +1674,8 @@ function isZ3Code(v){
 
   function openDrawer(row){
     dMat.textContent = row['Material'] || '—';
+    if(row['Material']){ dMat.setAttribute('data-copy-code', row['Material']); dMat.title = 'Clic para copiar el código'; }
+    else { dMat.removeAttribute('data-copy-code'); dMat.title = ''; }
     dName.textContent = row['Texto Material'] || row['Denom.estándar'] || 'Sin descripción';
 
     var estado = (row['Estado mat.todos ce']||'').toString().trim();
@@ -1649,9 +1695,11 @@ function isZ3Code(v){
         var v = row[f];
         var display = (v==null || v==='') ? '' : String(v);
         var isMono = /Material$|^Material$|Código|Jerarquía/.test(f) && f!=='Texto Material';
+        var isCopyableCode = (f==='Material' || f==='Nro. antiguo de material') && display!=='';
+        var copyAttr = isCopyableCode ? ' data-copy-code="'+escapeAttr(display)+'" title="Clic para copiar el código" style="cursor:pointer;"' : '';
         return '<div class="field">'+
           '<div class="field-label2">'+escapeHtml(f)+'</div>'+
-          '<div class="field-value2'+(display?'':' empty')+(isMono?' mono':'')+'">'+(display?escapeHtml(display):'Sin dato')+'</div>'+
+          '<div class="field-value2'+(display?'':' empty')+(isMono?' mono':'')+'"'+copyAttr+'>'+(display?escapeHtml(display):'Sin dato')+'</div>'+
         '</div>';
       }).join('');
       return '<div class="field-group">'+
@@ -1661,7 +1709,10 @@ function isZ3Code(v){
     }).join('');
 
     Array.prototype.forEach.call(drawerBody.querySelectorAll('[data-bom-material]'), function(el){
-      el.addEventListener('click', function(){
+      el.addEventListener('click', function(e){
+        // Si el clic fue sobre el código (que copia el material al portapapeles con este
+        // mismo clic), no se navega además a esa lista de materiales.
+        if(e.target.closest('[data-copy-code]')) return;
         var mat = el.getAttribute('data-bom-material');
         var alt = el.getAttribute('data-bom-alt');
         if(window.__bomOpenListByKey){
@@ -2601,7 +2652,12 @@ function isZ3Code(v){
     }
     emptyState.style.display = 'none';
     tableBody.innerHTML = pageRows.map((row, ri)=>{
-      const cells = TABLE_COLS.map((col, ci)=>`<td class="${col.cls||''}" data-r="${ri}" data-c="${ci}">${renderCell(col,row)}</td>`).join('');
+      const cells = TABLE_COLS.map((col, ci)=>{
+        // La columna Material permite copiar el código con un clic, sin abrir el drawer
+        // de detalle (el listener de fila ignora los clics sobre esta celda).
+        const copyAttr = col.i===iMaterial ? ` data-copy-code="${esc(String(row[col.i]??''))}"` : '';
+        return `<td class="${col.cls||''}"${copyAttr} data-r="${ri}" data-c="${ci}">${renderCell(col,row)}</td>`;
+      }).join('');
       const hasComp = COMP_MAP.size>0 && getComponentsFor(row[iMaterial], iAlt!==-1?row[iAlt]:'').length>0;
       const suspendido = isRowSuspendida(row);
       const pendingHv1 = hasComp && hasHv1Pending(row);
@@ -2615,6 +2671,9 @@ function isZ3Code(v){
 
   tableBody.addEventListener('click', (e)=>{
     if(bomCellSelection.wasDragged()) return;
+    // Si el clic fue sobre la celda de Material (que copia el código al portapapeles con
+    // este mismo clic), no se abre además el drawer de detalle.
+    if(e.target.closest('[data-copy-code]')) return;
     const tr = e.target.closest('tr');
     if(!tr) return;
     const ridx = parseInt(tr.getAttribute('data-ridx'),10);
@@ -2825,12 +2884,12 @@ function isZ3Code(v){
           else if(conc){ tag = yaPresente ? `<span class="hv-badge hv-badge-ok">Envase/Empaque · ya en la lista</span>` : `<span class="hv-badge hv-badge-conc">Envase/Empaque · pendiente conciliación</span>`; }
           const cssClass = excluidoAqui ? ' c-vigente-ok' : (hv ? (yaPresente?' c-vigente-ok':' c-vigente-hv1') : (conc ? (yaPresente?' c-vigente-ok':' c-vigente-conc') : ''));
           return `<div class="c-vigente${cssClass}">            <span class="c-vigente-label">Código antiguo → material vigente</span>
-            <span class="c-vigente-value"><strong>${esc(m.material)}</strong> — ${esc(m.texto)}${tag}</span>
+            <span class="c-vigente-value"><strong data-copy-code="${esc(m.material)}" title="Clic para copiar el código" style="cursor:pointer;">${esc(m.material)}</strong> — ${esc(m.texto)}${tag}</span>
           </div>`;
         }).join('') : '';
         return `
           <div class="comp-item">
-            <span class="c-code">${codigo}</span>
+            <span class="c-code" data-copy-code="${codigo}" title="Clic para copiar el código">${codigo}</span>
             <span class="c-qty">${cant}${um?` ${um}`:''}</span>
             <span class="c-desc">${desc}</span>
             ${prob?`<span class="c-prob">${prob}</span>`:''}
@@ -2872,7 +2931,11 @@ function isZ3Code(v){
   }
 
   function openDrawer(row){
-    document.getElementById('bomDrawerMaterial').textContent = iMaterial !== -1 ? row[iMaterial] : '—';
+    const materialCodeForHeader = iMaterial !== -1 ? row[iMaterial] : '';
+    const bomDrawerMaterialEl = document.getElementById('bomDrawerMaterial');
+    bomDrawerMaterialEl.textContent = materialCodeForHeader || '—';
+    if(materialCodeForHeader){ bomDrawerMaterialEl.setAttribute('data-copy-code', materialCodeForHeader); bomDrawerMaterialEl.title = 'Clic para copiar el código'; }
+    else { bomDrawerMaterialEl.removeAttribute('data-copy-code'); bomDrawerMaterialEl.title = ''; }
     document.getElementById('bomDrawerDesc').textContent = iDesc !== -1 ? row[iDesc] : '—';
 
     const pendingHv1 = hasHv1Pending(row);
@@ -2942,12 +3005,16 @@ function isZ3Code(v){
     const groupsHtml = groups.map(g=>`
       <div class="field-group">
         <div class="field-group-title">${g.title}</div>
-        ${g.fields.map(f=>`
+        ${g.fields.map(f=>{
+          const isMaterialField = f[0]==='Material';
+          const val = f[1]===''||f[1]===null||f[1]===undefined?'—':f[1];
+          const copyAttr = (isMaterialField && val!=='—') ? ` data-copy-code="${esc(val)}" title="Clic para copiar el código" style="cursor:pointer;"` : '';
+          return `
           <div class="field-row">
             <span class="f-label">${f[0]}</span>
-            <span class="f-value ${f[2]?'mono':''}">${esc(f[1]===''||f[1]===null||f[1]===undefined?'—':f[1])}</span>
+            <span class="f-value ${f[2]?'mono':''}"${copyAttr}>${esc(val)}</span>
           </div>
-        `).join('')}
+        `;}).join('')}
       </div>
     `).join('');
 

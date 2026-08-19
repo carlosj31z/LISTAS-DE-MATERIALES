@@ -283,6 +283,10 @@
     font-size:9px; font-weight:700; vertical-align:middle;
   }
   tbody tr.has-comp td.col-material::before{ content:'●'; color:var(--amber); font-size:8px; margin-right:5px; vertical-align:middle; }
+  /* Z3 = bloqueo definitivo: el código de material se muestra en rojo para distinguirlo
+     de un rápido vistazo, incluso entre otros materiales suspendidos (Z1/Z2). */
+  tbody tr.z3-bloqueado td.col-material{ color:#C0392B; font-weight:700; }
+  tbody tr.z3-bloqueado td.col-material::after{ background:#C0392B; }
 
   .badge{ display:inline-flex; align-items:center; gap:5px; padding:2px 9px; border-radius:12px; font-size:11px; font-weight:500; font-family:var(--mono); white-space:nowrap; }
   .badge .dot{width:6px;height:6px;border-radius:50%;}
@@ -535,6 +539,7 @@
       <div class="status-cell"><div class="status-label"><span class="tick" style="background:#4FD1C5"></span>Materiales</div><div class="status-value" id="mmStatTotal">0</div></div>
       <div class="status-cell"><div class="status-label"><span class="tick" style="background:#4FD1C5"></span>Tipos</div><div class="status-value" id="mmStatTipos">0</div></div>
       <div class="status-cell"><div class="status-label"><span class="tick" style="background:#4FD1C5"></span>Últ. modif.</div><div class="status-value" id="mmStatRango">—</div></div>
+      <div class="status-cell"><div class="status-label"><span class="tick" style="background:#9689C7"></span>Última carga</div><div class="status-value" id="mmStatUltimaCarga" style="font-size:15px;">—</div></div>
       <div class="status-cell flag-cell"><div class="status-label"><span class="tick" style="background:#963B32"></span>Suspendidos (Z)</div><div class="status-value" id="mmStatSuspendidos">0</div></div>
     </div>
   </header>
@@ -568,11 +573,36 @@
       <div class="toolbar-divider"></div>
       <button class="btn filter-btn btn-brick" id="mmToggleSuspendidos" title="Mostrar solo materiales con estado Z1/Z2/Z3 (suspendidos)">Solo suspendidos (Z)</button>
       <button class="btn filter-btn" id="mmToggleOmitSuspendidos" title="Excluir de la vista los materiales con cualquier estado Z (Z1/Z2/Z3…)" style="border-color:var(--brick);">Omitir suspendidos (Z)</button>
+      <button class="btn filter-btn" id="mmMoreFiltersToggle" title="Filtrar por modificado por y por rango de fecha de creación o modificación">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" style="width:13px;height:13px;"><path d="M4 5h16l-6.5 7.5V19l-3 1.5v-8z"/></svg>
+        Más filtros
+      </button>
       <button class="btn btn-primary" id="mmExportXlsx">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
         Exportar XLSX
       </button>
       <span class="count" id="mmResultCount" style="margin-left:auto; font-family:var(--mono); font-size:12px; color:var(--ink-soft); white-space:nowrap;"></span>
+    </div>
+
+    <div class="more-filters" id="mmMoreFilters">
+      <select id="mmFilterModificador"><option value="">Modificado por: todos</option></select>
+      <div class="date-field">
+        <label>Creado desde</label>
+        <input type="date" id="mmFechaCreacionDesde">
+      </div>
+      <div class="date-field">
+        <label>Creado hasta</label>
+        <input type="date" id="mmFechaCreacionHasta">
+      </div>
+      <div class="date-field">
+        <label>Modificado desde</label>
+        <input type="date" id="mmFechaModDesde">
+      </div>
+      <div class="date-field">
+        <label>Modificado hasta</label>
+        <input type="date" id="mmFechaModHasta">
+      </div>
+      <button class="btn btn-ghost" id="mmClearMoreFilters" type="button">Limpiar estos filtros</button>
     </div>
   </div>
 
@@ -638,6 +668,7 @@
       <div class="status-cell"><div class="status-label"><span class="tick" style="background:#9689C7"></span>Planta Lima</div><div class="status-value" id="bomStatLima">0</div></div>
       <div class="status-cell"><div class="status-label"><span class="tick" style="background:#EAD98C"></span>Materiales únicos</div><div class="status-value" id="bomStatUnicos">0</div></div>
       <div class="status-cell"><div class="status-label"><span class="tick" style="background:#8A6D1E"></span>Componentes cargados</div><div class="status-value" id="bomStatComponentes">0</div></div>
+      <div class="status-cell"><div class="status-label"><span class="tick" style="background:#9689C7"></span>Última carga</div><div class="status-value" id="bomStatUltimaCarga" style="font-size:15px;">—</div></div>
       <div class="status-cell flag-cell"><div class="status-label"><span class="tick" style="background:#963B32"></span>Suspendidos (Z)</div><div class="status-value" id="bomStatSuspendidos">0</div></div>
       <div class="status-cell flag-cell" style="background:rgba(91,75,138,0.14);"><div class="status-label"><span class="tick" style="background:#5B4B8A"></span>Pendientes Hv.1</div><div class="status-value" id="bomStatHv1">0</div></div>
       <div class="status-cell flag-cell" style="background:rgba(184,92,30,0.14);"><div class="status-label"><span class="tick" style="background:#B85C1E"></span>Pendientes conciliación</div><div class="status-value" id="bomStatConc">0</div></div>
@@ -778,6 +809,18 @@ function isZ3Code(v){
   return /^Z3/i.test(String(v).trim());
 }
 
+/* Formatea una fecha (Date) como "dd/mm/aaaa hh:mm", usado para mostrar la fecha/hora de
+   la última carga de cada archivo (Maestro de Materiales, Listas de Materiales). */
+function formatFechaHoraCorta(d){
+  if(!d || isNaN(d.getTime())) return '—';
+  var dd = String(d.getDate()).padStart(2,'0');
+  var mm = String(d.getMonth()+1).padStart(2,'0');
+  var yyyy = d.getFullYear();
+  var hh = String(d.getHours()).padStart(2,'0');
+  var mi = String(d.getMinutes()).padStart(2,'0');
+  return dd+'/'+mm+'/'+yyyy+' '+hh+':'+mi;
+}
+
 /* ============================================================
    NAVEGACIÓN ENTRE PESTAÑAS DE LA SUITE
    ============================================================ */
@@ -871,6 +914,28 @@ function isZ3Code(v){
       return { error: null };
     }catch(e){
       return { error: e };
+    }
+  };
+
+  /* Devuelve la fecha/hora (Date) de la última carga de una tabla, extraída del campo
+     carga_id que cada guardado ya escribe en todas sus filas ("c<timestamp>_<random>").
+     No requiere ninguna columna adicional de auditoría en Supabase: basta con leer una
+     sola fila (limit 1) y parsear el timestamp embebido en su carga_id. Devuelve null si
+     la tabla está vacía o el carga_id no tiene el formato esperado. */
+  window.__sbGetLastCargaDate = async function(table){
+    if(!window.__sb) return null;
+    try{
+      var res = await window.__sb.from(table).select('carga_id').limit(1);
+      if(res.error || !res.data || res.data.length===0) return null;
+      var cargaId = res.data[0].carga_id || '';
+      var m = /^c(\d+)_/.exec(cargaId);
+      if(!m) return null;
+      var ts = parseInt(m[1], 10);
+      if(isNaN(ts)) return null;
+      return new Date(ts);
+    }catch(e){
+      console.error('Error obteniendo fecha de última carga ('+table+')', e);
+      return null;
     }
   };
 })();
@@ -1173,6 +1238,10 @@ function isZ3Code(v){
       toolbar = $('mmToolbar'), tableWrap = $('mmTableWrap'), theadRow = $('mmTheadRow'), tbody = $('mmTbody'),
       pagination = $('mmPagination'), pgInfo = $('mmPgInfo'), resultCount = $('mmResultCount'),
       searchInput = $('mmSearchInput'), filterTipo = $('mmFilterTipo'), filterEstado = $('mmFilterEstado'), filterCreador = $('mmFilterCreador'),
+      filterModificador = $('mmFilterModificador'),
+      moreFiltersToggle = $('mmMoreFiltersToggle'), moreFiltersPanel = $('mmMoreFilters'), clearMoreFiltersBtn = $('mmClearMoreFilters'),
+      fechaCreacionDesdeInput = $('mmFechaCreacionDesde'), fechaCreacionHastaInput = $('mmFechaCreacionHasta'),
+      fechaModDesdeInput = $('mmFechaModDesde'), fechaModHastaInput = $('mmFechaModHasta'),
       pageSizeSel = $('mmPageSize'), scrim = $('mmScrim'), drawer = $('mmDrawer'), drawerBody = $('mmDrawerBody'),
       dMat = $('mmDMat'), dName = $('mmDName'), dStamp = $('mmDStamp'), drawerClose = $('mmDrawerClose'),
       toggleSuspendidos = $('mmToggleSuspendidos'), toggleOmitSuspendidos = $('mmToggleOmitSuspendidos'), tabBadgeMM = $('tabBadgeMM');
@@ -1271,6 +1340,13 @@ function isZ3Code(v){
 
         state.headers = headers.filter(function(h){ return EXCLUDE.indexOf(h)===-1; });
         state.rows = rows;
+        // Al cargar un archivo nuevo se limpian los filtros de "Más filtros" (modificado
+        // por y rangos de fecha), para que no queden filtros de una carga anterior
+        // ocultando filas del archivo recién cargado.
+        if(filterModificador) filterModificador.value = '';
+        [fechaCreacionDesdeInput, fechaCreacionHastaInput, fechaModDesdeInput, fechaModHastaInput].forEach(function(inp){
+          if(inp) inp.value = '';
+        });
         await onDataLoaded(file.name);
       }catch(err){
         console.error(err);
@@ -1339,6 +1415,7 @@ function isZ3Code(v){
     fillSelect(filterTipo, uniqueSorted('Denominación tipo material'), 'Tipo material: todos');
     fillSelect(filterEstado, uniqueSorted('Estado mat.todos ce'), 'Estado: todos');
     fillSelect(filterCreador, uniqueSorted('Nombre creador'), 'Creado por: todos');
+    if(filterModificador) fillSelect(filterModificador, uniqueSorted('Nombre de modificador'), 'Modificado por: todos');
 
     buildHeader();
     updateStats();
@@ -1359,6 +1436,16 @@ function isZ3Code(v){
         btnChange.textContent = originalBtnText;
       }
     }
+    updateUltimaCarga();
+  }
+
+  /* Consulta y muestra la fecha/hora de la última carga guardada en Supabase para el
+     Maestro de Materiales (extraída del carga_id de sus filas, ver __sbGetLastCargaDate). */
+  async function updateUltimaCarga(){
+    var el = document.getElementById('mmStatUltimaCarga');
+    if(!el || !window.__sbGetLastCargaDate) return;
+    var d = await window.__sbGetLastCargaDate('mm_materiales');
+    el.textContent = d ? formatFechaHoraCorta(d) : '—';
   }
 
   async function saveToSupabaseMM(){
@@ -1484,13 +1571,31 @@ function isZ3Code(v){
   function applyFilters(keepPage){
     var q = searchInput.value.trim().toLowerCase();
     var tipo = filterTipo.value, estado = filterEstado.value, creador = filterCreador.value;
+    var modificador = filterModificador ? filterModificador.value : '';
+    var fCreacionDesde = fechaCreacionDesdeInput ? fechaCreacionDesdeInput.value : '';
+    var fCreacionHasta = fechaCreacionHastaInput ? fechaCreacionHastaInput.value : '';
+    var fModDesde = fechaModDesdeInput ? fechaModDesdeInput.value : '';
+    var fModHasta = fechaModHastaInput ? fechaModHastaInput.value : '';
 
     var out = state.rows.filter(function(r){
       if(tipo && r['Denominación tipo material'] !== tipo) return false;
       if(estado && r['Estado mat.todos ce'] !== estado) return false;
       if(creador && r['Nombre creador'] !== creador) return false;
+      if(modificador && r['Nombre de modificador'] !== modificador) return false;
       if(state.onlySuspendidos && !isSuspendedCode(r['Estado mat.todos ce'])) return false;
       if(state.omitSuspendidos && isSuspendedCode(r['Estado mat.todos ce'])) return false;
+      if(fCreacionDesde || fCreacionHasta){
+        var dCreacion = parseDMY(r['Fecha creación material']);
+        if(!dCreacion) return false;
+        if(fCreacionDesde && dCreacion < new Date(fCreacionDesde+'T00:00:00')) return false;
+        if(fCreacionHasta && dCreacion > new Date(fCreacionHasta+'T23:59:59')) return false;
+      }
+      if(fModDesde || fModHasta){
+        var dMod = parseDMY(r['Última modificación']);
+        if(!dMod) return false;
+        if(fModDesde && dMod < new Date(fModDesde+'T00:00:00')) return false;
+        if(fModHasta && dMod > new Date(fModHasta+'T23:59:59')) return false;
+      }
       if(q){
         var hay = (String(r['Material']||'') + ' ' + String(r['Texto Material']||'') + ' ' + String(r['Denom.estándar']||'')).toLowerCase();
         if(hay.indexOf(q) === -1) return false;
@@ -1571,6 +1676,7 @@ function isZ3Code(v){
       tbody.innerHTML = pageRows.map(function(r, ri){
         var flag = (r['Ind.Borrado']||'').toString().trim().toUpperCase() === 'X';
         var suspendido = isSuspendedCode(r['Estado mat.todos ce']);
+        var z3Bloqueado = isZ3Code(r['Estado mat.todos ce']);
         var cells = SUMMARY_COLS.map(function(c, ci){
           var v = r[c.key];
           var display = (v==null || v==='') ? '' : String(v);
@@ -1593,7 +1699,8 @@ function isZ3Code(v){
           var copyAttr = ci===0 ? ' data-copy-code="'+escapeAttr(display)+'"' : '';
           return '<td'+cls+copyAttr+' data-r="'+ri+'" data-c="'+ci+'" title="'+escapeAttr(display)+(ci===0?' — clic para copiar':'')+'">'+content+'</td>';
         }).join('');
-        return '<tr data-mat="'+escapeAttr(r['Material'])+'"'+(suspendido?' class="suspendido"':'')+'>'+cells+'</tr>';
+        var rowCls = [suspendido?'suspendido':'', z3Bloqueado?'z3-bloqueado':''].filter(Boolean).join(' ');
+        return '<tr data-mat="'+escapeAttr(r['Material'])+'"'+(rowCls?' class="'+rowCls+'"':'')+'>'+cells+'</tr>';
       }).join('');
 
       Array.prototype.forEach.call(tbody.querySelectorAll('tr[data-mat]'), function(tr){
@@ -1621,6 +1728,25 @@ function isZ3Code(v){
   filterTipo.addEventListener('change', function(){ applyFilters(); });
   filterEstado.addEventListener('change', function(){ applyFilters(); });
   filterCreador.addEventListener('change', function(){ applyFilters(); });
+  if(filterModificador) filterModificador.addEventListener('change', function(){ applyFilters(); });
+  [fechaCreacionDesdeInput, fechaCreacionHastaInput, fechaModDesdeInput, fechaModHastaInput].forEach(function(inp){
+    if(inp) inp.addEventListener('change', function(){ applyFilters(); });
+  });
+  if(moreFiltersToggle && moreFiltersPanel){
+    moreFiltersToggle.addEventListener('click', function(){
+      var open = moreFiltersPanel.classList.toggle('open');
+      moreFiltersToggle.classList.toggle('active', open);
+    });
+  }
+  if(clearMoreFiltersBtn){
+    clearMoreFiltersBtn.addEventListener('click', function(){
+      if(filterModificador) filterModificador.value = '';
+      [fechaCreacionDesdeInput, fechaCreacionHastaInput, fechaModDesdeInput, fechaModHastaInput].forEach(function(inp){
+        if(inp) inp.value = '';
+      });
+      applyFilters();
+    });
+  }
   pageSizeSel.addEventListener('change', function(){ state.pageSize = parseInt(pageSizeSel.value,10); state.page=1; renderTable(); });
 
   $('mmPgFirst').addEventListener('click', function(){ state.page=1; renderTable(); });
@@ -1679,6 +1805,9 @@ function isZ3Code(v){
     dName.textContent = row['Texto Material'] || row['Denom.estándar'] || 'Sin descripción';
 
     var estado = (row['Estado mat.todos ce']||'').toString().trim();
+    // Z3 = bloqueo definitivo: el código de material en el encabezado del drawer se
+    // muestra en rojo intenso, igual que en la tabla.
+    dMat.style.color = isZ3Code(estado) ? '#C0392B' : '';
     if(estado){
       dStamp.style.display = 'block';
       dStamp.textContent = estado;
@@ -1899,6 +2028,7 @@ function isZ3Code(v){
       } finally {
         if(bomLoadBtnEl){ bomLoadBtnEl.disabled = false; bomLoadBtnEl.innerHTML = bomLoadBtnOriginalHtml; }
       }
+      updateUltimaCargaBom();
 
       let msg = `Se cargaron ${ROWS.length.toLocaleString('es-PE')} registros correctamente (utilización = 1).`;
       if(omitidosUtil > 0) msg += `\nSe omitieron ${omitidosUtil.toLocaleString('es-PE')} registro(s) con utilización distinta de 1 (incluye utilización 8).`;
@@ -1992,6 +2122,7 @@ function isZ3Code(v){
         // en vez de dejar "Guardando componentes…" o el texto de antes de esta carga.
         updateFilterButtonStates();
       }
+      updateUltimaCargaBom();
 
       let msg = `Se cargaron ${COMP_ROWS.length.toLocaleString('es-PE')} componentes correctamente.`;
       if(descartados > 0) msg += `\nSe descartaron ${descartados.toLocaleString('es-PE')} fila(s) sin "Relevancia p.fabr." (no se cruzarán con el BOM).`;
@@ -2660,9 +2791,10 @@ function isZ3Code(v){
       }).join('');
       const hasComp = COMP_MAP.size>0 && getComponentsFor(row[iMaterial], iAlt!==-1?row[iAlt]:'').length>0;
       const suspendido = isRowSuspendida(row);
+      const z3Bloqueado = isRowZ3Bloqueada(row);
       const pendingHv1 = hasComp && hasHv1Pending(row);
       const pendingConc = hasComp && hasConciliacionPending(row);
-      const rowClasses = [hasComp?'has-comp':'', suspendido?'suspendido':'', pendingHv1?'pending-hv1':'', pendingConc?'pending-conc':''].filter(Boolean).join(' ');
+      const rowClasses = [hasComp?'has-comp':'', suspendido?'suspendido':'', z3Bloqueado?'z3-bloqueado':'', pendingHv1?'pending-hv1':'', pendingConc?'pending-conc':''].filter(Boolean).join(' ');
       return `<tr data-ridx="${row.__ridx}" class="${rowClasses}">${cells}</tr>`;
     }).join('');
   }
@@ -2718,6 +2850,23 @@ function isZ3Code(v){
     document.getElementById('bomStatSuspendidos').textContent = suspendidos.toLocaleString('es-PE');
     document.getElementById('bomStatHv1').textContent = pendientesHv1.toLocaleString('es-PE');
     document.getElementById('bomStatConc').textContent = pendientesConc.toLocaleString('es-PE');
+  }
+
+  /* Consulta y muestra la fecha/hora de la última carga guardada en Supabase para Listas
+     de Materiales: toma la más reciente entre el Excel principal (mm_bom) y el de
+     Componentes (mm_bom_componentes), ya que "cargar Listas de Materiales" involucra
+     ambos archivos por separado. */
+  async function updateUltimaCargaBom(){
+    var el = document.getElementById('bomStatUltimaCarga');
+    if(!el || !window.__sbGetLastCargaDate) return;
+    var [dBom, dComp] = await Promise.all([
+      window.__sbGetLastCargaDate('mm_bom'),
+      window.__sbGetLastCargaDate('mm_bom_componentes')
+    ]);
+    var mas = null;
+    if(dBom && dComp) mas = dBom > dComp ? dBom : dComp;
+    else mas = dBom || dComp;
+    el.textContent = mas ? formatFechaHoraCorta(mas) : '—';
   }
 
   function updateFilterButtonStates(){
@@ -2945,6 +3094,9 @@ function isZ3Code(v){
     const maestroEstado = estadoEnMaestro(materialCode);
     const suspendidoOwn = isSuspendedCode(ownEstado);
     const suspendidoMaestro = isSuspendedCode(maestroEstado);
+    // Z3 = bloqueo definitivo: el código de material en el encabezado del drawer se
+    // muestra en rojo intenso, igual que en la tabla y en el Maestro de Materiales.
+    bomDrawerMaterialEl.style.color = (isZ3Code(ownEstado) || isZ3Code(maestroEstado)) ? '#C0392B' : '';
 
     const bomDStamp = document.getElementById('bomDStamp');
     if(bomDStamp){
@@ -3287,6 +3439,7 @@ function isZ3Code(v){
       updateAll();
       if(window.__globalLoading) window.__globalLoading.markFound();
     }
+    updateUltimaCargaBom();
     if(window.__globalLoading) window.__globalLoading.end();
   })();
 })();

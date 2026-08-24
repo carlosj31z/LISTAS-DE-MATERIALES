@@ -447,6 +447,23 @@
     width:auto; padding:0 4px;
     background: linear-gradient(90deg, var(--violet) 50%, var(--orange) 50%);
   }
+  tbody tr.vfab-bloqueada td.col-material::before{
+    content:'V'; display:inline-flex; align-items:center; justify-content:center;
+    width:15px; height:15px; margin-right:6px; border-radius:3px; background:#963B32; color:#fff;
+    font-size:9px; font-weight:700; vertical-align:middle;
+  }
+  tbody tr.vfab-bloqueada.pending-hv1 td.col-material::before{
+    content:'V·H'; width:auto; padding:0 4px;
+    background: linear-gradient(90deg, #963B32 50%, var(--violet) 50%);
+  }
+  tbody tr.vfab-bloqueada.pending-conc td.col-material::before{
+    content:'V·C'; width:auto; padding:0 4px;
+    background: linear-gradient(90deg, #963B32 50%, var(--orange) 50%);
+  }
+  tbody tr.vfab-bloqueada.pending-hv1.pending-conc td.col-material::before{
+    content:'V·H·C'; width:auto; padding:0 4px;
+    background: linear-gradient(90deg, #963B32 33%, var(--violet) 33% 66%, var(--orange) 66%);
+  }
 
   footer.page-footer{ text-align:center; padding:18px; color:var(--ink-faint); font-size:11.5px; font-family:var(--mono); }
 
@@ -669,10 +686,12 @@
       <div class="status-cell"><div class="status-label"><span class="tick" style="background:#9689C7"></span>Planta Lima</div><div class="status-value" id="bomStatLima">0</div></div>
       <div class="status-cell"><div class="status-label"><span class="tick" style="background:#EAD98C"></span>Materiales únicos</div><div class="status-value" id="bomStatUnicos">0</div></div>
       <div class="status-cell"><div class="status-label"><span class="tick" style="background:#8A6D1E"></span>Componentes cargados</div><div class="status-value" id="bomStatComponentes">0</div></div>
+      <div class="status-cell"><div class="status-label"><span class="tick" style="background:#4FD1C5"></span>Versiones fabric. cargadas</div><div class="status-value" id="bomStatVfab">0</div></div>
       <div class="status-cell"><div class="status-label"><span class="tick" style="background:#9689C7"></span>Última carga</div><div class="status-value" id="bomStatUltimaCarga" style="font-size:15px;">—</div></div>
       <div class="status-cell flag-cell"><div class="status-label"><span class="tick" style="background:#963B32"></span>Suspendidos (Z)</div><div class="status-value" id="bomStatSuspendidos">0</div></div>
       <div class="status-cell flag-cell" style="background:rgba(91,75,138,0.14);"><div class="status-label"><span class="tick" style="background:#5B4B8A"></span>Pendientes Hv.1</div><div class="status-value" id="bomStatHv1">0</div></div>
       <div class="status-cell flag-cell" style="background:rgba(184,92,30,0.14);"><div class="status-label"><span class="tick" style="background:#B85C1E"></span>Pendientes conciliación</div><div class="status-value" id="bomStatConc">0</div></div>
+      <div class="status-cell flag-cell" style="background:rgba(150,59,50,0.14);"><div class="status-label"><span class="tick" style="background:#963B32"></span>Con Vfab bloqueada</div><div class="status-value" id="bomStatVfabBloqueada">0</div></div>
     </div>
   </header>
 
@@ -695,6 +714,12 @@
         Cargar Componentes
       </button>
 
+      <input type="file" id="bomVfabFileInput" accept=".xlsx,.xls,.csv">
+      <button class="btn btn-amber" id="bomLoadVfabBtn" title="Cargar el export de SAP con las Versiones de Fabricación (Material, Versión fabricación, Lista mat.alternat., Utilización LMat, Bloqueo de versión de fabricación…)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M8 2v4M16 2v4M3 10h18"/><path d="M9 15l2 2 4-4"/></svg>
+        Cargar Versiones Fab.
+      </button>
+
       <div class="toolbar-divider"></div>
 
       <button id="bomToggleMM" class="filter-btn" title="Filtrar solo registros que contengan 'MM' en la descripción (Muestras Médicas)">
@@ -708,6 +733,8 @@
       <button id="bomToggleHv1Actualizada" class="filter-btn" title="Mostrar solo listas cuyos componentes ya referencian directamente el material Hv.1 (ya actualizadas)" style="border-color:var(--violet);">Actualizadas Hv.1</button>
 
       <button id="bomToggleConcPendiente" class="filter-btn" title="Mostrar solo listas cuyos componentes referencian el código antiguo de un material nuevo de Envase y Empaque (ZMEE) — pendientes de generar conciliación" style="border-color:var(--orange);">Pendientes conciliación</button>
+
+      <button id="bomToggleVfabBloqueada" class="filter-btn" title="Mostrar solo listas que tienen al menos una Versión de Fabricación con Bloqueo de versión de fabricación = 1 (bloqueada)" style="border-color:#963B32;">Con Vfab bloqueada</button>
 
       <div class="toolbar-divider"></div>
 
@@ -1382,6 +1409,7 @@ function formatFechaHoraCorta(d){
     var estadoMap = {};
     var textoMap = {};
     var tipoMap = {};
+    var inspeccionMap = {};
     state.rows.forEach(function(r){
       var old = (r['Nro. antiguo de material']||'').toString().trim();
       if(old){
@@ -1393,12 +1421,17 @@ function formatFechaHoraCorta(d){
         estadoMap[matKey] = r['Estado mat.todos ce'];
         textoMap[matKey] = r['Texto Material'] || r['Denom.estándar'] || '';
         tipoMap[matKey] = r['Tipo material'] || '';
+        inspeccionMap[matKey] = r['Texto de inspección'] || '';
       }
     });
     window.MM_OLDCODE_MAP = map;
     window.MM_ESTADO_MAP = estadoMap;
     window.MM_TEXTO_MAP = textoMap;
     window.MM_TIPO_MAP = tipoMap;
+    // Texto de inspección del Maestro de Materiales, publicado para que el exportado de
+    // Listas de Materiales pueda incluirlo (solo para la lista/producto, no para cada
+    // componente — ver uso en el exportador del BOM).
+    window.MM_INSPECCION_MAP = inspeccionMap;
     if(window.__refreshBomView){
       try{ window.__refreshBomView(); }catch(e){}
     }
@@ -1901,6 +1934,7 @@ function formatFechaHoraCorta(d){
   let filterOmitInactivos = false;
   let filterHv1 = null; // null | 'pendiente' | 'actualizada'
   let filterConc = false; // pendientes de conciliación (ZMEE)
+  let filterVfabBloqueada = false; // listas con al menos una Versión de Fabricación bloqueada
   let sortCol = null;
   let sortDir = 1;
   let currentPage = 1;
@@ -1912,6 +1946,15 @@ function formatFechaHoraCorta(d){
   let cMaterial, cAlt, cPos, cComponente, cDenom, cUM, cCantidad, cPosAlt, cProbabilidad, cGrupoAlt, cTipoPos, cListaMat, cRelevFab;
   let COMP_MAP = new Map();
   let COMP_BY_CODE_MAP = new Map();
+
+  /* Versiones de Fabricación (Vfab): export de SAP con una fila por cada versión de
+     fabricación de un material, cruzado por Material + Lista mat.alternat. contra la
+     lista de materiales (columna F del export = Lista mat.alternat. del BOM). */
+  let VFAB_COLUMNS = [];
+  let VFAB_ROWS = [];
+  let VFAB_IDX = {};
+  let vMaterial, vCentro, vVersion, vValidezA, vValidoDe, vAlt, vUtil, vTextoVersion, vBloqueo;
+  let VFAB_MAP = new Map(); // Material||Alt -> array de filas de VFAB_ROWS (solo Utilización LMat = 1)
 
   function normKey(material, alt){
     const a = (alt===''||alt===null||alt===undefined) ? '1' : String(alt).trim();
@@ -2169,6 +2212,95 @@ function formatFechaHoraCorta(d){
     e.target.value = '';
   });
 
+  document.getElementById('bomLoadVfabBtn').addEventListener('click', ()=>{
+    document.getElementById('bomVfabFileInput').click();
+  });
+
+  document.getElementById('bomVfabFileInput').addEventListener('change', async (e)=>{
+    const file = e.target.files[0];
+    if(!file) return;
+
+    try {
+      const data = await file.arrayBuffer();
+      const workbook = XLSX.read(data, { type: 'array' });
+      const firstSheet = workbook.SheetNames[0];
+      const worksheet = workbook.Sheets[firstSheet];
+      const jsonData = XLSX.utils.sheet_to_json(worksheet, { defval: '' });
+
+      if(jsonData.length === 0) {
+        alert('El archivo de Versiones de Fabricación está vacío o no tiene datos.');
+        return;
+      }
+
+      const colsCheck = Object.keys(jsonData[0]);
+      const tieneMaterial = colsCheck.indexOf('Material') !== -1;
+      const tieneVersion = colsCheck.indexOf('Versión fabricación') !== -1;
+      const tieneAlt = colsCheck.indexOf('Lista mat.alternat.') !== -1;
+      if(!tieneMaterial || !tieneVersion || !tieneAlt){
+        alert('El archivo debe contener las columnas "Material", "Versión fabricación" y "Lista mat.alternat.".\nColumnas encontradas: ' + colsCheck.join(', '));
+        return;
+      }
+
+      // Solo se conservan las versiones con Utilización LMat = 1, tal como se pidió: las
+      // demás (p.ej. "6", u otras) no deben participar en el cruce con la lista de
+      // materiales.
+      const jsonDataFiltrada = jsonData.filter(row => String(row['Utilización LMat']??'').trim() === '1');
+      const omitidasUtil = jsonData.length - jsonDataFiltrada.length;
+
+      if(jsonDataFiltrada.length === 0) {
+        alert('Ninguna fila tiene Utilización LMat = 1, así que no hay Versiones de Fabricación para cargar.');
+        return;
+      }
+
+      VFAB_COLUMNS = Object.keys(jsonData[0]);
+      VFAB_ROWS = jsonDataFiltrada.map(row => VFAB_COLUMNS.map(col => row[col] ?? ''));
+
+      VFAB_IDX = {};
+      VFAB_COLUMNS.forEach((c,i)=> VFAB_IDX[c]=i);
+
+      vMaterial      = VFAB_IDX['Material'];
+      vCentro        = VFAB_IDX['Centro'] ?? -1;
+      vVersion       = VFAB_IDX['Versión fabricación'];
+      vValidezA      = VFAB_IDX['Validez a'] ?? -1;
+      vValidoDe      = VFAB_IDX['Válido de'] ?? -1;
+      vAlt           = VFAB_IDX['Lista mat.alternat.'];
+      vUtil          = VFAB_IDX['Utilización LMat'] ?? -1;
+      vTextoVersion  = VFAB_IDX['Texto de versión de producción'] ?? -1;
+      vBloqueo       = VFAB_IDX['Bloqueo de versión de fabricación'] ?? -1;
+
+      if(vMaterial === undefined || vAlt === undefined || vVersion === undefined) {
+        alert('El archivo de Versiones de Fabricación debe contener las columnas "Material", "Lista mat.alternat." y "Versión fabricación".\nColumnas encontradas: ' + VFAB_COLUMNS.join(', '));
+        return;
+      }
+
+      buildVfabMap();
+      updateAll();
+
+      /* Se espera (await) el guardado en Supabase, por la misma razón que en Componentes:
+         el borrado por lotes puede tardar, y no esperar dejaba abierta la posibilidad de
+         cargas superpuestas con datos viejos mezclados con los nuevos. */
+      const vfabBtnEl = document.getElementById('bomLoadVfabBtn');
+      const vfabBtnOriginalHtml = vfabBtnEl ? vfabBtnEl.innerHTML : '';
+      if(vfabBtnEl){ vfabBtnEl.disabled = true; vfabBtnEl.innerHTML = 'Guardando versiones…'; }
+      try{
+        await saveVfabToSupabase(jsonDataFiltrada);
+      } finally {
+        if(vfabBtnEl){ vfabBtnEl.disabled = false; }
+        updateFilterButtonStates();
+      }
+      updateUltimaCargaBom();
+
+      let msg = `Se cargaron ${VFAB_ROWS.length.toLocaleString('es-PE')} versiones de fabricación correctamente (Utilización LMat = 1).`;
+      if(omitidasUtil > 0) msg += `\nSe omitieron ${omitidasUtil.toLocaleString('es-PE')} fila(s) con Utilización LMat distinta de 1.`;
+      alert(msg);
+
+    } catch(err) {
+      console.error(err);
+      alert('Error al leer el archivo de Versiones de Fabricación. Asegúrate de que sea un Excel válido (.xlsx, .xls).');
+    }
+    e.target.value = '';
+  });
+
   /* ---------- Persistencia en Supabase: Listas de Materiales (BOM) ---------- */
   async function saveBomToSupabase(jsonDataArr){
     if(!window.__sb) return;
@@ -2330,6 +2462,88 @@ function formatFechaHoraCorta(d){
     }
   }
 
+  /* ---------- Persistencia en Supabase: Versiones de Fabricación (Vfab) ---------- */
+  async function saveVfabToSupabase(jsonDataArr){
+    if(!window.__sb) return;
+    const cargaId = 'c' + Date.now() + '_' + Math.random().toString(36).slice(2,8);
+    try{
+      /* Mismo patrón de borrado por lotes + insertar después que el resto de las tablas
+         (ver notas equivalentes en saveComponentesToSupabase / saveToSupabaseMM): evita
+         tanto el timeout de Postgres con tablas grandes como las duplicaciones que dejaba
+         insertar antes de borrar. */
+      const delRes = await window.__sbDeleteAll('mm_vfab');
+      if(delRes.error){
+        console.error('Supabase delete (limpieza previa) mm_vfab error', delRes.error);
+        alert('No se pudo limpiar Versiones de Fabricación anterior en Supabase antes de guardar el nuevo. No se guardó nada para evitar duplicados. Detalle: ' + delRes.error.message);
+        return;
+      }
+
+      const records = jsonDataArr.map(row => ({
+        material: String(row['Material']||''),
+        lista_alt: String(row['Lista mat.alternat.']??''),
+        version: String(row['Versión fabricación']||''),
+        data: row,
+        carga_id: cargaId
+      }));
+      for(let i=0; i<records.length; i+=500){
+        const chunk = records.slice(i, i+500);
+        const res = await window.__sb.from('mm_vfab').insert(chunk);
+        if(res.error){
+          console.error('Supabase insert mm_vfab error', res.error);
+          alert('Se limpió Versiones de Fabricación anterior en Supabase, pero ocurrió un error guardando el nuevo (quedó incompleto). Vuelve a cargar el archivo. Detalle: ' + res.error.message);
+          return;
+        }
+      }
+    }catch(e){
+      console.error('Error guardando Versiones de Fabricación en Supabase', e);
+      alert('No se pudo guardar Versiones de Fabricación en Supabase. Revisa la consola para más detalle.');
+    }
+  }
+
+  async function loadVfabFromSupabase(){
+    if(!window.__sb) return false;
+    try{
+      const data = await window.__sbFetchAll('mm_vfab', 'data');
+      if(!data || data.length===0) return false;
+      const jsonDataArrRaw = data.map(r=>r.data);
+      /* Salvaguarda: deduplica por Material + Lista mat.alternat. + Centro + Versión
+         fabricación (misma lógica que en Componentes), conservando la última aparición. */
+      const seenVfab = new Map();
+      const jsonDataArr = [];
+      jsonDataArrRaw.forEach(row=>{
+        const key = [
+          row['Material']||'', row['Lista mat.alternat.']??'', row['Centro']||'', row['Versión fabricación']||''
+        ].map(String).join('||');
+        if(seenVfab.has(key)){ jsonDataArr[seenVfab.get(key)] = row; }
+        else { seenVfab.set(key, jsonDataArr.length); jsonDataArr.push(row); }
+      });
+
+      VFAB_COLUMNS = Object.keys(jsonDataArr[0]);
+      VFAB_ROWS = jsonDataArr.map(row => VFAB_COLUMNS.map(col => row[col] ?? ''));
+
+      VFAB_IDX = {};
+      VFAB_COLUMNS.forEach((c,i)=> VFAB_IDX[c]=i);
+
+      vMaterial      = VFAB_IDX['Material'];
+      vCentro        = VFAB_IDX['Centro'] ?? -1;
+      vVersion       = VFAB_IDX['Versión fabricación'];
+      vValidezA      = VFAB_IDX['Validez a'] ?? -1;
+      vValidoDe      = VFAB_IDX['Válido de'] ?? -1;
+      vAlt           = VFAB_IDX['Lista mat.alternat.'];
+      vUtil          = VFAB_IDX['Utilización LMat'] ?? -1;
+      vTextoVersion  = VFAB_IDX['Texto de versión de producción'] ?? -1;
+      vBloqueo       = VFAB_IDX['Bloqueo de versión de fabricación'] ?? -1;
+
+      if(vMaterial === undefined || vAlt === undefined || vVersion === undefined) return false;
+
+      buildVfabMap();
+      return true;
+    }catch(e){
+      console.error('Error cargando Versiones de Fabricación desde Supabase', e);
+      return false;
+    }
+  }
+
   function buildComponentMap(){
     COMP_MAP = new Map();
     COMP_BY_CODE_MAP = new Map();
@@ -2363,6 +2577,25 @@ function formatFechaHoraCorta(d){
   function getComponentsFor(material, alt){
     const key = normKey(material, alt);
     return COMP_MAP.get(key) || [];
+  }
+
+  /* Agrupa VFAB_ROWS por Material + Lista mat.alternat. (misma clave normKey que usan
+     Componentes y la lista de materiales, así toda la información "conversa" bajo el
+     mismo criterio de cruce), ordenando cada grupo por número de versión de fabricación. */
+  function buildVfabMap(){
+    VFAB_MAP = new Map();
+    for(const r of VFAB_ROWS){
+      const key = normKey(r[vMaterial], r[vAlt]);
+      if(!VFAB_MAP.has(key)) VFAB_MAP.set(key, []);
+      VFAB_MAP.get(key).push(r);
+    }
+    for(const arr of VFAB_MAP.values()){
+      arr.sort((a,b)=>{
+        const va = String(a[vVersion]||'');
+        const vb = String(b[vVersion]||'');
+        return va < vb ? -1 : (va > vb ? 1 : 0);
+      });
+    }
   }
 
   /* Dado un código de material (p.ej. un ZMEE del Maestro), devuelve las listas de
@@ -2435,6 +2668,29 @@ function formatFechaHoraCorta(d){
      componentes. Las de reacondicionado (95-99) NO se excluyen aquí. */
   function isAltListExcluida(altVal){
     return isConciliacionAltList(altVal);
+  }
+
+  /* Bloqueo de versión de fabricación (columna AJ del export de Vfab): "1" significa
+     bloqueada; "2", "3" o vacío significan no bloqueada. Se compara como texto exacto
+     ("1") en vez de con una expresión regular, porque a diferencia de los códigos Z
+     (Z1/Z2/Z3) aquí el valor es un dígito suelto sin prefijo de letra. */
+  function isVfabBloqueada(v){
+    return String(v===null||v===undefined?'':v).trim() === '1';
+  }
+
+  function getVfabFor(material, alt){
+    const key = normKey(material, alt);
+    return VFAB_MAP.get(key) || [];
+  }
+
+  /* true cuando la lista (Material + Lista mat.alternat.) tiene al menos una Versión de
+     Fabricación cargada con Bloqueo de versión de fabricación = 1. */
+  function hasVfabBloqueada(row){
+    if(VFAB_MAP.size===0) return false;
+    const material = iMaterial !== -1 ? row[iMaterial] : '';
+    const altVal = iAlt !== -1 ? row[iAlt] : '';
+    const vfabs = getVfabFor(material, altVal);
+    return vfabs.some(v => isVfabBloqueada(v[vBloqueo]));
   }
 
   function hasHv1Pending(row){
@@ -2526,6 +2782,8 @@ function formatFechaHoraCorta(d){
     document.getElementById('bomToggleHv1Actualizada').classList.remove('active-hv1');
     filterConc = false;
     document.getElementById('bomToggleConcPendiente').classList.remove('active-conc');
+    filterVfabBloqueada = false;
+    document.getElementById('bomToggleVfabBloqueada').classList.remove('active');
     sortCol = null;
     sortDir = 1;
     currentPage = 1;
@@ -2717,6 +2975,7 @@ function formatFechaHoraCorta(d){
     if(filterHv1 === 'pendiente' && !hasHv1Pending(row)) return false;
     if(filterHv1 === 'actualizada' && !hasHv1Updated(row)) return false;
     if(filterConc && !hasConciliacionPending(row)) return false;
+    if(filterVfabBloqueada && !hasVfabBloqueada(row)) return false;
 
     for(const def of FILTER_DEFS) {
       if(def.key === exceptKey) continue;
@@ -2827,7 +3086,8 @@ function formatFechaHoraCorta(d){
       const z3Bloqueado = isRowZ3Bloqueada(row);
       const pendingHv1 = hasComp && hasHv1Pending(row);
       const pendingConc = hasComp && hasConciliacionPending(row);
-      const rowClasses = [hasComp?'has-comp':'', suspendido?'suspendido':'', z3Bloqueado?'z3-bloqueado':'', pendingHv1?'pending-hv1':'', pendingConc?'pending-conc':''].filter(Boolean).join(' ');
+      const vfabBloqueada = hasVfabBloqueada(row);
+      const rowClasses = [hasComp?'has-comp':'', suspendido?'suspendido':'', z3Bloqueado?'z3-bloqueado':'', pendingHv1?'pending-hv1':'', pendingConc?'pending-conc':'', vfabBloqueada?'vfab-bloqueada':''].filter(Boolean).join(' ');
       return `<tr data-ridx="${row.__ridx}" class="${rowClasses}">${cells}</tr>`;
     }).join('');
   }
@@ -2874,31 +3134,34 @@ function formatFechaHoraCorta(d){
     const suspendidos = filtered.filter(r=>isRowSuspendida(r)).length;
     const pendientesHv1 = (window.MM_OLDCODE_MAP && COMP_MAP.size>0) ? filtered.filter(r=>hasHv1Pending(r)).length : 0;
     const pendientesConc = (window.MM_OLDCODE_MAP && COMP_MAP.size>0) ? filtered.filter(r=>hasConciliacionPending(r)).length : 0;
+    const conVfabBloqueada = VFAB_MAP.size>0 ? filtered.filter(r=>hasVfabBloqueada(r)).length : 0;
     document.getElementById('bomStatActivos').textContent = activos.toLocaleString('es-PE');
     document.getElementById('bomStatInactivos').textContent = inactivos.toLocaleString('es-PE');
     document.getElementById('bomStatAte').textContent = ate.toLocaleString('es-PE');
     document.getElementById('bomStatLima').textContent = lima.toLocaleString('es-PE');
     document.getElementById('bomStatUnicos').textContent = uniqueMats.toLocaleString('es-PE');
     document.getElementById('bomStatComponentes').textContent = COMP_ROWS.length.toLocaleString('es-PE');
+    document.getElementById('bomStatVfab').textContent = VFAB_ROWS.length.toLocaleString('es-PE');
     document.getElementById('bomStatSuspendidos').textContent = suspendidos.toLocaleString('es-PE');
     document.getElementById('bomStatHv1').textContent = pendientesHv1.toLocaleString('es-PE');
     document.getElementById('bomStatConc').textContent = pendientesConc.toLocaleString('es-PE');
+    document.getElementById('bomStatVfabBloqueada').textContent = conVfabBloqueada.toLocaleString('es-PE');
   }
 
   /* Consulta y muestra la fecha/hora de la última carga guardada en Supabase para Listas
-     de Materiales: toma la más reciente entre el Excel principal (mm_bom) y el de
-     Componentes (mm_bom_componentes), ya que "cargar Listas de Materiales" involucra
-     ambos archivos por separado. */
+     de Materiales: toma la más reciente entre el Excel principal (mm_bom), el de
+     Componentes (mm_bom_componentes) y el de Versiones de Fabricación (mm_vfab), ya que
+     "cargar Listas de Materiales" involucra estos tres archivos por separado. */
   async function updateUltimaCargaBom(){
     var el = document.getElementById('bomStatUltimaCarga');
     if(!el || !window.__sbGetLastCargaDate) return;
-    var [dBom, dComp] = await Promise.all([
+    var [dBom, dComp, dVfab] = await Promise.all([
       window.__sbGetLastCargaDate('mm_bom'),
-      window.__sbGetLastCargaDate('mm_bom_componentes')
+      window.__sbGetLastCargaDate('mm_bom_componentes'),
+      window.__sbGetLastCargaDate('mm_vfab')
     ]);
-    var mas = null;
-    if(dBom && dComp) mas = dBom > dComp ? dBom : dComp;
-    else mas = dBom || dComp;
+    var candidatos = [dBom, dComp, dVfab].filter(Boolean);
+    var mas = candidatos.length ? new Date(Math.max.apply(null, candidatos.map(d=>d.getTime()))) : null;
     el.textContent = mas ? formatFechaHoraCorta(mas) : '—';
   }
 
@@ -2928,11 +3191,22 @@ function formatFechaHoraCorta(d){
     const concBtn = document.getElementById('bomToggleConcPendiente');
     if(concBtn) concBtn.classList.toggle('active-conc', filterConc);
 
+    const vfabBloqBtn = document.getElementById('bomToggleVfabBloqueada');
+    if(vfabBloqBtn) vfabBloqBtn.classList.toggle('active', filterVfabBloqueada);
+
     const compBtn = document.getElementById('bomLoadComponentesBtn');
     if(compBtn){
       compBtn.classList.toggle('loaded', COMP_ROWS.length>0);
       if(COMP_ROWS.length>0){
         compBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg> Componentes cargados (${COMP_ROWS.length.toLocaleString('es-PE')})`;
+      }
+    }
+
+    const vfabBtn = document.getElementById('bomLoadVfabBtn');
+    if(vfabBtn){
+      vfabBtn.classList.toggle('loaded', VFAB_ROWS.length>0);
+      if(VFAB_ROWS.length>0){
+        vfabBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg> Versiones fab. cargadas (${VFAB_ROWS.length.toLocaleString('es-PE')})`;
       }
     }
   }
@@ -2948,9 +3222,11 @@ function formatFechaHoraCorta(d){
       document.getElementById('bomStatLima').textContent = '0';
       document.getElementById('bomStatUnicos').textContent = '0';
       document.getElementById('bomStatComponentes').textContent = COMP_ROWS.length.toLocaleString('es-PE');
+      document.getElementById('bomStatVfab').textContent = VFAB_ROWS.length.toLocaleString('es-PE');
       document.getElementById('bomStatSuspendidos').textContent = '0';
       document.getElementById('bomStatHv1').textContent = '0';
       document.getElementById('bomStatConc').textContent = '0';
+      document.getElementById('bomStatVfabBloqueada').textContent = '0';
       document.getElementById('bomMetaShowing').textContent = '0';
       document.getElementById('bomMetaTotal').textContent = '0';
       document.getElementById('bomMetaOfAll').textContent = '';
@@ -2997,6 +3273,71 @@ function formatFechaHoraCorta(d){
 
   const drawer = document.getElementById('bomDrawer');
   const overlay = document.getElementById('bomOverlay');
+
+  /* Sección de Versiones de Fabricación (Vfab) de la lista, mostrada en el panel principal
+     del drawer (a diferencia de Componentes, que va en su propio panel/modal aparte) ya
+     que suele haber pocas versiones por lista y encaja bien junto a los demás grupos de
+     campos. Cruce por Material + Lista mat.alternat., igual que Componentes. */
+  function renderVfabSection(row){
+    const material = iMaterial !== -1 ? row[iMaterial] : '';
+    const altVal = iAlt !== -1 ? row[iAlt] : '';
+
+    if(VFAB_ROWS.length === 0){
+      return `
+        <div class="field-group">
+          <div class="field-group-title">Versiones de fabricación</div>
+          <div class="comp-empty">
+            Carga el archivo de Versiones de Fabricación de SAP para ver aquí el detalle de esta lista de materiales.
+            <br><button class="btn btn-amber" id="bomDrawerLoadVfabBtn">Cargar Versiones Fab.</button>
+          </div>
+        </div>
+      `;
+    }
+
+    const vfabs = getVfabFor(material, altVal);
+
+    if(vfabs.length === 0){
+      return `
+        <div class="field-group">
+          <div class="field-group-title">Versiones de fabricación</div>
+          <div class="comp-empty">No se encontraron Versiones de Fabricación para el material <strong>${esc(material)}</strong>${altVal!==''&&altVal!==undefined?` (lista alternativa ${esc(altVal)})`:''} en el archivo cargado (recuerda que solo se cargan las versiones con Utilización LMat = 1).</div>
+        </div>
+      `;
+    }
+
+    const itemsHtml = vfabs.map(v=>{
+      const version = vVersion!==-1 ? esc(v[vVersion]) : '—';
+      const centro = vCentro!==-1 ? esc(v[vCentro]) : '';
+      const texto = vTextoVersion!==-1 ? esc(v[vTextoVersion]) : '';
+      const validoDe = vValidoDe!==-1 ? fmtDate(v[vValidoDe]).replace(/<[^>]+>/g,'') : '';
+      const validezA = vValidezA!==-1 ? fmtDate(v[vValidezA]).replace(/<[^>]+>/g,'') : '';
+      const bloqueada = isVfabBloqueada(v[vBloqueo]);
+      const badge = bloqueada
+        ? `<span class="hv-badge" style="background:#963B32;">Bloqueada</span>`
+        : `<span class="hv-badge hv-badge-ok">No bloqueada</span>`;
+      return `
+        <div class="comp-item">
+          <span class="c-code">Vfab ${version}${centro?` <span class="alt-tag" style="margin-left:4px;">Centro ${centro}</span>`:''}</span>
+          <span class="c-qty">${badge}</span>
+          ${texto?`<span class="c-desc">${texto}</span>`:''}
+          ${(validoDe||validezA)?`<span class="c-prob" style="color:var(--ink-faint);">Vigencia: ${validoDe||'—'} a ${validezA||'—'}</span>`:''}
+        </div>
+      `;
+    }).join('');
+
+    const hayBloqueada = vfabs.some(v=>isVfabBloqueada(v[vBloqueo]));
+
+    return `
+      <div class="field-group">
+        <div class="field-group-title">
+          Versiones de fabricación
+          <span class="fg-count">${vfabs.length} versión${vfabs.length!==1?'es':''}</span>
+        </div>
+        ${hayBloqueada?`<div class="susp-banner">Esta lista tiene al menos una Versión de Fabricación bloqueada (Bloqueo de versión de fabricación = 1).</div>`:''}
+        <div class="comp-group">${itemsHtml}</div>
+      </div>
+    `;
+  }
 
   function renderComponentesSection(row){
     const material = iMaterial !== -1 ? row[iMaterial] : '';
@@ -3127,13 +3468,22 @@ function formatFechaHoraCorta(d){
     const maestroEstado = estadoEnMaestro(materialCode);
     const suspendidoOwn = isSuspendedCode(ownEstado);
     const suspendidoMaestro = isSuspendedCode(maestroEstado);
+    const vfabBloqueadaDrawer = hasVfabBloqueada(row);
     // Z3 = bloqueo definitivo: el código de material en el encabezado del drawer se
     // muestra en rojo intenso, igual que en la tabla y en el Maestro de Materiales.
     bomDrawerMaterialEl.style.color = (isZ3Code(ownEstado) || isZ3Code(maestroEstado)) ? '#C0392B' : '';
 
     const bomDStamp = document.getElementById('bomDStamp');
     if(bomDStamp){
-      if(pendingHv1 && pendingConc){
+      if(vfabBloqueadaDrawer){
+        // Prioridad más alta: un bloqueo de Versión de Fabricación es información
+        // operativa crítica (no se puede fabricar con esa versión), así que domina el
+        // sello por encima de Hv.1/conciliación/suspensión de material.
+        bomDStamp.style.display = 'block';
+        bomDStamp.textContent = 'Vfab bloqueada';
+        bomDStamp.style.borderColor = '#963B32';
+        bomDStamp.style.color = '#963B32';
+      } else if(pendingHv1 && pendingConc){
         bomDStamp.style.display = 'block';
         bomDStamp.textContent = 'Hv.1 · C';
         bomDStamp.style.borderColor = 'var(--violet)';
@@ -3207,15 +3557,16 @@ function formatFechaHoraCorta(d){
       ? `<div class="susp-banner">Este material figura con estado <strong>${esc(suspendidoOwn?ownEstado:maestroEstado)}</strong> (suspendido)${(suspendidoMaestro && !suspendidoOwn)?' según el Maestro de Materiales':''}.</div>`
       : '';
 
+    const vfabHtml = renderVfabSection(row);
     const isNarrowScreen = window.matchMedia('(max-width: 940px)').matches;
     const componentsHtml = renderComponentesSection(row);
 
     if(isNarrowScreen){
       // En pantallas angostas no hay espacio para dos paneles lado a lado —
       // se combinan en un único panel con scroll, igual que antes.
-      document.getElementById('bomDrawerBody').innerHTML = suspBanner + groupsHtml + componentsHtml;
+      document.getElementById('bomDrawerBody').innerHTML = suspBanner + groupsHtml + vfabHtml + componentsHtml;
     } else {
-      document.getElementById('bomDrawerBody').innerHTML = suspBanner + groupsHtml;
+      document.getElementById('bomDrawerBody').innerHTML = suspBanner + groupsHtml + vfabHtml;
       const compTitleEl = document.getElementById('bomComponentsDrawerTitle');
       if(compTitleEl){
         const compDesc = iDesc !== -1 ? row[iDesc] : '';
@@ -3228,6 +3579,10 @@ function formatFechaHoraCorta(d){
     const drawerLoadCompBtn = document.getElementById('bomDrawerLoadCompBtn');
     if(drawerLoadCompBtn){
       drawerLoadCompBtn.addEventListener('click', ()=> document.getElementById('bomComponentesFileInput').click());
+    }
+    const drawerLoadVfabBtn = document.getElementById('bomDrawerLoadVfabBtn');
+    if(drawerLoadVfabBtn){
+      drawerLoadVfabBtn.addEventListener('click', ()=> document.getElementById('bomVfabFileInput').click());
     }
 
     drawer.classList.add('open');
@@ -3269,20 +3624,38 @@ function formatFechaHoraCorta(d){
       const altVal = iAlt !== -1 ? row[iAlt] : '';
       const estadoLMat = iEstado !== -1 ? String(row[iEstado]||'').trim() : '';
       const activa = estadoLMat.toLowerCase() === 'activo';
+      const etapa = iTexto !== -1 ? String(row[iTexto]||'') : '';
 
+      // Bloqueo Z del MATERIAL DE LA LISTA (la cabecera del BOM), separado del bloqueo Z
+      // que pueda tener cada COMPONENTE individualmente — son cosas distintas: la lista
+      // puede estar sana mientras uno de sus componentes está bloqueado, o viceversa.
       const ownEstado = estadoCodeOf(row);
       const maestroEstado = estadoEnMaestro(material);
-      const bloqueadoZ = isSuspendedCode(ownEstado) || isSuspendedCode(maestroEstado);
-      const codigoZ = isSuspendedCode(ownEstado) ? ownEstado : (isSuspendedCode(maestroEstado) ? maestroEstado : '');
-      const esZ3 = isZ3Code(ownEstado) || isZ3Code(maestroEstado);
+      const bloqueadoZLista = isSuspendedCode(ownEstado) || isSuspendedCode(maestroEstado);
+      const codigoZLista = isSuspendedCode(ownEstado) ? ownEstado : (isSuspendedCode(maestroEstado) ? maestroEstado : '');
+      const esZ3Lista = isZ3Code(ownEstado) || isZ3Code(maestroEstado);
+
+      // Texto de inspección del Maestro de Materiales, correspondiente al material de la
+      // LISTA (no a cada componente) — se busca por el código del material de la lista.
+      const textoInspeccion = (window.MM_INSPECCION_MAP && window.MM_INSPECCION_MAP[String(material||'').trim()]) || '';
+
+      // Versiones de Fabricación de esta lista (Material + Lista mat.alternat.): se
+      // resume en un texto con todas las versiones encontradas, y si alguna está
+      // bloqueada (Bloqueo de versión de fabricación = 1).
+      const vfabs = getVfabFor(material, altVal);
+      const versionesFab = vfabs.map(v => vVersion!==-1 ? String(v[vVersion]||'') : '').filter(Boolean).join(', ');
+      const vfabBloqueadaLista = vfabs.some(v => isVfabBloqueada(v[vBloqueo]));
+      const versionesFabBloqueadas = vfabs.filter(v => isVfabBloqueada(v[vBloqueo])).map(v => vVersion!==-1 ? String(v[vVersion]||'') : '').filter(Boolean).join(', ');
 
       const comps = getComponentsFor(material, altVal);
 
       if(comps.length === 0){
         dataRows.push({
-          material, descLista, alt: altVal || '1', estadoLMat, activa,
-          bloqueadoZ, codigoZ, esZ3,
+          material, descLista, textoInspeccion, alt: altVal || '1', estadoLMat, activa, etapa,
+          bloqueadoZLista, codigoZLista, esZ3Lista,
+          versionesFab, vfabBloqueadaLista, versionesFabBloqueadas,
           componente:'', descComponente:'', posicion:'', cantidad:'', unidad:'',
+          bloqueadoZComponente:false, codigoZComponente:'', esZ3Componente:false,
           exclusivo: false
         });
         return;
@@ -3294,11 +3667,21 @@ function formatFechaHoraCorta(d){
         const posComp = cPos!==-1 ? String(c[cPos]||'') : '';
         const cantComp = cCantidad!==-1 ? c[cCantidad] : '';
         const umComp = cUM!==-1 ? String(c[cUM]||'') : '';
+
+        // Bloqueo Z propio del componente, consultado en el Maestro de Materiales por su
+        // propio código (independiente del estado de la lista que lo contiene).
+        const estadoComp = estadoEnMaestro(codigoComp);
+        const bloqueadoZComponente = isSuspendedCode(estadoComp);
+        const codigoZComponente = bloqueadoZComponente ? estadoComp : '';
+        const esZ3Componente = isZ3Code(estadoComp);
+
         dataRows.push({
-          material, descLista, alt: altVal || '1', estadoLMat, activa,
-          bloqueadoZ, codigoZ, esZ3,
+          material, descLista, textoInspeccion, alt: altVal || '1', estadoLMat, activa, etapa,
+          bloqueadoZLista, codigoZLista, esZ3Lista,
+          versionesFab, vfabBloqueadaLista, versionesFabBloqueadas,
           componente: codigoComp, descComponente: descComp, posicion: posComp,
           cantidad: cantComp, unidad: umComp,
+          bloqueadoZComponente, codigoZComponente, esZ3Componente,
           exclusivo: isComponenteExclusivoDelProducto(descLista, descComp)
         });
       });
@@ -3309,7 +3692,14 @@ function formatFechaHoraCorta(d){
       return;
     }
 
-    const headers = ['Material (Lista)','Descripción de LMat','Lista alt.','Estado LMat','¿Activa?','¿Bloqueo Z?','Código Z','Componente','Denominación de componente','Posición','Cantidad','Unidad','¿Exclusivo del producto?'];
+    const headers = [
+      'Material (Lista)','Descripción de LMat','Texto de inspección','Lista alt.','Estado LMat','¿Activa?','Etapa',
+      '¿Bloqueo Z Lista?','Código Z Lista',
+      'Versiones fabricación','¿Vfab bloqueada?','Versiones Vfab bloqueadas',
+      'Componente','Denominación de componente','Posición','Cantidad','Unidad',
+      '¿Bloqueo Z Componente?','Código Z Componente',
+      '¿Exclusivo del producto?'
+    ];
 
     const HEADER_FILL = { patternType:'solid', fgColor:{ rgb:'1F3B57' } };
     const HEADER_FONT = { bold:true, color:{ rgb:'FFFFFF' }, sz:11, name:'Calibri' };
@@ -3318,17 +3708,22 @@ function formatFechaHoraCorta(d){
     const FILL_Z3 = { patternType:'solid', fgColor:{ rgb:'F5D0CC' } };
     const FILL_ZBLOQUEO = { patternType:'solid', fgColor:{ rgb:'FCE8E6' } };
     const FILL_EXCLUSIVO = { patternType:'solid', fgColor:{ rgb:'FFF3D6' } };
+    const FILL_VFAB = { patternType:'solid', fgColor:{ rgb:'E3D3F0' } };
     const FONT_Z3 = { color:{ rgb:'C0392B' }, bold:true, sz:10, name:'Calibri' };
+    const FONT_VFAB = { color:{ rgb:'5B4B8A' }, bold:true, sz:10, name:'Calibri' };
     const FONT_NORMAL = { sz:10, name:'Calibri' };
 
     const aoa = [headers];
     dataRows.forEach(r=>{
       aoa.push([
-        r.material, r.descLista, r.alt, r.estadoLMat || '—', r.activa ? 'Activa' : 'Inactiva',
-        r.bloqueadoZ ? 'Sí' : 'No', r.codigoZ || '—',
+        r.material, r.descLista, r.textoInspeccion || '—', r.alt, r.estadoLMat || '—', r.activa ? 'Activa' : 'Inactiva', r.etapa || '—',
+        r.bloqueadoZLista ? 'Sí' : 'No', r.codigoZLista || '—',
+        r.versionesFab || '—', r.vfabBloqueadaLista ? 'Sí' : 'No', r.versionesFabBloqueadas || '—',
         r.componente || '—', r.descComponente || '—', r.posicion || '—',
         r.cantidad!=='' && r.cantidad!=null ? Number(r.cantidad) : '',
-        r.unidad || '—', r.exclusivo ? 'Sí' : 'No'
+        r.unidad || '—',
+        r.bloqueadoZComponente ? 'Sí' : 'No', r.codigoZComponente || '—',
+        r.exclusivo ? 'Sí' : 'No'
       ]);
     });
 
@@ -3336,8 +3731,12 @@ function formatFechaHoraCorta(d){
 
     // Ancho de columnas ajustado a un contenido típico de cada campo.
     ws['!cols'] = [
-      {wch:14},{wch:34},{wch:9},{wch:12},{wch:10},{wch:11},{wch:9},
-      {wch:14},{wch:32},{wch:10},{wch:11},{wch:9},{wch:16}
+      {wch:14},{wch:34},{wch:38},{wch:9},{wch:12},{wch:10},{wch:16},
+      {wch:13},{wch:12},
+      {wch:20},{wch:14},{wch:24},
+      {wch:14},{wch:32},{wch:10},{wch:11},{wch:9},
+      {wch:16},{wch:15},
+      {wch:16}
     ];
 
     // Fila de encabezado congelada y con autofiltro (búsqueda/orden nativo de Excel en
@@ -3354,15 +3753,19 @@ function formatFechaHoraCorta(d){
       ws[addr].s = { fill: HEADER_FILL, font: HEADER_FONT, alignment:{ vertical:'center', horizontal:'center', wrapText:true }, border: CELL_BORDER };
     }
 
-    // Estilo de cada fila de datos: rojo para bloqueo Z3, rosado suave para otros bloqueos
-    // Z, ámbar para componente exclusivo del producto (se prioriza Z3 > otro Z > exclusivo
-    // si coinciden, para que el bloqueo siempre destaque primero).
+    // Estilo de cada fila de datos: violeta para Versión de Fabricación bloqueada (máxima
+    // prioridad, es información operativa crítica), rojo para bloqueo Z3 (en la lista o en
+    // el componente), rosado suave para otros bloqueos Z, ámbar para componente exclusivo
+    // del producto.
     dataRows.forEach((r, i)=>{
       const rIdx = i+1;
       let fill = null;
       let font = FONT_NORMAL;
-      if(r.esZ3){ fill = FILL_Z3; font = FONT_Z3; }
-      else if(r.bloqueadoZ){ fill = FILL_ZBLOQUEO; }
+      const esZ3 = r.esZ3Lista || r.esZ3Componente;
+      const bloqueadoZ = r.bloqueadoZLista || r.bloqueadoZComponente;
+      if(r.vfabBloqueadaLista){ fill = FILL_VFAB; font = FONT_VFAB; }
+      else if(esZ3){ fill = FILL_Z3; font = FONT_Z3; }
+      else if(bloqueadoZ){ fill = FILL_ZBLOQUEO; }
       else if(r.exclusivo){ fill = FILL_EXCLUSIVO; }
       for(let c=0; c<headers.length; c++){
         const addr = XLSX.utils.encode_cell({r:rIdx, c});
@@ -3386,16 +3789,27 @@ function formatFechaHoraCorta(d){
     // el formato sin depender de esta conversación.
     const legendAoa = [
       ['Leyenda de colores'],
-      ['Rojo — Material con bloqueo Z3 (bloqueo definitivo)'],
-      ['Rosado — Material con otro bloqueo Z (Z1/Z2, suspensión temporal/parcial)'],
+      ['Violeta — La lista tiene al menos una Versión de Fabricación bloqueada (columna "¿Vfab bloqueada?" = Sí; ver "Versiones Vfab bloqueadas" para saber cuáles). Máxima prioridad visual: es información operativa crítica.'],
+      ['Rojo — Bloqueo Z3 (bloqueo definitivo), ya sea en la lista de materiales o en el componente — ver columnas "Código Z Lista" / "Código Z Componente" para saber cuál'],
+      ['Rosado — Otro bloqueo Z (Z1/Z2, suspensión temporal/parcial), en la lista o en el componente'],
       ['Ámbar — Componente exclusivo del producto (su descripción incluye el nombre del producto de la lista, p.ej. "CJA DEQUAZOL R OVU x8" para la lista "DEQUAZOL R OVU T4 CJA x8")'],
+      [''],
+      ['Nota: el bloqueo Z de la Lista de materiales y el bloqueo Z del Componente son independientes entre sí — una lista sana puede tener un componente bloqueado, y viceversa. Revisa ambas columnas por separado.'],
+      ['Nota: la columna "Texto de inspección" corresponde únicamente al material de la lista (el producto), tal como figura en el Maestro de Materiales — no aplica a los componentes. Si aparece "—" es porque el Maestro de Materiales no está cargado en la otra pestaña, o ese material no tiene texto de inspección.'],
+      ['Nota: la columna "Etapa" corresponde al Texto de alternativa de la lista de materiales (p.ej. Envase, Acondicionado, etc.), tal como aparece en el export de SAP.'],
+      ['Nota: las Versiones de Fabricación se cruzan con la lista de materiales por Material + Lista mat.alternat., considerando solo las versiones con Utilización LMat = 1. El bloqueo de una versión (columna AJ del export = "1") es independiente del bloqueo Z del material.'],
     ];
     const wsLegend = XLSX.utils.aoa_to_sheet(legendAoa);
-    wsLegend['!cols'] = [{wch:100}];
+    wsLegend['!cols'] = [{wch:110}];
     wsLegend['A1'].s = { font:{ bold:true, sz:12, name:'Calibri' } };
-    wsLegend['A2'].s = { fill:FILL_Z3, font:FONT_Z3 };
-    wsLegend['A3'].s = { fill:FILL_ZBLOQUEO, font:FONT_NORMAL };
-    wsLegend['A4'].s = { fill:FILL_EXCLUSIVO, font:FONT_NORMAL };
+    wsLegend['A2'].s = { fill:FILL_VFAB, font:FONT_VFAB };
+    wsLegend['A3'].s = { fill:FILL_Z3, font:FONT_Z3 };
+    wsLegend['A4'].s = { fill:FILL_ZBLOQUEO, font:FONT_NORMAL };
+    wsLegend['A5'].s = { fill:FILL_EXCLUSIVO, font:FONT_NORMAL };
+    wsLegend['A7'].s = { font:{ italic:true, sz:10, name:'Calibri', color:{ rgb:'5C6B77' } } };
+    wsLegend['A8'].s = { font:{ italic:true, sz:10, name:'Calibri', color:{ rgb:'5C6B77' } } };
+    wsLegend['A9'].s = { font:{ italic:true, sz:10, name:'Calibri', color:{ rgb:'5C6B77' } } };
+    wsLegend['A10'].s = { font:{ italic:true, sz:10, name:'Calibri', color:{ rgb:'5C6B77' } } };
     XLSX.utils.book_append_sheet(wb, wsLegend, 'Leyenda');
 
     XLSX.writeFile(wb, `lmat_detalle_componentes_${new Date().toISOString().slice(0,10)}.xlsx`);
@@ -3530,6 +3944,12 @@ function formatFechaHoraCorta(d){
       updateAll();
     }
 
+    if(e.target.closest('#bomToggleVfabBloqueada')) {
+      filterVfabBloqueada = !filterVfabBloqueada;
+      currentPage = 1;
+      updateAll();
+    }
+
     if(e.target.closest('#bomClearFecha')) {
       dateDesde = ''; dateHasta = '';
       const d1 = document.getElementById('bomCreadoDesde'); if(d1) d1.value = '';
@@ -3560,6 +3980,8 @@ function formatFechaHoraCorta(d){
     document.getElementById('bomToggleHv1Actualizada').classList.remove('active-hv1');
     filterConc = false;
     document.getElementById('bomToggleConcPendiente').classList.remove('active-conc');
+    filterVfabBloqueada = false;
+    document.getElementById('bomToggleVfabBloqueada').classList.remove('active');
     currentPage=1;
     updateAll();
   }
@@ -3594,7 +4016,8 @@ function formatFechaHoraCorta(d){
     if(window.__globalLoading) window.__globalLoading.begin();
     const bomLoaded = await loadBomFromSupabase();
     const compLoaded = await loadComponentesFromSupabase();
-    if(bomLoaded || compLoaded){
+    const vfabLoaded = await loadVfabFromSupabase();
+    if(bomLoaded || compLoaded || vfabLoaded){
       updateAll();
       if(window.__globalLoading) window.__globalLoading.markFound();
     }

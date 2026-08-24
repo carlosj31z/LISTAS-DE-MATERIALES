@@ -8,6 +8,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
   :root{
@@ -711,9 +712,9 @@
       <div class="toolbar-divider"></div>
 
       <button class="btn btn-ghost" id="bomClearFilters">Limpiar filtros</button>
-      <button class="btn btn-primary" id="bomExportCsv">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-        Exportar CSV
+      <button class="btn btn-primary" id="bomExportDetallado" title="Excel con una fila por cada componente: estado de la lista, bloqueo Z del material y si el componente es exclusivo del producto">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="15" y2="17"/></svg>
+        Exportar detalle de componentes
       </button>
       <button class="btn btn-primary" id="bomExportXlsx">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
@@ -1946,6 +1947,38 @@ function formatFechaHoraCorta(d){
   function needsConciliacion(match){
     if(!match) return false;
     return isZmeeTipo(match.tipo) && !isHv1(match.texto);
+  }
+
+  /* Palabras genéricas de envase/empaque que suelen encabezar la descripción de un
+     componente (CJA, CAJA, ETQ, ETIQUETA, FOLLETO, ROLLO, TAPA…) y que por sí solas NO
+     bastan para identificar el producto — se ignoran al buscar la "primera palabra
+     significativa" tanto de la lista como del componente. */
+  var PALABRAS_GENERICAS_ENVASE = ['CJA','CAJA','ETQ','ETIQUETA','FOLLETO','ROLLO','TAPA','FRASCO','BLISTER','ESTUCHE','BOLSA','PRECINTO','CINTA','SOBRE','TUBO','FILM','LAMINA'];
+
+  /* Primera palabra "significativa" de una descripción: la primera palabra que NO es un
+     término genérico de envase/empaque. Ej.: "CJA DEQUAZOL R OVU x8" -> "DEQUAZOL". */
+  function primeraPalabraSignificativa(texto){
+    if(typeof texto !== 'string') return '';
+    var palabras = texto.trim().toUpperCase().split(/\s+/);
+    for(var i=0; i<palabras.length; i++){
+      var p = palabras[i].replace(/[^A-ZÀ-Ú0-9]/g, '');
+      if(p && PALABRAS_GENERICAS_ENVASE.indexOf(p) === -1) return p;
+    }
+    return palabras[0] || '';
+  }
+
+  /* Un componente se considera EXCLUSIVO DEL PRODUCTO cuando la primera palabra
+     significativa de la descripción de la LISTA de materiales (el nombre del producto,
+     p.ej. "DEQUAZOL" en "DEQUAZOL R OVU T4 CJA x8") también aparece en la descripción del
+     COMPONENTE (p.ej. "CJA DEQUAZOL R OVU x8") — es decir, el envase/empaque fue impreso o
+     diseñado específicamente para ese producto, y no es un insumo genérico compartido por
+     varios productos. */
+  function isComponenteExclusivoDelProducto(descLista, descComponente){
+    var palabraProducto = primeraPalabraSignificativa(descLista);
+    if(!palabraProducto || palabraProducto.length < 3) return false;
+    if(typeof descComponente !== 'string') return false;
+    var re = new RegExp('\\b' + palabraProducto.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b', 'i');
+    return re.test(descComponente);
   }
 
   /* Estado del material según el Maestro de Materiales (window.MM_ESTADO_MAP, publicado por
@@ -3214,32 +3247,158 @@ function formatFechaHoraCorta(d){
   overlay.addEventListener('click', closeDrawer);
   document.addEventListener('keydown', (e)=>{ if(e.key==='Escape') closeDrawer(); });
 
-  document.getElementById('bomExportCsv').addEventListener('click', ()=>{
+  document.getElementById('bomExportDetallado').addEventListener('click', ()=>{
     if(ROWS.length === 0) {
       alert('No hay datos para exportar. Carga un archivo Excel primero.');
       return;
     }
+    if(COMP_ROWS.length === 0) {
+      alert('No hay componentes cargados. Carga el archivo de Componentes en la pestaña Listas de Materiales para poder exportar el detalle.');
+      return;
+    }
+
     const filtered = window.__bomLastFiltered || getFiltered();
-    const headers = TABLE_COLS.map(c=>c.label);
-    const lines = [headers.join(',')];
+
+    // Una fila por cada componente de cada lista de materiales filtrada. Si una lista no
+    // tiene componentes cargados, igual se incluye una fila (con las columnas de
+    // componente vacías) para no "perder" esa lista del reporte.
+    const dataRows = [];
     filtered.forEach(row=>{
-      const vals = TABLE_COLS.map(c=>{
-        let v = row[c.i];
-        if(v===null||v===undefined) v='';
-        v = String(v).replace(/"/g,'""');
-        if(v.includes(',')||v.includes('"')||v.includes('\n')) v = `"${v}"`;
-        return v;
+      const material = iMaterial !== -1 ? row[iMaterial] : '';
+      const descLista = iDesc !== -1 ? row[iDesc] : '';
+      const altVal = iAlt !== -1 ? row[iAlt] : '';
+      const estadoLMat = iEstado !== -1 ? String(row[iEstado]||'').trim() : '';
+      const activa = estadoLMat.toLowerCase() === 'activo';
+
+      const ownEstado = estadoCodeOf(row);
+      const maestroEstado = estadoEnMaestro(material);
+      const bloqueadoZ = isSuspendedCode(ownEstado) || isSuspendedCode(maestroEstado);
+      const codigoZ = isSuspendedCode(ownEstado) ? ownEstado : (isSuspendedCode(maestroEstado) ? maestroEstado : '');
+      const esZ3 = isZ3Code(ownEstado) || isZ3Code(maestroEstado);
+
+      const comps = getComponentsFor(material, altVal);
+
+      if(comps.length === 0){
+        dataRows.push({
+          material, descLista, alt: altVal || '1', estadoLMat, activa,
+          bloqueadoZ, codigoZ, esZ3,
+          componente:'', descComponente:'', posicion:'', cantidad:'', unidad:'',
+          exclusivo: false
+        });
+        return;
+      }
+
+      comps.forEach(c=>{
+        const codigoComp = cComponente!==-1 ? String(c[cComponente]||'') : '';
+        const descComp = cDenom!==-1 ? String(c[cDenom]||'') : '';
+        const posComp = cPos!==-1 ? String(c[cPos]||'') : '';
+        const cantComp = cCantidad!==-1 ? c[cCantidad] : '';
+        const umComp = cUM!==-1 ? String(c[cUM]||'') : '';
+        dataRows.push({
+          material, descLista, alt: altVal || '1', estadoLMat, activa,
+          bloqueadoZ, codigoZ, esZ3,
+          componente: codigoComp, descComponente: descComp, posicion: posComp,
+          cantidad: cantComp, unidad: umComp,
+          exclusivo: isComponenteExclusivoDelProducto(descLista, descComp)
+        });
       });
-      lines.push(vals.join(','));
     });
-    const csv = '\uFEFF' + lines.join('\n');
-    const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `bom_export_filtrado_${new Date().toISOString().slice(0,10)}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
+
+    if(dataRows.length === 0){
+      alert('No hay filas para exportar con los filtros actuales.');
+      return;
+    }
+
+    const headers = ['Material (Lista)','Descripción de LMat','Lista alt.','Estado LMat','¿Activa?','¿Bloqueo Z?','Código Z','Componente','Denominación de componente','Posición','Cantidad','Unidad','¿Exclusivo del producto?'];
+
+    const HEADER_FILL = { patternType:'solid', fgColor:{ rgb:'1F3B57' } };
+    const HEADER_FONT = { bold:true, color:{ rgb:'FFFFFF' }, sz:11, name:'Calibri' };
+    const THIN_BORDER = { style:'thin', color:{ rgb:'D8DEE1' } };
+    const CELL_BORDER = { top:THIN_BORDER, bottom:THIN_BORDER, left:THIN_BORDER, right:THIN_BORDER };
+    const FILL_Z3 = { patternType:'solid', fgColor:{ rgb:'F5D0CC' } };
+    const FILL_ZBLOQUEO = { patternType:'solid', fgColor:{ rgb:'FCE8E6' } };
+    const FILL_EXCLUSIVO = { patternType:'solid', fgColor:{ rgb:'FFF3D6' } };
+    const FONT_Z3 = { color:{ rgb:'C0392B' }, bold:true, sz:10, name:'Calibri' };
+    const FONT_NORMAL = { sz:10, name:'Calibri' };
+
+    const aoa = [headers];
+    dataRows.forEach(r=>{
+      aoa.push([
+        r.material, r.descLista, r.alt, r.estadoLMat || '—', r.activa ? 'Activa' : 'Inactiva',
+        r.bloqueadoZ ? 'Sí' : 'No', r.codigoZ || '—',
+        r.componente || '—', r.descComponente || '—', r.posicion || '—',
+        r.cantidad!=='' && r.cantidad!=null ? Number(r.cantidad) : '',
+        r.unidad || '—', r.exclusivo ? 'Sí' : 'No'
+      ]);
+    });
+
+    const ws = XLSX.utils.aoa_to_sheet(aoa);
+
+    // Ancho de columnas ajustado a un contenido típico de cada campo.
+    ws['!cols'] = [
+      {wch:14},{wch:34},{wch:9},{wch:12},{wch:10},{wch:11},{wch:9},
+      {wch:14},{wch:32},{wch:10},{wch:11},{wch:9},{wch:16}
+    ];
+
+    // Fila de encabezado congelada y con autofiltro (búsqueda/orden nativo de Excel en
+    // cada columna), sobre todo el rango de datos.
+    const lastCol = XLSX.utils.encode_col(headers.length-1);
+    const lastRow = dataRows.length + 1;
+    ws['!autofilter'] = { ref: `A1:${lastCol}${lastRow}` };
+    ws['!freeze'] = { xSplit:0, ySplit:1 };
+
+    // Estilo del encabezado.
+    for(let c=0; c<headers.length; c++){
+      const addr = XLSX.utils.encode_cell({r:0, c});
+      if(!ws[addr]) ws[addr] = { t:'s', v:'' };
+      ws[addr].s = { fill: HEADER_FILL, font: HEADER_FONT, alignment:{ vertical:'center', horizontal:'center', wrapText:true }, border: CELL_BORDER };
+    }
+
+    // Estilo de cada fila de datos: rojo para bloqueo Z3, rosado suave para otros bloqueos
+    // Z, ámbar para componente exclusivo del producto (se prioriza Z3 > otro Z > exclusivo
+    // si coinciden, para que el bloqueo siempre destaque primero).
+    dataRows.forEach((r, i)=>{
+      const rIdx = i+1;
+      let fill = null;
+      let font = FONT_NORMAL;
+      if(r.esZ3){ fill = FILL_Z3; font = FONT_Z3; }
+      else if(r.bloqueadoZ){ fill = FILL_ZBLOQUEO; }
+      else if(r.exclusivo){ fill = FILL_EXCLUSIVO; }
+      for(let c=0; c<headers.length; c++){
+        const addr = XLSX.utils.encode_cell({r:rIdx, c});
+        // Si aoa_to_sheet no generó celda para un valor vacío (p.ej. cantidad ''), se crea
+        // aquí igualmente para que el color de fondo/borde de la fila quede completo sin
+        // huecos, en vez de saltarla.
+        if(!ws[addr]) ws[addr] = { t:'s', v:'' };
+        ws[addr].s = { fill: fill||undefined, font, border: CELL_BORDER, alignment:{ vertical:'center' } };
+      }
+    });
+
+    // Recalcula el rango de la hoja por si el paso anterior creó celdas nuevas (vacías)
+    // que aoa_to_sheet no había generado — sin esto, esas celdas podrían quedar fuera de
+    // '!ref' y Excel no las mostraría aunque tengan estilo asignado.
+    ws['!ref'] = `A1:${lastCol}${lastRow}`;
+
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Detalle componentes');
+
+    // Segunda hoja con la leyenda de colores, para que quien reciba el archivo entienda
+    // el formato sin depender de esta conversación.
+    const legendAoa = [
+      ['Leyenda de colores'],
+      ['Rojo — Material con bloqueo Z3 (bloqueo definitivo)'],
+      ['Rosado — Material con otro bloqueo Z (Z1/Z2, suspensión temporal/parcial)'],
+      ['Ámbar — Componente exclusivo del producto (su descripción incluye el nombre del producto de la lista, p.ej. "CJA DEQUAZOL R OVU x8" para la lista "DEQUAZOL R OVU T4 CJA x8")'],
+    ];
+    const wsLegend = XLSX.utils.aoa_to_sheet(legendAoa);
+    wsLegend['!cols'] = [{wch:100}];
+    wsLegend['A1'].s = { font:{ bold:true, sz:12, name:'Calibri' } };
+    wsLegend['A2'].s = { fill:FILL_Z3, font:FONT_Z3 };
+    wsLegend['A3'].s = { fill:FILL_ZBLOQUEO, font:FONT_NORMAL };
+    wsLegend['A4'].s = { fill:FILL_EXCLUSIVO, font:FONT_NORMAL };
+    XLSX.utils.book_append_sheet(wb, wsLegend, 'Leyenda');
+
+    XLSX.writeFile(wb, `lmat_detalle_componentes_${new Date().toISOString().slice(0,10)}.xlsx`);
   });
 
   document.getElementById('bomExportXlsx').addEventListener('click', ()=>{

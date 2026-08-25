@@ -4152,6 +4152,19 @@ function formatFechaHoraCorta(d){
       return;
     }
 
+    // Se reordena por Material (y dentro de cada Material, por Lista alt. y Posición) para
+    // que las filas de una misma lista de materiales queden siempre contiguas en el Excel
+    // — independientemente del orden en que estuviera la tabla en pantalla — y así el
+    // coloreado alterno por Material (más abajo) agrupe correctamente cada lista completa
+    // en una sola banda de color, sin cortes ni mezclas entre listas distintas.
+    dataRows.sort((a, b)=>{
+      if(a.material !== b.material) return a.material < b.material ? -1 : 1;
+      if(a.alt !== b.alt) return a.alt < b.alt ? -1 : 1;
+      const pa = parseFloat(a.posicion), pb = parseFloat(b.posicion);
+      if(!isNaN(pa) && !isNaN(pb) && pa !== pb) return pa - pb;
+      return 0;
+    });
+
     const headers = [
       'Material (Lista)','Descripción de LMat','Texto de inspección','Lista alt.','Centro','Estado LMat','Etapa',
       '¿Categoría 3?',
@@ -4220,9 +4233,21 @@ function formatFechaHoraCorta(d){
     // Categoría 3 aún NO aplicada en SAP (es una sugerencia, no un bloqueo real), rojo
     // para bloqueo Z3 real ya registrado en SAP (en la lista o en el componente), rosado
     // suave para otros bloqueos Z reales, ámbar para componente exclusivo del producto.
+    // Cuando ninguna de esas alertas aplica, se usa una banda de color alterna que cambia
+    // cada vez que cambia el Material (columna A) — así se distingue de un vistazo dónde
+    // termina una lista de materiales y empieza la siguiente, sin depender del número de
+    // fila (cada lista puede ocupar varias filas, una por componente).
+    const FILL_BANDA_A = { patternType:'solid', fgColor:{ rgb:'FFFFFF' } };
+    const FILL_BANDA_B = { patternType:'solid', fgColor:{ rgb:'F1F4F4' } };
+    let bandaActual = false; // false = FILL_BANDA_A, true = FILL_BANDA_B
+    let materialAnterior = null;
     dataRows.forEach((r, i)=>{
       const rIdx = i+1;
-      let fill = null;
+      if(r.material !== materialAnterior){
+        bandaActual = !bandaActual;
+        materialAnterior = r.material;
+      }
+      let fill = bandaActual ? FILL_BANDA_B : FILL_BANDA_A;
       let font = FONT_NORMAL;
       const esZ3Real = r.esZ3Lista || r.esZ3Componente;
       const bloqueadoZReal = r.bloqueadoZLista || r.bloqueadoZComponente;
@@ -4376,6 +4401,7 @@ function formatFechaHoraCorta(d){
       ['Rosado — Otro bloqueo Z (Z1/Z2, suspensión temporal/parcial) YA REGISTRADO EN SAP, en la lista o en el componente'],
       ['Violeta claro — RECOMENDACIÓN: esta app no modifica SAP, así que este color solo señala que la lista (o un componente exclusivo suyo) debería bloquearse a Z3 en SAP por ser Categoría 3, y todavía no tiene ese bloqueo aplicado allá. Es una sugerencia para que lo hagas manualmente, no un estado real.'],
       ['Ámbar — Componente exclusivo del producto (su descripción incluye el nombre del producto de la lista, p.ej. "CJA DEQUAZOL R OVU x8" para la lista "DEQUAZOL R OVU T4 CJA x8") — solo se considera exclusivo si el código del componente empieza con "1" (ZMEE); los que empiezan con "5" (ZSEB) no cuentan aunque el texto coincida.'],
+      ['Blanco / gris muy claro — Sin ninguna alerta de las anteriores. Estas dos tonalidades se alternan cada vez que cambia el Material de la columna A, para distinguir de un vistazo dónde termina una lista de materiales y empieza la siguiente (cada lista puede ocupar varias filas, una por componente). Las filas se reordenan por Material al exportar, independientemente del orden en que estuviera la tabla en pantalla.'],
       [''],
       ['Nota: el bloqueo Z de la Lista de materiales y el bloqueo Z del Componente son independientes entre sí — una lista sana puede tener un componente bloqueado, y viceversa. Revisa ambas columnas por separado.'],
       ['Nota: la columna "Texto de inspección" corresponde únicamente al material de la lista (el producto), tal como figura en el Maestro de Materiales — no aplica a los componentes. Si aparece "—" es porque el Maestro de Materiales no está cargado en la otra pestaña, o ese material no tiene texto de inspección.'],
@@ -4392,12 +4418,13 @@ function formatFechaHoraCorta(d){
     wsLegend['A3'].s = { fill:FILL_ZBLOQUEO, font:FONT_NORMAL };
     wsLegend['A4'].s = { fill:FILL_CAT3_PENDIENTE, font:FONT_CAT3_PENDIENTE };
     wsLegend['A5'].s = { fill:FILL_EXCLUSIVO, font:FONT_NORMAL };
-    wsLegend['A7'].s = { font:{ italic:true, sz:10, name:'Calibri', color:{ rgb:'5C6B77' } } };
+    wsLegend['A6'].s = { font:{ italic:true, sz:10, name:'Calibri', color:{ rgb:'5C6B77' } } };
     wsLegend['A8'].s = { font:{ italic:true, sz:10, name:'Calibri', color:{ rgb:'5C6B77' } } };
     wsLegend['A9'].s = { font:{ italic:true, sz:10, name:'Calibri', color:{ rgb:'5C6B77' } } };
     wsLegend['A10'].s = { font:{ italic:true, sz:10, name:'Calibri', color:{ rgb:'5C6B77' } } };
     wsLegend['A11'].s = { font:{ italic:true, sz:10, name:'Calibri', color:{ rgb:'5C6B77' } } };
     wsLegend['A12'].s = { font:{ italic:true, sz:10, name:'Calibri', color:{ rgb:'5C6B77' } } };
+    wsLegend['A13'].s = { font:{ italic:true, sz:10, name:'Calibri', color:{ rgb:'5C6B77' } } };
     XLSX.utils.book_append_sheet(wb, wsLegend, 'Leyenda');
 
     XLSX.writeFile(wb, `lmat_detalle_componentes_${new Date().toISOString().slice(0,10)}.xlsx`);

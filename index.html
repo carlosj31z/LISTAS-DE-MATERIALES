@@ -1210,6 +1210,17 @@ function formatFechaHoraCorta(d){
 
   var EXCLUDE = ['Texto de compra'];
 
+  /* ============================================================
+     CATEGORÍA 3 (productos reformulados 2024, base ASCA)
+     Lista embebida de productos identificados como Categoría 3, con su nombre
+     normalizado al estilo SAP (mayúsculas, sin tildes, espacios colapsados) para
+     poder cruzarlo contra el "Texto de inspección" real del Maestro de Materiales
+     — que en SAP no admite minúsculas ni tildes y puede variar levemente en
+     espacios. Formato de cada entrada: [nombreNormalizado, nombreOriginal, productoReformulado].
+     ============================================================ */
+  var CAT3_PRODUCTOS_BASE = [["AB BRONCOL NF 1200 POLVO PARA SUSPENSION INYECTABLE", "AB BRONCOL NF 1200 Polvo para Suspensión Inyectable", "AB-BRONCOL 1000 NF 1000 mg Polvo y Disolvente para Suspensión Inyectable"], ["AB BRONCOL NF 300 POLVO PARA SUSPENSION INYECTABLE", "AB BRONCOL NF 300 Polvo para Suspensión Inyectable", "AB-BRONCOL 250 NF 250 mg Polvo y Disolvente para Suspensión Inyectable"], ["AB BRONCOL NF 600 POLVO PARA SUSPENSION INYECTABLE", "AB BRONCOL NF 600 Polvo para Suspensión Inyectable", "AB-BRONCOL 500 NF 500 mg Polvo y Disolvente para Suspensión Inyectable"], ["ACARIL - S 30% LOCION", "ACARIL - S 30% Loción", "ACARIL-S NF 25% Loción"], ["ACARIL CREMA", "ACARIL Crema", "ACARIL NF 10% Emulsión Cutánea"], ["ADECEROL EMULSION BEBIBLE", "ADECEROL Emulsión Bebible", "ADECEROL NF 5 000 UI + 4 000 UI + 2 g/ 10 mL Emulsión Oral"], ["ALIDOL TABLETA RECUBIERTA", "ALIDOL Tableta Recubierta", "ALIDOL NF 200 mg Cápsula Blanda"], ["BIOTINOL 300 MCG/10 ML SOLUCION ORAL", "BIOTINOL 300 mcg/10 mL Solución Oral", "BIOTINOL 300 mcg/10 mL Solución Oral"], ["BRONCO AMOXIDIN 125 POLVO PARA SUSPENSION ORAL", "BRONCO AMOXIDIN 125 Polvo para Suspensión Oral", "AMOXIDIN 125 NF 125 mg/5 mL Polvo para Suspensión Oral"], ["BRONCO AMOXIDIN 250 POLVO PARA SUSPENSION ORAL", "BRONCO AMOXIDIN 250 Polvo para Suspensión Oral", "BRONCO AMOXIDIN 250 NF  250 mg + 4 mg/5 mL Polvo para Suspensión Oral"], ["BRONCO AMOXIDIN 500 MG + 300 MG TABLETA", "BRONCO AMOXIDIN 500 mg + 300 mg Tableta", "BRONCO AMOXIDIN NF 500 mg + 8 mg Cápsula"], ["BRONCO AMOXIDIN 500 POLVO PARA SUSPENSION ORAL", "BRONCO AMOXIDIN 500 Polvo para Suspensión Oral", "AMOXIDIN 500 NF 500mg/5mL Polvo para Suspensión Oral"], ["BRONCO MEDIMOX 125 (125MG + 4MG)/5ML POLVO PARA SUSPENSION ORAL", "BRONCO MEDIMOX 125 (125mg + 4mg)/5mL Polvo para Suspensión Oral", "BRONCO MEDIMOX 125 NF 125 mg/5 mL Polvo para Suspensión Oral"], ["BRONCO MEDIMOX 500 POLVO PARA SUSPENSION ORAL", "BRONCO MEDIMOX 500 Polvo para Suspensión Oral", "BRONCO MEDIMOX 500 NF 500 mg/5 mL Polvo para Suspensión Oral"], ["BRONCO MEDIMOX TABLETA RECUBIERTA", "BRONCO MEDIMOX Tableta Recubierta", "BRONCO MEDIMOX NF 500 mg + 80 mg Cápsula"], ["BRONCO TRIFAMOX 125 POLVO PARA SUSPENSION ORAL", "BRONCO TRIFAMOX 125 Polvo para Suspensión Oral", "AMOXIDIN 7 125 NF 125mg/5mL Polvo para Suspensión Oral"], ["BRONCO TRIFAMOX 500 POLVO PARA SUSPENSION ORAL", "BRONCO TRIFAMOX 500 Polvo para Suspensión Oral", "TRIFAMOX 500 NF  500mg/5mL Polvo para Suspensión Oral"], ["CIPROXXAK SUSPENSION OFTALMICA", "CIPROXXAK Suspensión Oftálmica", "LEVOXXAK NF 1 mg+ 5 mg/mL Solución oftálmica"], ["CLINDESS DUO OVULO VAGINAL", "CLINDESS DUO Ovulo Vaginal", "CLINDESS ONE NF 100 mg Ovulo"], ["CREMA DEL DR. ZAIDMAN CREMA TOPICA", "CREMA DEL DR. ZAIDMAN Crema Tópica", "POMADA PROTECTORA DEL DR. ZAIDMAN NF 17% + 7.5% Pomada"], ["DEQUAZOL R 500MG+100 000UI+7MG OVULO", "DEQUAZOL R 500mg+100 000UI+7mg Ovulo", "DEQUAZOL R NF 500 mg + 100 000 UI Ovulo"], ["DIGESTAL CAPSULA", "DIGESTAL Cápsula", "DIGESTAL NF 0.5 mg + 200 mg Cápsula"], ["DOUGLAS 425MG/5ML SUSPENSION ORAL", "DOUGLAS 425mg/5mL Suspensión Oral", "DOUGLAS NF 400 mg/5 mL Suspensión Oral"], ["ELECTRORAL NF ANIS SOLUCION ORAL", "ELECTRORAL NF ANIS Solución Oral", "ELECTRORAL NF A ANIS Solución Oral"], ["ELECTRORAL NF FRESA SOLUCION ORAL", "ELECTRORAL NF FRESA Solución Oral", "ELECTRORAL NF A FRESA Solución Oral"], ["ELECTRORAL NF HIERBA LUISA SOLUCION ORAL", "ELECTRORAL NF HIERBA LUISA Solución Oral", "ELECTRORAL NF SABOR A UVA"], ["ELECTRORAL PEDIATRICO ANIS SOL ORAL", "ELECTRORAL PEDIATRICO ANIS Sol oral", "ELECTRORAL PEDIATRICO NF ANIS Sol oral"], ["ELECTRORAL PEDIATRICO FRESA SOL ORAL", "ELECTRORAL PEDIATRICO FRESA Sol oral", "ELECTRORAL PEDIATRICO NF  FRESA Sol oral"], ["ELECTRORAL PEDIATRICO UVA SOL ORAL", "ELECTRORAL PEDIATRICO UVA Sol oral", "ELECTRORAL PEDIATRICO NF Sabor a UVA Solución Oral"], ["ENDOVIT AL 5% SOLUCION INYECTABLE", "ENDOVIT AL 5% Solución Inyectable", "ENDOVIT NF Polvo para Solución Inyectable y para Perfusión"], ["ENDOVIT PLUS SOLUCION INYECTABLE", "ENDOVIT PLUS Solución Inyectable", "SUEROVIT NF Polvo para Solución Inyectable y para Perfusión"], ["ENZIMATIK CAPSULA", "ENZIMATIK Cápsula", "ENZIMATIK NF 172 mg + 80 mg Tableta Recubierta"], ["EPITELIOL 100 000 UI/10 ML SUSPENSION ORAL", "EPITELIOL 100 000 UI/10 ml Suspensión Oral", "EPITELIOL NF 5000 UI/10 mL Suspensión Oral"], ["EVACUOL ENEMA SOLUCION", "EVACUOL ENEMA Solución", "EVACUOL NF 16 g + 6 g/100 mL Solución Rectal"], ["EVACUOL F SOLUCION ORAL", "EVACUOL F  Solución Oral", "EVACUOL F NF (24.4 g + 10.8 g)/45 mL Solución Oral"], ["EVACUOL PEDIATRICO SOLUCION RECTAL (ENEMA)", "EVACUOL PEDIATRICO  Solución Rectal (Enema)", "EVACUOL PEDIATRICO NF (10.7 g + 4.7 g)/59 mL Solución Rectal"], ["EVAKUA LIMONADA PURGANTE SOLUCION ORAL", "EVAKUA LIMONADA PURGANTE Solución Oral", "EVAKUA NF 5 mg/5mL Solución oral"], ["FURACIN 6 MG OVULO VAGINAL", "FURACIN 6 mg Ovulo Vaginal", "FURACIN NF 100 mg Ovulo"], ["FUROXONA 16,66 MG / 5 ML SUSPENSION", "FUROXONA 16,66 mg / 5 mL Suspensión", "FUROXONA NF 50mg/5mL Suspensión Oral"], ["FUROXONA 30MG/ML SOLUCION ORAL", "FUROXONA 30mg/mL Solución Oral", "FUROXIDE NF 50mg/5mL Suspensión Oral"], ["GRAVOL 12,5 MG SUPOSITORIO", "GRAVOL 12,5 mg Supositorio", "GRAVOL NF 25 mg Supositorio"], ["GRAVOL 12,5 MG/ML SOLUCION ORAL GOTAS", "GRAVOL 12,5 mg/mL Solución Oral Gotas", "GRAVOL NF 92.5 mg/mL Solución para Gotas Orales"], ["GRAVOL A/P 75 MG CAPSULAS", "GRAVOL A/P 75 mg Cápsulas", "GRAVOL NF 100 mg Tableta de Liberación Modificada"], ["GRAVOL PEDIATRICO 30 MG/3 ML SOLUCION INYECTABLE", "GRAVOL PEDIATRICO 30 mg/3 mL Solución Inyectable", "Gravol Pediátrico NF 50 mg/5 mL Solución Inyectable"], ["GRIPA C JUNIOR TABLETA MASTICABLE", "GRIPA C JUNIOR Tableta Masticable", "Gripa C Junior NF 80mg + 1.25mg + 0.5mg Tableta Masticable:"], ["GRIPA C MAXIMA POTENCIA TABLETA", "GRIPA C MAXIMA POTENCIA Tableta", "GRIPA C MÁXIMA POTENCIA NF 325mg + 10mg + 5mg + 2mg Tableta"], ["HEPAFORT SOLUCION INYECTABLE", "HEPAFORT  Solución  Inyectable", "HEPAFORT® NF (100mg + 100mg + 1mg)/3mL Solución Inyectable"], ["HORTRIN A TABLETA RECUBIERTA", "HORTRIN A Tableta Recubierta", "HORTRIN A NF 200 mg Cápsula"], ["HORTRIN TABLETA RECUBIERTA", "HORTRIN Tableta Recubierta", "HORTRIN ONE NF 200 mg Cápsula"], ["LECHE DE MAGNESIA PHILLIPS 425 MG/5 ML SUSPENSION ORAL", "LECHE DE MAGNESIA PHILLIPS 425 mg/5 mL Suspensión Oral", "LECHE DE MAGNESIA PHILLIPS CLASICA NF 400 mg/5 mL Suspensión Oral (Nuevo R.S.)"], ["LEVOCERT D CAPSULA", "LEVOCERT D Cápsula", "LEVOCERT D NF 5 mg + 120 mg Tableta de Liberación prolongada"], ["LEVOCERT D JARABE", "LEVOCERT D Jarabe", "LEVOCERT ONE NF 2.5 mg/5 mL Solución Oral"], ["LITIASIN GRANULOS PARA SOLUCION", "LITIASIN Gránulos para solución", "LITIASIN NF 2 g + 1.94 g + 1.874 g Polvo para Solución Oral"], ["LOROPHYN 150 MG OVULOS", "LOROPHYN 150 mg Ovulos", "LOROPHYN NF 18.9 mg Ovulo"], ["MEDICILINA 1 000 000 UI POLVO PARA INYECCION", "MEDICILINA 1 000 000 UI Polvo para Inyección", "MEDICILINA NF 1 000 000 UI  Polvo para suspensión inyectable"], ["MEDICORT 2 MG/5 ML ELIXIR", "MEDICORT 2 mg/5 mL Elixir", "MEDICORT NF 2 mg/5 mL Solución oral"], ["MEDIVEL 100 MG + 150 MG OVULO", "MEDIVEL 100 mg + 150 mg Ovulo", "MEDIVEL NF 500 mg + 100 000 UI Ovulo"], ["MEDIVEL CREMA VAGINAL", "MEDIVEL Crema Vaginal", "MEDIVEL NF 0.75 % Gel Vaginal"], ["METROZOL OVULO", "METROZOL Ovulo", "METROZOL NF 500 mg + 100 mg Ovulo"], ["NISTAZINC CREMA", "NISTAZINC Crema", "NISTAZINC NF 10 000 000 UI + 20 g Ungüento"], ["PADRAX 1.65 G/SOBRE POLVO ORAL", "PADRAX 1.65 g/sobre Polvo Oral", "PADRAX NF 200 mg Tableta:"], ["PLASYODINE SOLUCION", "PLASYODINE Solución", "PLASYODINE NF 10 % Solución Tópica"], ["RAQUIFEROL D2 600 000 UI EMULSION BEBIBLE", "RAQUIFEROL D2 600 000 UI Emulsión Bebible", "RAQUIFEROL D2 NF 600 000 UI/1.5 mL Solución Oral"], ["RAQUIFEROL D3 600 000 UI SOLUCION BEBIBLE", "RAQUIFEROL D3  600 000  UI  Solución Bebible", "RAQUIFEROL D3 NF 200 000 UI/2 mL Solución Oral"], ["RYNATAN (2 MG + 5 MG + 12.5 MG)/5 ML SUSPENSION ORAL", "RYNATAN (2 mg + 5 mg + 12.5 mg)/5 mL Suspensión Oral", "RYNATAN NF 10 mg/10ml + 4 mg /10 mL Solución Oral"], ["RYNATAN 25MG + 25MG + 8MG TABLETA", "RYNATAN 25mg + 25mg + 8mg Tableta", "RYNATAN NF 10 mg + 4 mg Tableta"], ["SAL DE ANDREWS LIMON POLVO EFERVESCENTE", "SAL DE ANDREWS Limón Polvo Efervescente", "SAL DE ANDREWS LIMON NF 2.288 g + 2.157 g + 0.500 g"], ["SAL DE ANDREWS POLVO EFERVESCENTE", "SAL DE ANDREWS Polvo Efervescente", "SAL DE ANDREWS NF 2.288 g + 2.157 g + 0.500 g Polvo Efervescente"], ["SINCOL 5 MG/ML SOLUCION ORAL", "SINCOL 5 mg/mL Solución Oral", "SINCOL NF 10 mg + 500 mg Tableta Recubierta"], ["SOLUNA SOLUCION INYECTABLE", "SOLUNA Solucion Inyectable", "SOLUNA NF 50 mg + 5 mg / mL"], ["SORBAMIN 30 NF CON ELECTROLITOS SOLUCION INYECTABLE", "SORBAMIN 30 NF Con Electrolitos Solución Inyectable", "SORBAMIN 55 SP NF Solución para Perfusión"], ["SULFAMED 1% POLVO", "SULFAMED 1% Polvo", "SULFRIN NF 1% Crema"], ["TRES B 10 000 SOLUCION INYECTABLE", "TRES B 10 000  Solución  Inyectable", "TRES B 1000 NF 100 mg + 100 mg + 1 mg/3 mL Solución Inyectable"], ["VITADRIN SOLUCION ORAL", "VITADRIN Solución Oral", "VITADRIN NF Solución Oral"], ["NASODIL 0.9% SOLUCION GOTAS NASALES", "NASODIL 0.9% Solución Gotas Nasales", "NASODIL NF 0.85% Solución Nasal"], ["MENTHOLATUM UNGUENTO", "MENTHOLATUM Ungüento", "MENTHOLATUM® NF 9% + 1.35% + 0.33% Ungüento"], ["DENTIGEL DEL DR. ZAIDMAN – SABOR A FRAMBUESA 7.5% GEL", "DENTIGEL DEL DR. ZAIDMAN – SABOR A FRAMBUESA 7.5% Gel", "DENTIGEL® DEL DR. ZADIMAN - SABOR A FRAMBUESA NF 5 % Gel Gingival"], ["EPITELIOL 50 000 UI TABLETA RECUBIERTA", "EPITELIOL 50 000 UI Tableta Recubierta", "EPITELIOL NF 50 000 UI Tableta Recubierta"], ["RETINOL 50 000 UI TABLETA RECUBIERTA", "RETINOL 50 000 UI Tableta Recubierta", "RETINOL NF 50 000 UI Tableta Recubierta"]];
+
+
   var SUMMARY_COLS = [
     {key:'Material', label:'Material', cls:'mat'},
     {key:'Texto Material', label:'Texto material', cls:'matname wrap'},
@@ -1404,12 +1415,45 @@ function formatFechaHoraCorta(d){
      material Hv.1) y Material -> Tipo material (detecta si el material vigente es ZMEE,
      para la lógica de conciliaciones). Todo se publica en window para que la app BOM lo
      consuma. */
+  /* Normaliza un texto al estilo SAP: mayúsculas, sin tildes/diacríticos, espacios
+     múltiples colapsados a uno solo y recortados en los extremos. Se usa para comparar el
+     "Texto de inspección" real del Maestro de Materiales contra la lista embebida de
+     productos Categoría 3 (que puede tener tildes/minúsculas en el Excel de origen, pero
+     en SAP ese mismo texto no las admite). */
+  function normalizeSapText(text){
+    if(text===null || text===undefined) return '';
+    var s = String(text);
+    // Descompone caracteres acentuados (á -> a + ́) y elimina las marcas diacríticas.
+    s = s.normalize('NFKD').replace(/[\u0300-\u036f]/g, '');
+    s = s.toUpperCase();
+    s = s.replace(/\s+/g, ' ').trim();
+    return s;
+  }
+
+  /* Índice de la lista embebida CAT3_PRODUCTOS_BASE por nombre normalizado, para lookup
+     O(1) en vez de recorrer el array completo por cada material del Maestro. */
+  var CAT3_BASE_MAP = (function(){
+    var m = {};
+    CAT3_PRODUCTOS_BASE.forEach(function(entry){
+      m[entry[0]] = { nombreOriginal: entry[1], reformulado: entry[2] };
+    });
+    return m;
+  })();
+
+  /* Marcas manuales de Categoría 3 (además de las detectadas automáticamente por
+     coincidencia de texto), guardadas en Supabase para persistir entre sesiones y ser
+     consistentes para cualquiera que abra la app. Clave: texto de inspección normalizado
+     -> { reformulado, fuente:'manual' }. Se fusiona con las detecciones automáticas al
+     construir window.MM_CAT3_MAP. */
+  var CAT3_MANUAL = {};
+
   function buildOldCodeMap(){
     var map = {};
     var estadoMap = {};
     var textoMap = {};
     var tipoMap = {};
     var inspeccionMap = {};
+    var cat3Map = {}; // Material -> { nombreCat3Original, reformulado, fuente }
     state.rows.forEach(function(r){
       var old = (r['Nro. antiguo de material']||'').toString().trim();
       if(old){
@@ -1421,7 +1465,19 @@ function formatFechaHoraCorta(d){
         estadoMap[matKey] = r['Estado mat.todos ce'];
         textoMap[matKey] = r['Texto Material'] || r['Denom.estándar'] || '';
         tipoMap[matKey] = r['Tipo material'] || '';
-        inspeccionMap[matKey] = r['Texto de inspección'] || '';
+        var inspeccion = r['Texto de inspección'] || '';
+        inspeccionMap[matKey] = inspeccion;
+
+        var inspeccionNorm = normalizeSapText(inspeccion);
+        if(inspeccionNorm){
+          var manualMatch = CAT3_MANUAL[inspeccionNorm];
+          var baseMatch = CAT3_BASE_MAP[inspeccionNorm];
+          if(manualMatch){
+            cat3Map[matKey] = { nombreCat3Original: manualMatch.nombreOriginal || inspeccion, reformulado: manualMatch.reformulado || '', fuente: 'manual' };
+          } else if(baseMatch){
+            cat3Map[matKey] = { nombreCat3Original: baseMatch.nombreOriginal, reformulado: baseMatch.reformulado, fuente: 'automatico' };
+          }
+        }
       }
     });
     window.MM_OLDCODE_MAP = map;
@@ -1432,6 +1488,10 @@ function formatFechaHoraCorta(d){
     // Listas de Materiales pueda incluirlo (solo para la lista/producto, no para cada
     // componente — ver uso en el exportador del BOM).
     window.MM_INSPECCION_MAP = inspeccionMap;
+    // Categoría 3: Material -> { nombreCat3Original, reformulado, fuente }. Publicado para
+    // que Listas de Materiales pueda marcar como Cat3 cualquier lista cuyo material dueño
+    // aparezca aquí, y para el resumen exportado.
+    window.MM_CAT3_MAP = cat3Map;
     if(window.__refreshBomView){
       try{ window.__refreshBomView(); }catch(e){}
     }
@@ -1520,6 +1580,51 @@ function formatFechaHoraCorta(d){
     }catch(e){
       console.error('Error guardando Maestro de Materiales en Supabase', e);
       alert('No se pudo guardar el Maestro de Materiales en Supabase. Revisa la consola para más detalle.');
+    }
+  }
+
+  /* ---------- Persistencia en Supabase: marcas manuales de Categoría 3 ---------- */
+  /* A diferencia de las tablas de carga masiva (mm_materiales, mm_bom…), aquí cada fila es
+     una marca individual que el usuario agrega/quita puntualmente, así que no se borra
+     todo y se reinserta: se hace insert/delete por fila. Clave única:
+     texto_inspeccion_norm (el texto de inspección ya normalizado al estilo SAP). */
+  async function saveCat3ManualMark(textoInspeccionNorm, nombreOriginal, reformulado){
+    if(!window.__sb) return { error: null };
+    try{
+      const res = await window.__sb.from('mm_cat3_manual').insert([{
+        texto_inspeccion_norm: textoInspeccionNorm,
+        nombre_original: nombreOriginal || textoInspeccionNorm,
+        reformulado: reformulado || ''
+      }]);
+      return { error: res.error || null };
+    }catch(e){
+      return { error: e };
+    }
+  }
+
+  async function removeCat3ManualMark(textoInspeccionNorm){
+    if(!window.__sb) return { error: null };
+    try{
+      const res = await window.__sb.from('mm_cat3_manual').delete().eq('texto_inspeccion_norm', textoInspeccionNorm);
+      return { error: res.error || null };
+    }catch(e){
+      return { error: e };
+    }
+  }
+
+  async function loadCat3ManualFromSupabase(){
+    if(!window.__sb) return;
+    try{
+      const rows = await window.__sbFetchAll('mm_cat3_manual', 'texto_inspeccion_norm, nombre_original, reformulado');
+      const map = {};
+      (rows||[]).forEach(function(r){
+        if(r.texto_inspeccion_norm){
+          map[r.texto_inspeccion_norm] = { nombreOriginal: r.nombre_original, reformulado: r.reformulado };
+        }
+      });
+      CAT3_MANUAL = map;
+    }catch(e){
+      console.error('Error cargando marcas manuales de Categoría 3 desde Supabase', e);
     }
   }
 
@@ -1832,6 +1937,38 @@ function formatFechaHoraCorta(d){
     '</div>';
   }
 
+  function renderCat3Section(row){
+    var material = (row['Material']||'').toString().trim();
+    var inspeccion = row['Texto de inspección'] || '';
+    var inspeccionNorm = normalizeSapText(inspeccion);
+    var cat3Info = material ? (window.MM_CAT3_MAP && window.MM_CAT3_MAP[material]) : null;
+
+    if(!inspeccionNorm){
+      return '<div class="field-group">'+
+        '<div class="field-group-title">Categoría 3 (reformulación)</div>'+
+        '<div class="comp-empty">Este material no tiene Texto de inspección, así que no se puede evaluar ni marcar como Categoría 3.</div>'+
+      '</div>';
+    }
+
+    if(cat3Info){
+      var fuenteTxt = cat3Info.fuente==='manual' ? 'marcado manualmente' : 'detectado automáticamente por coincidencia de texto de inspección';
+      return '<div class="field-group">'+
+        '<div class="field-group-title">Categoría 3 (reformulación)</div>'+
+        '<div class="hv1-banner" style="background:var(--amber-soft); border-color:var(--amber); color:var(--amber);">'+
+          'Este producto es <strong>Categoría 3</strong> ('+fuenteTxt+').'+
+          (cat3Info.reformulado ? '<br>Reformulado a: <strong>'+escapeHtml(cat3Info.reformulado)+'</strong>' : '')+
+        '</div>'+
+        (cat3Info.fuente==='manual' ? '<button class="btn btn-ghost" id="mmCat3ToggleBtn" data-cat3-norm="'+escapeAttr(inspeccionNorm)+'" data-cat3-action="remove" type="button">Quitar marca manual de Categoría 3</button>' : '<p style="margin:6px 2px 0; font-size:11.5px; color:var(--ink-faint);">Detectado desde la base de productos Categoría 3 cargada en la app.</p>')+
+      '</div>';
+    }
+
+    return '<div class="field-group">'+
+      '<div class="field-group-title">Categoría 3 (reformulación)</div>'+
+      '<div class="comp-empty">Este material no está marcado como Categoría 3.</div>'+
+      '<button class="btn btn-amber" id="mmCat3ToggleBtn" data-cat3-norm="'+escapeAttr(inspeccionNorm)+'" data-cat3-original="'+escapeAttr(inspeccion)+'" data-cat3-action="add" type="button" style="margin-top:8px;">Marcar como Categoría 3</button>'+
+    '</div>';
+  }
+
   function openDrawer(row){
     dMat.textContent = row['Material'] || '—';
     if(row['Material']){ dMat.setAttribute('data-copy-code', row['Material']); dMat.title = 'Clic para copiar el código'; }
@@ -1852,8 +1989,9 @@ function formatFechaHoraCorta(d){
     }
 
     var listasHtml = renderListasQueLoContienen(row['Material']);
+    var cat3Html = renderCat3Section(row);
 
-    drawerBody.innerHTML = listasHtml + DETAIL_GROUPS.map(function(g){
+    drawerBody.innerHTML = cat3Html + listasHtml + DETAIL_GROUPS.map(function(g){
       var fieldsHtml = g.fields.map(function(f){
         var v = row[f];
         var display = (v==null || v==='') ? '' : String(v);
@@ -1870,6 +2008,39 @@ function formatFechaHoraCorta(d){
         '<div class="field-grid">'+fieldsHtml+'</div>'+
       '</div>';
     }).join('');
+
+    var cat3Btn = document.getElementById('mmCat3ToggleBtn');
+    if(cat3Btn){
+      cat3Btn.addEventListener('click', async function(){
+        var norm = cat3Btn.getAttribute('data-cat3-norm');
+        var action = cat3Btn.getAttribute('data-cat3-action');
+        cat3Btn.disabled = true;
+        var originalText = cat3Btn.textContent;
+        cat3Btn.textContent = 'Guardando…';
+        try{
+          if(action === 'add'){
+            var original = cat3Btn.getAttribute('data-cat3-original') || norm;
+            var res = await saveCat3ManualMark(norm, original, '');
+            if(res.error){
+              alert('No se pudo guardar la marca de Categoría 3. Detalle: ' + res.error.message);
+              return;
+            }
+            CAT3_MANUAL[norm] = { nombreOriginal: original, reformulado: '' };
+          } else {
+            var res2 = await removeCat3ManualMark(norm);
+            if(res2.error){
+              alert('No se pudo quitar la marca de Categoría 3. Detalle: ' + res2.error.message);
+              return;
+            }
+            delete CAT3_MANUAL[norm];
+          }
+          buildOldCodeMap();
+          openDrawer(row);
+        } finally {
+          cat3Btn.disabled = false;
+        }
+      });
+    }
 
     Array.prototype.forEach.call(drawerBody.querySelectorAll('[data-bom-material]'), function(el){
       el.addEventListener('click', function(e){
@@ -1903,7 +2074,12 @@ function formatFechaHoraCorta(d){
   document.addEventListener('keydown', function(e){ if(e.key==='Escape') closeDrawer(); });
 
   if(window.__globalLoading) window.__globalLoading.begin();
-  loadFromSupabaseMM().then(function(found){
+  /* Las marcas manuales de Categoría 3 se cargan ANTES que el Maestro de Materiales, para
+     que buildOldCodeMap() (llamada desde onDataLoaded al restaurar desde Supabase) ya
+     tenga CAT3_MANUAL listo y pueda fusionarlo con la detección automática. */
+  loadCat3ManualFromSupabase().then(function(){
+    return loadFromSupabaseMM();
+  }).then(function(found){
     if(found && window.__globalLoading) window.__globalLoading.markFound();
     if(window.__globalLoading) window.__globalLoading.end();
   });
@@ -2016,7 +2192,15 @@ function formatFechaHoraCorta(d){
      COMPONENTE (p.ej. "CJA DEQUAZOL R OVU x8") — es decir, el envase/empaque fue impreso o
      diseñado específicamente para ese producto, y no es un insumo genérico compartido por
      varios productos. */
-  function isComponenteExclusivoDelProducto(descLista, descComponente){
+  function isComponenteExclusivoDelProducto(descLista, descComponente, codigoComponente){
+    // Solo los componentes cuyo código empieza con "1" (materiales tipo ZMEE, Mat. de
+    // Envase y Empaque) pueden considerarse exclusivos del producto. Los que empiezan con
+    // "5" son ZSEB (otro tipo de material) y no deben marcarse como exclusivos aunque su
+    // descripción coincida con el nombre del producto — antes se estaban contando por
+    // error porque la comparación solo miraba el texto, no el código.
+    if(typeof codigoComponente === 'string' && codigoComponente.trim() && !/^1/.test(codigoComponente.trim())){
+      return false;
+    }
     var palabraProducto = primeraPalabraSignificativa(descLista);
     if(!palabraProducto || palabraProducto.length < 3) return false;
     if(typeof descComponente !== 'string') return false;
@@ -3639,6 +3823,12 @@ function formatFechaHoraCorta(d){
       // LISTA (no a cada componente) — se busca por el código del material de la lista.
       const textoInspeccion = (window.MM_INSPECCION_MAP && window.MM_INSPECCION_MAP[String(material||'').trim()]) || '';
 
+      // Categoría 3: material de la LISTA marcado (automática o manualmente) como producto
+      // reformulado 2024, según window.MM_CAT3_MAP publicado por el Maestro de Materiales.
+      const cat3Info = window.MM_CAT3_MAP && window.MM_CAT3_MAP[String(material||'').trim()];
+      const esCat3 = !!cat3Info;
+      const cat3Reformulado = cat3Info ? (cat3Info.reformulado || '') : '';
+
       // Versiones de Fabricación de esta lista (Material + Lista mat.alternat.): se
       // resume en un texto con todas las versiones encontradas, y si alguna está
       // bloqueada (Bloqueo de versión de fabricación = 1).
@@ -3652,7 +3842,7 @@ function formatFechaHoraCorta(d){
       if(comps.length === 0){
         dataRows.push({
           material, descLista, textoInspeccion, alt: altVal || '1', estadoLMat, activa, etapa,
-          bloqueadoZLista, codigoZLista, esZ3Lista,
+          bloqueadoZLista, codigoZLista, esZ3Lista, esCat3, cat3Reformulado,
           versionesFab, vfabBloqueadaLista, versionesFabBloqueadas,
           componente:'', descComponente:'', posicion:'', cantidad:'', unidad:'',
           bloqueadoZComponente:false, codigoZComponente:'', esZ3Componente:false,
@@ -3677,12 +3867,12 @@ function formatFechaHoraCorta(d){
 
         dataRows.push({
           material, descLista, textoInspeccion, alt: altVal || '1', estadoLMat, activa, etapa,
-          bloqueadoZLista, codigoZLista, esZ3Lista,
+          bloqueadoZLista, codigoZLista, esZ3Lista, esCat3, cat3Reformulado,
           versionesFab, vfabBloqueadaLista, versionesFabBloqueadas,
           componente: codigoComp, descComponente: descComp, posicion: posComp,
           cantidad: cantComp, unidad: umComp,
           bloqueadoZComponente, codigoZComponente, esZ3Componente,
-          exclusivo: isComponenteExclusivoDelProducto(descLista, descComp)
+          exclusivo: isComponenteExclusivoDelProducto(descLista, descComp, codigoComp)
         });
       });
     });
@@ -3694,6 +3884,7 @@ function formatFechaHoraCorta(d){
 
     const headers = [
       'Material (Lista)','Descripción de LMat','Texto de inspección','Lista alt.','Estado LMat','Etapa',
+      '¿Categoría 3?','Producto reformulado',
       '¿Bloqueo Z Lista?','Código Z Lista',
       'Versiones fabricación','¿Vfab bloqueada?','Versiones Vfab bloqueadas',
       'Componente','Denominación de componente','Posición','Cantidad','Unidad',
@@ -3715,6 +3906,7 @@ function formatFechaHoraCorta(d){
     dataRows.forEach(r=>{
       aoa.push([
         r.material, r.descLista, r.textoInspeccion || '—', r.alt, r.estadoLMat || '—', r.etapa || '—',
+        r.esCat3 ? 'Sí' : 'No', r.cat3Reformulado || '—',
         r.bloqueadoZLista ? 'Sí' : 'No', r.codigoZLista || '—',
         r.versionesFab || '—', r.vfabBloqueadaLista ? 'Sí' : 'No', r.versionesFabBloqueadas || '—',
         r.componente || '—', r.descComponente || '—', r.posicion || '—',
@@ -3730,6 +3922,7 @@ function formatFechaHoraCorta(d){
     // Ancho de columnas ajustado a un contenido típico de cada campo.
     ws['!cols'] = [
       {wch:14},{wch:34},{wch:38},{wch:9},{wch:12},{wch:16},
+      {wch:13},{wch:38},
       {wch:13},{wch:12},
       {wch:20},{wch:14},{wch:24},
       {wch:14},{wch:32},{wch:10},{wch:11},{wch:9},
@@ -3782,18 +3975,126 @@ function formatFechaHoraCorta(d){
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Detalle componentes');
 
+    // ---------- Segunda hoja: Resumen Categoría 3 ----------
+    // Una fila por cada lista de materiales Cat3 única (Material + Lista alt., sin
+    // repetirse aunque tenga varios componentes), con sus Versiones de Fabricación y
+    // Componentes exclusivos resumidos, y el estatus de bloqueo consolidado de las tres
+    // fuentes (Lista, Versión de Fabricación, Componentes) para poder verificar de un
+    // vistazo que todo lo relacionado a ese producto reformulado está bien.
+    const cat3Keys = new Set();
+    const cat3Rows = [];
+    dataRows.forEach(r=>{
+      if(!r.esCat3) return;
+      const key = r.material + '||' + r.alt;
+      if(cat3Keys.has(key)) return;
+      cat3Keys.add(key);
+
+      const filasDeEstaLista = dataRows.filter(x => x.material===r.material && x.alt===r.alt && x.esCat3);
+      const componentesExclusivos = filasDeEstaLista
+        .filter(x => x.exclusivo && x.componente)
+        .map(x => x.componente + (x.descComponente ? ' — ' + x.descComponente : ''));
+      const componentesBloqueados = filasDeEstaLista
+        .filter(x => x.bloqueadoZComponente && x.componente)
+        .map(x => x.componente + ' (' + x.codigoZComponente + ')');
+
+      const listaBloqueada = r.bloqueadoZLista;
+      const vfabBloqueada = r.vfabBloqueadaLista;
+      const algunComponenteBloqueado = componentesBloqueados.length > 0;
+      const todoOk = !listaBloqueada && !vfabBloqueada && !algunComponenteBloqueado;
+
+      let estatusConsolidado;
+      if(todoOk){
+        estatusConsolidado = 'OK — sin bloqueos';
+      } else {
+        const partes = [];
+        if(listaBloqueada) partes.push('Lista bloqueada (' + r.codigoZLista + ')');
+        if(vfabBloqueada) partes.push('Vfab bloqueada');
+        if(algunComponenteBloqueado) partes.push('Componente(s) bloqueado(s)');
+        estatusConsolidado = partes.join(' · ');
+      }
+
+      cat3Rows.push({
+        material: r.material,
+        descLista: r.descLista,
+        cat3Reformulado: r.cat3Reformulado,
+        alt: r.alt,
+        estadoLMat: r.estadoLMat,
+        listaBloqueada, codigoZLista: r.codigoZLista,
+        versionesFab: r.versionesFab,
+        vfabBloqueada, versionesFabBloqueadas: r.versionesFabBloqueadas,
+        componentesExclusivos: componentesExclusivos.join(' | '),
+        componentesBloqueados: componentesBloqueados.join(' | '),
+        estatusConsolidado, todoOk
+      });
+    });
+
+    if(cat3Rows.length > 0){
+      const cat3Headers = [
+        'Material (Lista)','Descripción de LMat','Producto reformulado','Lista alt.','Estado LMat',
+        '¿Lista bloqueada (Z)?','Código Z Lista',
+        'Versiones fabricación','¿Vfab bloqueada?','Versiones Vfab bloqueadas',
+        'Componentes exclusivos del producto','Componentes bloqueados (Z)',
+        'Estatus consolidado'
+      ];
+      const cat3Aoa = [cat3Headers];
+      cat3Rows.forEach(r=>{
+        cat3Aoa.push([
+          r.material, r.descLista, r.cat3Reformulado || '—', r.alt, r.estadoLMat || '—',
+          r.listaBloqueada ? 'Sí' : 'No', r.codigoZLista || '—',
+          r.versionesFab || '—', r.vfabBloqueada ? 'Sí' : 'No', r.versionesFabBloqueadas || '—',
+          r.componentesExclusivos || '—', r.componentesBloqueados || '—',
+          r.estatusConsolidado
+        ]);
+      });
+
+      const wsCat3 = XLSX.utils.aoa_to_sheet(cat3Aoa);
+      wsCat3['!cols'] = [
+        {wch:14},{wch:34},{wch:38},{wch:9},{wch:12},
+        {wch:14},{wch:12},
+        {wch:20},{wch:14},{wch:24},
+        {wch:44},{wch:34},
+        {wch:26}
+      ];
+      const cat3LastCol = XLSX.utils.encode_col(cat3Headers.length-1);
+      const cat3LastRow = cat3Rows.length + 1;
+      wsCat3['!autofilter'] = { ref: `A1:${cat3LastCol}${cat3LastRow}` };
+      wsCat3['!freeze'] = { xSplit:0, ySplit:1 };
+
+      for(let c=0; c<cat3Headers.length; c++){
+        const addr = XLSX.utils.encode_cell({r:0, c});
+        if(!wsCat3[addr]) wsCat3[addr] = { t:'s', v:'' };
+        wsCat3[addr].s = { fill: HEADER_FILL, font: HEADER_FONT, alignment:{ vertical:'center', horizontal:'center', wrapText:true }, border: CELL_BORDER };
+      }
+      const FILL_CAT3_OK = { patternType:'solid', fgColor:{ rgb:'DEF0EF' } };
+      const FILL_CAT3_ALERTA = { patternType:'solid', fgColor:{ rgb:'F5D0CC' } };
+      cat3Rows.forEach((r, i)=>{
+        const rIdx = i+1;
+        const fill = r.todoOk ? FILL_CAT3_OK : FILL_CAT3_ALERTA;
+        const font = r.todoOk ? FONT_NORMAL : FONT_Z3;
+        for(let c=0; c<cat3Headers.length; c++){
+          const addr = XLSX.utils.encode_cell({r:rIdx, c});
+          if(!wsCat3[addr]) wsCat3[addr] = { t:'s', v:'' };
+          wsCat3[addr].s = { fill, font, border: CELL_BORDER, alignment:{ vertical:'center', wrapText:true } };
+        }
+      });
+      wsCat3['!ref'] = `A1:${cat3LastCol}${cat3LastRow}`;
+
+      XLSX.utils.book_append_sheet(wb, wsCat3, 'Resumen Categoría 3');
+    }
+
     // Segunda hoja con la leyenda de colores, para que quien reciba el archivo entienda
     // el formato sin depender de esta conversación.
     const legendAoa = [
       ['Leyenda de colores'],
       ['Rojo — Bloqueo Z3 (bloqueo definitivo), ya sea en la lista de materiales o en el componente — ver columnas "Código Z Lista" / "Código Z Componente" para saber cuál'],
       ['Rosado — Otro bloqueo Z (Z1/Z2, suspensión temporal/parcial), en la lista o en el componente'],
-      ['Ámbar — Componente exclusivo del producto (su descripción incluye el nombre del producto de la lista, p.ej. "CJA DEQUAZOL R OVU x8" para la lista "DEQUAZOL R OVU T4 CJA x8")'],
+      ['Ámbar — Componente exclusivo del producto (su descripción incluye el nombre del producto de la lista, p.ej. "CJA DEQUAZOL R OVU x8" para la lista "DEQUAZOL R OVU T4 CJA x8") — solo se considera exclusivo si el código del componente empieza con "1" (ZMEE); los que empiezan con "5" (ZSEB) no cuentan aunque el texto coincida.'],
       [''],
       ['Nota: el bloqueo Z de la Lista de materiales y el bloqueo Z del Componente son independientes entre sí — una lista sana puede tener un componente bloqueado, y viceversa. Revisa ambas columnas por separado.'],
       ['Nota: la columna "Texto de inspección" corresponde únicamente al material de la lista (el producto), tal como figura en el Maestro de Materiales — no aplica a los componentes. Si aparece "—" es porque el Maestro de Materiales no está cargado en la otra pestaña, o ese material no tiene texto de inspección.'],
       ['Nota: la columna "Etapa" corresponde al Texto de alternativa de la lista de materiales (p.ej. Envase, Acondicionado, etc.), tal como aparece en el export de SAP.'],
       ['Nota: las Versiones de Fabricación se cruzan con la lista de materiales por Material + Lista mat.alternat., considerando solo las versiones con Utilización LMat = 1. La columna "¿Vfab bloqueada?" indica Sí cuando el bloqueo de una versión (columna AJ del export) = "1" — es independiente del bloqueo Z del material.'],
+      ['Nota: la columna "¿Categoría 3?" indica si el material de la lista corresponde a un producto reformulado 2024 (base ASCA), detectado por coincidencia del Texto de inspección del Maestro de Materiales, o marcado manualmente desde la ficha del material. La hoja "Resumen Categoría 3" reúne una fila por cada lista Cat3 única, con su estatus consolidado de bloqueo (Lista + Versión de Fabricación + Componentes) — verde si todo está sano, rojo si hay algún bloqueo que revisar.'],
     ];
     const wsLegend = XLSX.utils.aoa_to_sheet(legendAoa);
     wsLegend['!cols'] = [{wch:110}];
@@ -3805,6 +4106,7 @@ function formatFechaHoraCorta(d){
     wsLegend['A7'].s = { font:{ italic:true, sz:10, name:'Calibri', color:{ rgb:'5C6B77' } } };
     wsLegend['A8'].s = { font:{ italic:true, sz:10, name:'Calibri', color:{ rgb:'5C6B77' } } };
     wsLegend['A9'].s = { font:{ italic:true, sz:10, name:'Calibri', color:{ rgb:'5C6B77' } } };
+    wsLegend['A10'].s = { font:{ italic:true, sz:10, name:'Calibri', color:{ rgb:'5C6B77' } } };
     XLSX.utils.book_append_sheet(wb, wsLegend, 'Leyenda');
 
     XLSX.writeFile(wb, `lmat_detalle_componentes_${new Date().toISOString().slice(0,10)}.xlsx`);

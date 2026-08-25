@@ -4062,6 +4062,7 @@ function formatFechaHoraCorta(d){
       const material = iMaterial !== -1 ? row[iMaterial] : '';
       const descLista = iDesc !== -1 ? row[iDesc] : '';
       const altVal = iAlt !== -1 ? row[iAlt] : '';
+      const centro = iCentro !== -1 ? row[iCentro] : '';
       const estadoLMat = iEstado !== -1 ? String(row[iEstado]||'').trim() : '';
       const activa = estadoLMat.toLowerCase() === 'activo';
       const etapa = iTexto !== -1 ? String(row[iTexto]||'') : '';
@@ -4105,7 +4106,7 @@ function formatFechaHoraCorta(d){
 
       if(comps.length === 0){
         dataRows.push({
-          material, descLista, textoInspeccion, alt: altVal || '1', estadoLMat, activa, etapa,
+          material, descLista, textoInspeccion, alt: altVal || '1', centro, estadoLMat, activa, etapa,
           bloqueadoZLista, codigoZLista, esZ3Lista, esCat3, cat3Reformulado, bloqueadoZ3PorCat3Lista,
           versionesFab, vfabBloqueadaLista, versionesFabBloqueadas,
           componente:'', descComponente:'', posicion:'', cantidad:'', unidad:'',
@@ -4135,7 +4136,7 @@ function formatFechaHoraCorta(d){
         const bloqueadoZ3PorCat3Componente = esCat3 && esExclusivo;
 
         dataRows.push({
-          material, descLista, textoInspeccion, alt: altVal || '1', estadoLMat, activa, etapa,
+          material, descLista, textoInspeccion, alt: altVal || '1', centro, estadoLMat, activa, etapa,
           bloqueadoZLista, codigoZLista, esZ3Lista, esCat3, cat3Reformulado, bloqueadoZ3PorCat3Lista,
           versionesFab, vfabBloqueadaLista, versionesFabBloqueadas,
           componente: codigoComp, descComponente: descComp, posicion: posComp,
@@ -4152,7 +4153,7 @@ function formatFechaHoraCorta(d){
     }
 
     const headers = [
-      'Material (Lista)','Descripción de LMat','Texto de inspección','Lista alt.','Estado LMat','Etapa',
+      'Material (Lista)','Descripción de LMat','Texto de inspección','Lista alt.','Centro','Estado LMat','Etapa',
       '¿Categoría 3?',
       'Código Z Lista',
       'Versiones fabricación','¿Vfab bloqueada?','Versiones Vfab bloqueadas',
@@ -4176,7 +4177,7 @@ function formatFechaHoraCorta(d){
     const aoa = [headers];
     dataRows.forEach(r=>{
       aoa.push([
-        r.material, r.descLista, r.textoInspeccion || '—', r.alt, r.estadoLMat || '—', r.etapa || '—',
+        r.material, r.descLista, r.textoInspeccion || '—', r.alt, r.centro || '—', r.estadoLMat || '—', r.etapa || '—',
         r.esCat3 ? 'Sí' : 'No',
         r.codigoZLista || '—',
         r.versionesFab || '—', r.vfabBloqueadaLista ? 'Sí' : 'No', r.versionesFabBloqueadas || '—',
@@ -4192,7 +4193,7 @@ function formatFechaHoraCorta(d){
 
     // Ancho de columnas ajustado a un contenido típico de cada campo.
     ws['!cols'] = [
-      {wch:14},{wch:34},{wch:38},{wch:9},{wch:12},{wch:16},
+      {wch:14},{wch:34},{wch:38},{wch:9},{wch:10},{wch:12},{wch:16},
       {wch:13},
       {wch:12},
       {wch:20},{wch:14},{wch:24},

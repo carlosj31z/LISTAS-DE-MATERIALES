@@ -3693,7 +3693,7 @@ function formatFechaHoraCorta(d){
     }
 
     const headers = [
-      'Material (Lista)','Descripción de LMat','Texto de inspección','Lista alt.','Estado LMat','¿Activa?','Etapa',
+      'Material (Lista)','Descripción de LMat','Texto de inspección','Lista alt.','Estado LMat','Etapa',
       '¿Bloqueo Z Lista?','Código Z Lista',
       'Versiones fabricación','¿Vfab bloqueada?','Versiones Vfab bloqueadas',
       'Componente','Denominación de componente','Posición','Cantidad','Unidad',
@@ -3708,15 +3708,13 @@ function formatFechaHoraCorta(d){
     const FILL_Z3 = { patternType:'solid', fgColor:{ rgb:'F5D0CC' } };
     const FILL_ZBLOQUEO = { patternType:'solid', fgColor:{ rgb:'FCE8E6' } };
     const FILL_EXCLUSIVO = { patternType:'solid', fgColor:{ rgb:'FFF3D6' } };
-    const FILL_VFAB = { patternType:'solid', fgColor:{ rgb:'E3D3F0' } };
     const FONT_Z3 = { color:{ rgb:'C0392B' }, bold:true, sz:10, name:'Calibri' };
-    const FONT_VFAB = { color:{ rgb:'5B4B8A' }, bold:true, sz:10, name:'Calibri' };
     const FONT_NORMAL = { sz:10, name:'Calibri' };
 
     const aoa = [headers];
     dataRows.forEach(r=>{
       aoa.push([
-        r.material, r.descLista, r.textoInspeccion || '—', r.alt, r.estadoLMat || '—', r.activa ? 'Activa' : 'Inactiva', r.etapa || '—',
+        r.material, r.descLista, r.textoInspeccion || '—', r.alt, r.estadoLMat || '—', r.etapa || '—',
         r.bloqueadoZLista ? 'Sí' : 'No', r.codigoZLista || '—',
         r.versionesFab || '—', r.vfabBloqueadaLista ? 'Sí' : 'No', r.versionesFabBloqueadas || '—',
         r.componente || '—', r.descComponente || '—', r.posicion || '—',
@@ -3731,7 +3729,7 @@ function formatFechaHoraCorta(d){
 
     // Ancho de columnas ajustado a un contenido típico de cada campo.
     ws['!cols'] = [
-      {wch:14},{wch:34},{wch:38},{wch:9},{wch:12},{wch:10},{wch:16},
+      {wch:14},{wch:34},{wch:38},{wch:9},{wch:12},{wch:16},
       {wch:13},{wch:12},
       {wch:20},{wch:14},{wch:24},
       {wch:14},{wch:32},{wch:10},{wch:11},{wch:9},
@@ -3763,8 +3761,7 @@ function formatFechaHoraCorta(d){
       let font = FONT_NORMAL;
       const esZ3 = r.esZ3Lista || r.esZ3Componente;
       const bloqueadoZ = r.bloqueadoZLista || r.bloqueadoZComponente;
-      if(r.vfabBloqueadaLista){ fill = FILL_VFAB; font = FONT_VFAB; }
-      else if(esZ3){ fill = FILL_Z3; font = FONT_Z3; }
+      if(esZ3){ fill = FILL_Z3; font = FONT_Z3; }
       else if(bloqueadoZ){ fill = FILL_ZBLOQUEO; }
       else if(r.exclusivo){ fill = FILL_EXCLUSIVO; }
       for(let c=0; c<headers.length; c++){
@@ -3789,7 +3786,6 @@ function formatFechaHoraCorta(d){
     // el formato sin depender de esta conversación.
     const legendAoa = [
       ['Leyenda de colores'],
-      ['Violeta — La lista tiene al menos una Versión de Fabricación bloqueada (columna "¿Vfab bloqueada?" = Sí; ver "Versiones Vfab bloqueadas" para saber cuáles). Máxima prioridad visual: es información operativa crítica.'],
       ['Rojo — Bloqueo Z3 (bloqueo definitivo), ya sea en la lista de materiales o en el componente — ver columnas "Código Z Lista" / "Código Z Componente" para saber cuál'],
       ['Rosado — Otro bloqueo Z (Z1/Z2, suspensión temporal/parcial), en la lista o en el componente'],
       ['Ámbar — Componente exclusivo del producto (su descripción incluye el nombre del producto de la lista, p.ej. "CJA DEQUAZOL R OVU x8" para la lista "DEQUAZOL R OVU T4 CJA x8")'],
@@ -3797,19 +3793,18 @@ function formatFechaHoraCorta(d){
       ['Nota: el bloqueo Z de la Lista de materiales y el bloqueo Z del Componente son independientes entre sí — una lista sana puede tener un componente bloqueado, y viceversa. Revisa ambas columnas por separado.'],
       ['Nota: la columna "Texto de inspección" corresponde únicamente al material de la lista (el producto), tal como figura en el Maestro de Materiales — no aplica a los componentes. Si aparece "—" es porque el Maestro de Materiales no está cargado en la otra pestaña, o ese material no tiene texto de inspección.'],
       ['Nota: la columna "Etapa" corresponde al Texto de alternativa de la lista de materiales (p.ej. Envase, Acondicionado, etc.), tal como aparece en el export de SAP.'],
-      ['Nota: las Versiones de Fabricación se cruzan con la lista de materiales por Material + Lista mat.alternat., considerando solo las versiones con Utilización LMat = 1. El bloqueo de una versión (columna AJ del export = "1") es independiente del bloqueo Z del material.'],
+      ['Nota: las Versiones de Fabricación se cruzan con la lista de materiales por Material + Lista mat.alternat., considerando solo las versiones con Utilización LMat = 1. La columna "¿Vfab bloqueada?" indica Sí cuando el bloqueo de una versión (columna AJ del export) = "1" — es independiente del bloqueo Z del material.'],
     ];
     const wsLegend = XLSX.utils.aoa_to_sheet(legendAoa);
     wsLegend['!cols'] = [{wch:110}];
     wsLegend['A1'].s = { font:{ bold:true, sz:12, name:'Calibri' } };
-    wsLegend['A2'].s = { fill:FILL_VFAB, font:FONT_VFAB };
-    wsLegend['A3'].s = { fill:FILL_Z3, font:FONT_Z3 };
-    wsLegend['A4'].s = { fill:FILL_ZBLOQUEO, font:FONT_NORMAL };
-    wsLegend['A5'].s = { fill:FILL_EXCLUSIVO, font:FONT_NORMAL };
+    wsLegend['A2'].s = { fill:FILL_Z3, font:FONT_Z3 };
+    wsLegend['A3'].s = { fill:FILL_ZBLOQUEO, font:FONT_NORMAL };
+    wsLegend['A4'].s = { fill:FILL_EXCLUSIVO, font:FONT_NORMAL };
+    wsLegend['A6'].s = { font:{ italic:true, sz:10, name:'Calibri', color:{ rgb:'5C6B77' } } };
     wsLegend['A7'].s = { font:{ italic:true, sz:10, name:'Calibri', color:{ rgb:'5C6B77' } } };
     wsLegend['A8'].s = { font:{ italic:true, sz:10, name:'Calibri', color:{ rgb:'5C6B77' } } };
     wsLegend['A9'].s = { font:{ italic:true, sz:10, name:'Calibri', color:{ rgb:'5C6B77' } } };
-    wsLegend['A10'].s = { font:{ italic:true, sz:10, name:'Calibri', color:{ rgb:'5C6B77' } } };
     XLSX.utils.book_append_sheet(wb, wsLegend, 'Leyenda');
 
     XLSX.writeFile(wb, `lmat_detalle_componentes_${new Date().toISOString().slice(0,10)}.xlsx`);

@@ -96,6 +96,10 @@
   .btn svg{width:14px;height:14px; flex:none;}
   .btn:hover{transform:translateY(-1px);}
   .btn:active{transform:translateY(0);}
+  /* Variante minimalista para botones de carga de archivos: solo ícono + etiqueta corta,
+     con menos padding y texto más pequeño. El detalle completo va en el atributo title. */
+  .btn-compact{ padding:7px 10px; font-size:12px; gap:5px; }
+  .btn-compact svg{ width:13px; height:13px; }
   .btn-ghost{ background:var(--surface-alt); border-color:var(--border); color:var(--ink-soft); }
   .btn-ghost:hover{color:var(--brick); border-color:var(--brick); background:var(--brick-soft);}
   .btn-primary{ background:var(--navy); color:#fff; }
@@ -585,42 +589,16 @@
         <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="9" cy="9" r="6"/><path d="M17 17l-4-4" stroke-linecap="round"/></svg>
         <input type="text" id="mmSearchInput" placeholder="Buscar por código o texto de material&hellip;">
       </div>
-      <select id="mmFilterTipo"><option value="">Tipo material: todos</option></select>
-      <select id="mmFilterEstado"><option value="">Estado: todos</option></select>
-      <select id="mmFilterCreador"><option value="">Creado por: todos</option></select>
+      <button class="btn filter-btn" id="mmSearchModeToggle" type="button" title="Alternar entre buscar por Material/Texto material o por Texto de inspección">Buscando: Material</button>
       <div class="toolbar-divider"></div>
       <button class="btn filter-btn btn-brick" id="mmToggleSuspendidos" title="Mostrar solo materiales con estado Z1/Z2/Z3 (suspendidos)">Solo suspendidos (Z)</button>
       <button class="btn filter-btn" id="mmToggleOmitSuspendidos" title="Excluir de la vista los materiales con cualquier estado Z (Z1/Z2/Z3…)" style="border-color:var(--brick);">Omitir suspendidos (Z)</button>
-      <button class="btn filter-btn" id="mmMoreFiltersToggle" title="Filtrar por modificado por y por rango de fecha de creación o modificación">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" style="width:13px;height:13px;"><path d="M4 5h16l-6.5 7.5V19l-3 1.5v-8z"/></svg>
-        Más filtros
-      </button>
+      <button class="btn btn-ghost" id="mmClearAllFilters" type="button">Limpiar filtros</button>
       <button class="btn btn-primary" id="mmExportXlsx">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
         Exportar XLSX
       </button>
       <span class="count" id="mmResultCount" style="margin-left:auto; font-family:var(--mono); font-size:12px; color:var(--ink-soft); white-space:nowrap;"></span>
-    </div>
-
-    <div class="more-filters" id="mmMoreFilters">
-      <select id="mmFilterModificador"><option value="">Modificado por: todos</option></select>
-      <div class="date-field">
-        <label>Creado desde</label>
-        <input type="date" id="mmFechaCreacionDesde">
-      </div>
-      <div class="date-field">
-        <label>Creado hasta</label>
-        <input type="date" id="mmFechaCreacionHasta">
-      </div>
-      <div class="date-field">
-        <label>Modificado desde</label>
-        <input type="date" id="mmFechaModDesde">
-      </div>
-      <div class="date-field">
-        <label>Modificado hasta</label>
-        <input type="date" id="mmFechaModHasta">
-      </div>
-      <button class="btn btn-ghost" id="mmClearMoreFilters" type="button">Limpiar estos filtros</button>
     </div>
   </div>
 
@@ -703,21 +681,21 @@
       </div>
 
       <input type="file" id="bomFileInput" accept=".xlsx,.xls,.csv">
-      <button class="btn btn-success" id="bomLoadExcelBtn">
+      <button class="btn btn-success btn-compact" id="bomLoadExcelBtn" title="Cargar el export de SAP de Listas de Materiales">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-        Cargar Excel
+        Excel
       </button>
 
       <input type="file" id="bomComponentesFileInput" accept=".xlsx,.xls,.csv">
-      <button class="btn btn-amber" id="bomLoadComponentesBtn" title="Cargar el export de SAP con los componentes de cada lista de materiales (Material, Lista mat.alternat., Componente, Denominación, Cantidad, Unidad…)">
+      <button class="btn btn-amber btn-compact" id="bomLoadComponentesBtn" title="Cargar el export de SAP con los componentes de cada lista de materiales (Material, Lista mat.alternat., Componente, Denominación, Cantidad, Unidad…)">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M20 7h-9M14 17H5M17 3l4 4-4 4M7 21l-4-4 4-4"/></svg>
-        Cargar Componentes
+        Componentes
       </button>
 
       <input type="file" id="bomVfabFileInput" accept=".xlsx,.xls,.csv">
-      <button class="btn btn-amber" id="bomLoadVfabBtn" title="Cargar el export de SAP con las Versiones de Fabricación (Material, Versión fabricación, Lista mat.alternat., Utilización LMat, Bloqueo de versión de fabricación…)">
+      <button class="btn btn-amber btn-compact" id="bomLoadVfabBtn" title="Cargar el export de SAP con las Versiones de Fabricación (Material, Versión fabricación, Lista mat.alternat., Utilización LMat, Bloqueo de versión de fabricación…)">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M8 2v4M16 2v4M3 10h18"/><path d="M9 15l2 2 4-4"/></svg>
-        Cargar Versiones Fab.
+        Vfab
       </button>
 
       <div class="toolbar-divider"></div>
@@ -1224,14 +1202,15 @@ function formatFechaHoraCorta(d){
   var SUMMARY_COLS = [
     {key:'Material', label:'Material', cls:'mat'},
     {key:'Texto Material', label:'Texto material', cls:'matname wrap'},
-    {key:'Denominación tipo material', label:'Tipo material'},
-    {key:'Unidad de medida base', label:'UM base'},
-    {key:'Estado mat.todos ce', label:'Estado', badge:true},
-    {key:'Texto condiciones de almacenaje', label:'Cond. almacenaje', cls:'wrap'},
-    {key:'Nombre creador', label:'Creado por', cls:'mono-small'},
-    {key:'Fecha creación material', label:'F. creación', cls:'mono-small', date:true},
-    {key:'Nombre de modificador', label:'Modificado por', cls:'mono-small'},
-    {key:'Última modificación', label:'Últ. modificación', cls:'mono-small', date:true}
+    {key:'Texto de inspección', label:'Texto inspección', cls:'wrap', filterable:true},
+    {key:'Denominación tipo material', label:'Tipo material', filterable:true},
+    {key:'Unidad de medida base', label:'UM base', filterable:true},
+    {key:'Estado mat.todos ce', label:'Estado', badge:true, filterable:true},
+    {key:'Texto condiciones de almacenaje', label:'Cond. almacenaje', cls:'wrap', filterable:true},
+    {key:'Nombre creador', label:'Creado por', cls:'mono-small', filterable:true},
+    {key:'Fecha creación material', label:'F. creación', cls:'mono-small', date:true, filterable:'fecha'},
+    {key:'Nombre de modificador', label:'Modificado por', cls:'mono-small', filterable:true},
+    {key:'Última modificación', label:'Últ. modificación', cls:'mono-small', date:true, filterable:'fecha'}
   ];
 
   var DETAIL_GROUPS = [
@@ -1276,11 +1255,7 @@ function formatFechaHoraCorta(d){
       dzError = $('mmDzError'), filebar = $('mmFilebar'), fnameText = $('mmFnameText'), btnChange = $('mmBtnChange'),
       toolbar = $('mmToolbar'), tableWrap = $('mmTableWrap'), theadRow = $('mmTheadRow'), tbody = $('mmTbody'),
       pagination = $('mmPagination'), pgInfo = $('mmPgInfo'), resultCount = $('mmResultCount'),
-      searchInput = $('mmSearchInput'), filterTipo = $('mmFilterTipo'), filterEstado = $('mmFilterEstado'), filterCreador = $('mmFilterCreador'),
-      filterModificador = $('mmFilterModificador'),
-      moreFiltersToggle = $('mmMoreFiltersToggle'), moreFiltersPanel = $('mmMoreFilters'), clearMoreFiltersBtn = $('mmClearMoreFilters'),
-      fechaCreacionDesdeInput = $('mmFechaCreacionDesde'), fechaCreacionHastaInput = $('mmFechaCreacionHasta'),
-      fechaModDesdeInput = $('mmFechaModDesde'), fechaModHastaInput = $('mmFechaModHasta'),
+      searchInput = $('mmSearchInput'), searchModeToggle = $('mmSearchModeToggle'), clearAllFiltersBtn = $('mmClearAllFilters'),
       pageSizeSel = $('mmPageSize'), scrim = $('mmScrim'), drawer = $('mmDrawer'), drawerBody = $('mmDrawerBody'),
       dMat = $('mmDMat'), dName = $('mmDName'), dStamp = $('mmDStamp'), drawerClose = $('mmDrawerClose'),
       toggleSuspendidos = $('mmToggleSuspendidos'), toggleOmitSuspendidos = $('mmToggleOmitSuspendidos'), tabBadgeMM = $('tabBadgeMM');
@@ -1379,13 +1354,11 @@ function formatFechaHoraCorta(d){
 
         state.headers = headers.filter(function(h){ return EXCLUDE.indexOf(h)===-1; });
         state.rows = rows;
-        // Al cargar un archivo nuevo se limpian los filtros de "Más filtros" (modificado
-        // por y rangos de fecha), para que no queden filtros de una carga anterior
-        // ocultando filas del archivo recién cargado.
-        if(filterModificador) filterModificador.value = '';
-        [fechaCreacionDesdeInput, fechaCreacionHastaInput, fechaModDesdeInput, fechaModHastaInput].forEach(function(inp){
-          if(inp) inp.value = '';
-        });
+        // Al cargar un archivo nuevo se limpian todos los filtros por columna y de fecha,
+        // para que no queden filtros de una carga anterior ocultando filas del archivo
+        // recién cargado.
+        SUMMARY_COLS.forEach(function(c){ if(filterState[c.key]) filterState[c.key].clear(); });
+        for(var dk in state.dateFilters){ state.dateFilters[dk] = {desde:'', hasta:''}; }
         await onDataLoaded(file.name);
       }catch(err){
         console.error(err);
@@ -1505,11 +1478,6 @@ function formatFechaHoraCorta(d){
     tableWrap.style.display = 'block';
     pagination.style.display = 'flex';
     dropzone.style.display = 'none';
-
-    fillSelect(filterTipo, uniqueSorted('Denominación tipo material'), 'Tipo material: todos');
-    fillSelect(filterEstado, uniqueSorted('Estado mat.todos ce'), 'Estado: todos');
-    fillSelect(filterCreador, uniqueSorted('Nombre creador'), 'Creado por: todos');
-    if(filterModificador) fillSelect(filterModificador, uniqueSorted('Nombre de modificador'), 'Modificado por: todos');
 
     buildHeader();
     updateStats();
@@ -1678,16 +1646,101 @@ function formatFechaHoraCorta(d){
     return new Date(+m[3], +m[2]-1, +m[1]);
   }
 
+  /* Estado de filtros por columna (checkbox multi-selección), igual patrón que usa Listas
+     de Materiales: filterState[key] es un Set de valores seleccionados para esa columna;
+     Set vacío = sin filtro en esa columna (se muestran todos los valores). */
+  var filterState = {};
+  SUMMARY_COLS.forEach(function(c){ if(c.filterable) filterState[c.key] = new Set(); });
+  var dateFilterState = { desde: '', hasta: '' }; // para Fecha creación / Última modificación, se filtra la columna que se abra
+
+  var MM_FUNNEL_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3"><path d="M4 5h16l-6.5 7.5V19l-3 1.5v-8z"/></svg>';
+
   function buildHeader(){
     theadRow.innerHTML = SUMMARY_COLS.map(function(c){
-      return '<th data-key="'+c.key+'">'+c.label+'<span class="arrow" data-arrow="'+c.key+'"></span></th>';
+      var filterHtml = '';
+      if(c.filterable === 'fecha'){
+        filterHtml = '<button class="th-filter-btn" data-filter-key="'+c.key+'" title="Filtrar por rango de fecha" type="button">'+MM_FUNNEL_SVG+'</button>'+
+          '<div class="filter-panel filter-panel-date" data-panel="'+c.key+'">'+
+            '<div class="filter-panel-date-body">'+
+              '<div class="date-field"><label>Desde</label><input type="date" data-fecha-desde="'+c.key+'"></div>'+
+              '<div class="date-field"><label>Hasta</label><input type="date" data-fecha-hasta="'+c.key+'"></div>'+
+              '<button type="button" class="btn btn-ghost" data-clear-fecha="'+c.key+'">Limpiar fecha</button>'+
+            '</div>'+
+          '</div>';
+      } else if(c.filterable){
+        filterHtml = '<button class="th-filter-btn" data-filter-key="'+c.key+'" title="Filtrar '+escapeAttr(c.label)+'" type="button">'+MM_FUNNEL_SVG+'</button>'+
+          '<div class="filter-panel" data-panel="'+c.key+'"></div>';
+      }
+      return '<th data-key="'+c.key+'"><div class="th-inner"><span class="th-label">'+c.label+'<span class="arrow" data-arrow="'+c.key+'"></span></span>'+filterHtml+'</div></th>';
     }).join('');
-    Array.prototype.forEach.call(theadRow.querySelectorAll('th'), function(th){
-      th.addEventListener('click', function(){
+    Array.prototype.forEach.call(theadRow.querySelectorAll('.th-label'), function(el){
+      el.addEventListener('click', function(){
+        var th = el.closest('th');
         var key = th.getAttribute('data-key');
         if(state.sortKey === key){ state.sortDir *= -1; } else { state.sortKey = key; state.sortDir = 1; }
         applyFilters(true);
       });
+    });
+    SUMMARY_COLS.forEach(function(c){
+      if(c.filterable) renderMmFilterPanel(c);
+    });
+  }
+
+  function mmBuildOptionCounts(key, dataRows){
+    var counts = new Map();
+    dataRows.forEach(function(r){
+      var v = r[key]===''||r[key]===null||r[key]===undefined ? '(vacío)' : String(r[key]);
+      counts.set(v, (counts.get(v)||0)+1);
+    });
+    return [...counts.entries()].sort(function(a,b){ return b[1]-a[1]; });
+  }
+
+  /* Filas que cumplen todos los filtros activos EXCEPTO el de la columna exceptKey — usado
+     para que el panel de cada columna muestre los conteos "¿cuántas filas quedarían si
+     eligiera este valor?" en vez de recalcularse en base a un resultado ya reducido por su
+     propio filtro (mismo patrón que Listas de Materiales). */
+  function mmGetFilteredExcept(exceptKey){
+    return applyFiltersCore(exceptKey);
+  }
+
+  function renderMmFilterPanel(col){
+    var panel = document.querySelector('#view-mm .filter-panel[data-panel="'+col.key+'"]');
+    if(!panel) return;
+    if(col.filterable === 'fecha') return; // el panel de fecha ya trae su HTML fijo desde buildHeader
+    var subset = mmGetFilteredExcept(col.key);
+    var options = mmBuildOptionCounts(col.key, subset);
+    var needsSearch = options.length > 8;
+    var selected = filterState[col.key] || new Set();
+    panel.innerHTML =
+      (needsSearch ? '<div class="filter-panel-search"><input type="text" placeholder="Buscar…" data-mm-search-for="'+col.key+'"></div>' : '')+
+      '<div class="filter-panel-actions">'+
+        '<button data-mm-action="all" data-mm-key="'+col.key+'">Todos</button>'+
+        '<button data-mm-action="none" data-mm-key="'+col.key+'">Ninguno</button>'+
+      '</div>'+
+      '<div class="filter-panel-list" data-mm-list-for="'+col.key+'">'+
+        options.map(function(pair){
+          var val = pair[0], count = pair[1];
+          return '<label class="filter-option" data-optlabel="'+escapeAttr(val.toLowerCase())+'">'+
+            '<input type="checkbox" data-mm-key="'+col.key+'" value="'+escapeAttr(val)+'" '+(selected.has(val)?'checked':'')+'>'+
+            '<span class="opt-label">'+escapeHtml(val)+'</span>'+
+            '<span class="opt-count">'+count+'</span>'+
+          '</label>';
+        }).join('')+
+      '</div>';
+  }
+
+  function updateMmFilterButtonStates(){
+    SUMMARY_COLS.forEach(function(c){
+      if(!c.filterable) return;
+      var btn = document.querySelector('#view-mm .th-filter-btn[data-filter-key="'+c.key+'"]');
+      if(!btn) return;
+      if(c.filterable === 'fecha'){
+        var active = (state.dateFilters && state.dateFilters[c.key] && (state.dateFilters[c.key].desde || state.dateFilters[c.key].hasta));
+        btn.classList.toggle('active', !!active);
+      } else {
+        var n = filterState[c.key] ? filterState[c.key].size : 0;
+        btn.classList.toggle('active', n>0);
+      }
     });
   }
 
@@ -1707,41 +1760,56 @@ function formatFechaHoraCorta(d){
     return CREADORES_PRIORITARIOS.indexOf(c) !== -1;
   }
 
-  function applyFilters(keepPage){
-    var q = searchInput.value.trim().toLowerCase();
-    var tipo = filterTipo.value, estado = filterEstado.value, creador = filterCreador.value;
-    var modificador = filterModificador ? filterModificador.value : '';
-    var fCreacionDesde = fechaCreacionDesdeInput ? fechaCreacionDesdeInput.value : '';
-    var fCreacionHasta = fechaCreacionHastaInput ? fechaCreacionHastaInput.value : '';
-    var fModDesde = fechaModDesdeInput ? fechaModDesdeInput.value : '';
-    var fModHasta = fechaModHastaInput ? fechaModHastaInput.value : '';
+  state.dateFilters = { 'Fecha creación material': {desde:'', hasta:''}, 'Última modificación': {desde:'', hasta:''} };
 
-    var out = state.rows.filter(function(r){
-      if(tipo && r['Denominación tipo material'] !== tipo) return false;
-      if(estado && r['Estado mat.todos ce'] !== estado) return false;
-      if(creador && r['Nombre creador'] !== creador) return false;
-      if(modificador && r['Nombre de modificador'] !== modificador) return false;
+  /* Modo de búsqueda alternable del cuadro de texto libre: 'material' busca en Material +
+     Texto Material + Denom.estándar (comportamiento de siempre); 'inspeccion' busca en
+     Texto de inspección. Se alterna con el botón junto al buscador. */
+  state.searchMode = 'material';
+
+  /* Lógica central de filtrado, reutilizada tanto por applyFilters (resultado final que se
+     muestra en la tabla) como por mmGetFilteredExcept (para calcular los conteos de cada
+     panel de columna sin que el propio filtro de esa columna se autoexcluya). exceptKey
+     indica qué filtro de columna omitir (o null para aplicar todos). */
+  function applyFiltersCore(exceptKey){
+    var q = searchInput.value.trim().toLowerCase();
+    return state.rows.filter(function(r){
       if(state.onlySuspendidos && !isSuspendedCode(r['Estado mat.todos ce'])) return false;
       if(state.omitSuspendidos && isSuspendedCode(r['Estado mat.todos ce'])) return false;
-      if(fCreacionDesde || fCreacionHasta){
-        var dCreacion = parseDMY(r['Fecha creación material']);
-        if(!dCreacion) return false;
-        if(fCreacionDesde && dCreacion < new Date(fCreacionDesde+'T00:00:00')) return false;
-        if(fCreacionHasta && dCreacion > new Date(fCreacionHasta+'T23:59:59')) return false;
+
+      for(var key in filterState){
+        if(key === exceptKey) continue;
+        var set = filterState[key];
+        if(!set || set.size===0) continue;
+        var v = r[key]===''||r[key]===null||r[key]===undefined ? '(vacío)' : String(r[key]);
+        if(!set.has(v)) return false;
       }
-      if(fModDesde || fModHasta){
-        var dMod = parseDMY(r['Última modificación']);
-        if(!dMod) return false;
-        if(fModDesde && dMod < new Date(fModDesde+'T00:00:00')) return false;
-        if(fModHasta && dMod > new Date(fModHasta+'T23:59:59')) return false;
+
+      for(var dateKey in state.dateFilters){
+        if(dateKey === exceptKey) continue;
+        var df = state.dateFilters[dateKey];
+        if(!df || (!df.desde && !df.hasta)) continue;
+        var d = parseDMY(r[dateKey]);
+        if(!d) return false;
+        if(df.desde && d < new Date(df.desde+'T00:00:00')) return false;
+        if(df.hasta && d > new Date(df.hasta+'T23:59:59')) return false;
       }
+
       if(q){
-        var hay = (String(r['Material']||'') + ' ' + String(r['Texto Material']||'') + ' ' + String(r['Denom.estándar']||'')).toLowerCase();
+        var hay;
+        if(state.searchMode === 'inspeccion'){
+          hay = String(r['Texto de inspección']||'').toLowerCase();
+        } else {
+          hay = (String(r['Material']||'') + ' ' + String(r['Texto Material']||'') + ' ' + String(r['Denom.estándar']||'')).toLowerCase();
+        }
         if(hay.indexOf(q) === -1) return false;
       }
       return true;
     });
+  }
 
+  function applyFilters(keepPage){
+    var out = applyFiltersCore(null);
     var key = state.sortKey, dir = state.sortDir;
     out.sort(function(a,b){
       /* Cuando el orden activo es por fecha de creación (el orden por defecto de la vista):
@@ -1785,6 +1853,10 @@ function formatFechaHoraCorta(d){
     if(state.page < 1) state.page = 1;
     renderTable();
     updateSortArrows();
+    updateMmFilterButtonStates();
+    SUMMARY_COLS.forEach(function(c){
+      if(c.filterable && c.filterable !== 'fecha') renderMmFilterPanel(c);
+    });
   }
 
   function updateSortArrows(){
@@ -1864,28 +1936,116 @@ function formatFechaHoraCorta(d){
   }
 
   searchInput.addEventListener('input', debounce(function(){ applyFilters(); }, 180));
-  filterTipo.addEventListener('change', function(){ applyFilters(); });
-  filterEstado.addEventListener('change', function(){ applyFilters(); });
-  filterCreador.addEventListener('change', function(){ applyFilters(); });
-  if(filterModificador) filterModificador.addEventListener('change', function(){ applyFilters(); });
-  [fechaCreacionDesdeInput, fechaCreacionHastaInput, fechaModDesdeInput, fechaModHastaInput].forEach(function(inp){
-    if(inp) inp.addEventListener('change', function(){ applyFilters(); });
-  });
-  if(moreFiltersToggle && moreFiltersPanel){
-    moreFiltersToggle.addEventListener('click', function(){
-      var open = moreFiltersPanel.classList.toggle('open');
-      moreFiltersToggle.classList.toggle('active', open);
-    });
-  }
-  if(clearMoreFiltersBtn){
-    clearMoreFiltersBtn.addEventListener('click', function(){
-      if(filterModificador) filterModificador.value = '';
-      [fechaCreacionDesdeInput, fechaCreacionHastaInput, fechaModDesdeInput, fechaModHastaInput].forEach(function(inp){
-        if(inp) inp.value = '';
-      });
+
+  if(searchModeToggle){
+    searchModeToggle.addEventListener('click', function(){
+      state.searchMode = state.searchMode === 'material' ? 'inspeccion' : 'material';
+      searchModeToggle.classList.toggle('active', state.searchMode === 'inspeccion');
+      searchModeToggle.textContent = state.searchMode === 'inspeccion' ? 'Buscando: Texto inspección' : 'Buscando: Material';
+      searchInput.placeholder = state.searchMode === 'inspeccion'
+        ? 'Buscar por texto de inspección…'
+        : 'Buscar por código o texto de material…';
       applyFilters();
     });
   }
+
+  if(clearAllFiltersBtn){
+    clearAllFiltersBtn.addEventListener('click', function(){
+      SUMMARY_COLS.forEach(function(c){ if(filterState[c.key]) filterState[c.key].clear(); });
+      document.querySelectorAll('#view-mm .filter-panel input[type=checkbox]').forEach(function(cb){ cb.checked = false; });
+      for(var dk in state.dateFilters){ state.dateFilters[dk] = {desde:'', hasta:''}; }
+      document.querySelectorAll('#view-mm [data-fecha-desde], #view-mm [data-fecha-hasta]').forEach(function(inp){ inp.value = ''; });
+      searchInput.value = '';
+      state.onlySuspendidos = false;
+      toggleSuspendidos.classList.remove('active');
+      state.omitSuspendidos = false;
+      toggleOmitSuspendidos.classList.remove('active');
+      applyFilters();
+    });
+  }
+
+  // Abre/cierra el panel de filtro de una columna al hacer clic en su ícono de embudo.
+  theadRow.addEventListener('click', function(e){
+    var filterBtn = e.target.closest('.th-filter-btn');
+    if(!filterBtn) return;
+    var key = filterBtn.getAttribute('data-filter-key');
+    var panel = document.querySelector('#view-mm .filter-panel[data-panel="'+key+'"]');
+    if(!panel) return;
+    var isOpen = panel.classList.contains('open');
+    document.querySelectorAll('#view-mm .filter-panel.open').forEach(function(p){ p.classList.remove('open'); });
+    if(!isOpen) panel.classList.add('open');
+  });
+  document.addEventListener('click', function(e){
+    if(e.target.closest('#view-mm .filter-panel') || e.target.closest('#view-mm .th-filter-btn')) return;
+    document.querySelectorAll('#view-mm .filter-panel.open').forEach(function(p){ p.classList.remove('open'); });
+  });
+  document.addEventListener('keydown', function(e){
+    if(e.key==='Escape'){
+      document.querySelectorAll('#view-mm .filter-panel.open').forEach(function(p){ p.classList.remove('open'); });
+    }
+  });
+  document.querySelectorAll('#view-mm .filter-panel').forEach(function(p){ p.addEventListener('click', function(e){ e.stopPropagation(); }); });
+
+  // Checkbox de un valor dentro de un panel de filtro de columna.
+  document.addEventListener('change', function(e){
+    if(e.target.matches('#view-mm .filter-panel input[type=checkbox][data-mm-key]')){
+      var key = e.target.getAttribute('data-mm-key');
+      var val = e.target.value;
+      if(!filterState[key]) filterState[key] = new Set();
+      if(e.target.checked) filterState[key].add(val); else filterState[key].delete(val);
+      applyFilters();
+    }
+    if(e.target.matches('#view-mm [data-fecha-desde]')){
+      var dk = e.target.getAttribute('data-fecha-desde');
+      state.dateFilters[dk] = state.dateFilters[dk] || {desde:'',hasta:''};
+      state.dateFilters[dk].desde = e.target.value;
+      applyFilters();
+    }
+    if(e.target.matches('#view-mm [data-fecha-hasta]')){
+      var dk2 = e.target.getAttribute('data-fecha-hasta');
+      state.dateFilters[dk2] = state.dateFilters[dk2] || {desde:'',hasta:''};
+      state.dateFilters[dk2].hasta = e.target.value;
+      applyFilters();
+    }
+  });
+
+  // Búsqueda dentro de un panel de filtro (cuando hay más de 8 valores posibles).
+  document.addEventListener('input', function(e){
+    if(e.target.matches('#view-mm [data-mm-search-for]')){
+      var key = e.target.getAttribute('data-mm-search-for');
+      var q = e.target.value.toLowerCase();
+      document.querySelectorAll('#view-mm [data-mm-list-for="'+key+'"] .filter-option').forEach(function(opt){
+        var label = opt.getAttribute('data-optlabel');
+        opt.style.display = label.indexOf(q) !== -1 ? '' : 'none';
+      });
+    }
+  });
+
+  // Botones "Todos" / "Ninguno" dentro de un panel de filtro.
+  document.addEventListener('click', function(e){
+    if(e.target.matches('#view-mm [data-mm-action]')){
+      var key = e.target.getAttribute('data-mm-key');
+      var action = e.target.getAttribute('data-mm-action');
+      var checkboxes = document.querySelectorAll('#view-mm .filter-panel[data-panel="'+key+'"] input[type=checkbox]');
+      if(!filterState[key]) filterState[key] = new Set();
+      if(action==='all'){
+        filterState[key].clear();
+        checkboxes.forEach(function(cb){ if(cb.closest('.filter-option').style.display!=='none'){ cb.checked=false; } });
+      } else if(action==='none'){
+        checkboxes.forEach(function(cb){
+          if(cb.closest('.filter-option').style.display!=='none'){ cb.checked = true; filterState[key].add(cb.value); }
+        });
+      }
+      applyFilters();
+    }
+    if(e.target.matches('#view-mm [data-clear-fecha]')){
+      var dk3 = e.target.getAttribute('data-clear-fecha');
+      state.dateFilters[dk3] = {desde:'', hasta:''};
+      document.querySelectorAll('#view-mm [data-fecha-desde="'+dk3+'"], #view-mm [data-fecha-hasta="'+dk3+'"]').forEach(function(inp){ inp.value=''; });
+      applyFilters();
+    }
+  });
+
   pageSizeSel.addEventListener('change', function(){ state.pageSize = parseInt(pageSizeSel.value,10); state.page=1; renderTable(); });
 
   $('mmPgFirst').addEventListener('click', function(){ state.page=1; renderTable(); });
@@ -1957,6 +2117,7 @@ function formatFechaHoraCorta(d){
         '<div class="hv1-banner" style="background:var(--amber-soft); border-color:var(--amber); color:var(--amber);">'+
           'Este producto es <strong>Categoría 3</strong> ('+fuenteTxt+').'+
           (cat3Info.reformulado ? '<br>Reformulado a: <strong>'+escapeHtml(cat3Info.reformulado)+'</strong>' : '')+
+          '<br><span style="font-weight:400;">Recuerda bloquearlo a Z3 en SAP manualmente (esta app no modifica SAP).</span>'+
         '</div>'+
         (cat3Info.fuente==='manual' ? '<button class="btn btn-ghost" id="mmCat3ToggleBtn" data-cat3-norm="'+escapeAttr(inspeccionNorm)+'" data-cat3-action="remove" type="button">Quitar marca manual de Categoría 3</button>' : '<p style="margin:6px 2px 0; font-size:11.5px; color:var(--ink-faint);">Detectado desde la base de productos Categoría 3 cargada en la app.</p>')+
       '</div>';
@@ -2170,42 +2331,96 @@ function formatFechaHoraCorta(d){
 
   /* Palabras genéricas de envase/empaque que suelen encabezar la descripción de un
      componente (CJA, CAJA, ETQ, ETIQUETA, FOLLETO, ROLLO, TAPA…) y que por sí solas NO
-     bastan para identificar el producto — se ignoran al buscar la "primera palabra
-     significativa" tanto de la lista como del componente. */
-  var PALABRAS_GENERICAS_ENVASE = ['CJA','CAJA','ETQ','ETIQUETA','FOLLETO','ROLLO','TAPA','FRASCO','BLISTER','ESTUCHE','BOLSA','PRECINTO','CINTA','SOBRE','TUBO','FILM','LAMINA'];
+     bastan para identificar el producto — se ignoran al buscar el nombre base del
+     producto. */
+  var PALABRAS_GENERICAS_ENVASE = ['CJA','CAJA','ETQ','ETIQUETA','FOLLETO','ROLLO','TAPA','FRASCO','BLISTER','ESTUCHE','BOLSA','PRECINTO','CINTA','SOBRE','TUBO','FILM','LAMINA','AMP'];
 
-  /* Primera palabra "significativa" de una descripción: la primera palabra que NO es un
-     término genérico de envase/empaque. Ej.: "CJA DEQUAZOL R OVU x8" -> "DEQUAZOL". */
-  function primeraPalabraSignificativa(texto){
-    if(typeof texto !== 'string') return '';
-    var palabras = texto.trim().toUpperCase().split(/\s+/);
-    for(var i=0; i<palabras.length; i++){
-      var p = palabras[i].replace(/[^A-ZÀ-Ú0-9]/g, '');
-      if(p && PALABRAS_GENERICAS_ENVASE.indexOf(p) === -1) return p;
-    }
-    return palabras[0] || '';
+  /* Formas farmacéuticas y términos técnicos comunes que marcan el FIN del nombre de marca
+     dentro de la descripción de una lista de materiales — p.ej. en "AB BRONCOL NF 1200
+     Polvo para Suspensión Inyectable", el nombre real del producto termina antes de
+     "Polvo". Complementa la detección de medidas/dosis numéricas como otra frontera. Solo
+     se listan sin tildes/diéresis porque cada palabra se normaliza antes de comparar (ver
+     normalizeAccentsUpper), así "ÓVULO"/"UNGÜENTO" etc. también coinciden. */
+  var FORMAS_FARMACEUTICAS = ['POLVO','SOLUCION','TABLETA','TABLETAS','CREMA','OVULO','OVULOS','SUSPENSION','CAPSULA','CAPSULAS','LOCION','EMULSION','ELIXIR','JARABE','GRANULOS','SUPOSITORIO','GEL','UNGUENTO','ENEMA','GOTAS','INYECTABLE','INY'];
+
+  /* Palabras conectoras que no identifican al producto por sí solas — no deben quedar
+     "colgando" al final de un candidato de comparación (ej. "SAL DE" es inválido, pero
+     "SAL DE ANDREWS" sí es válido). */
+  var PALABRAS_CONECTORAS = ['DE','DEL','LA','EL','LOS','LAS','Y','A','EN','CON'];
+
+  /* Mayúsculas y sin diacríticos (tildes, diéresis…), usando descomposición Unicode en vez
+     de un rango fijo de caracteres — así cubre correctamente casos como "Ü" en "Ungüento",
+     que un regex de rango À-Ú no incluye. */
+  function normalizeAccentsUpper(text){
+    if(text===null || text===undefined) return '';
+    return String(text).normalize('NFKD').replace(/[\u0300-\u036f]/g, '').toUpperCase();
   }
 
-  /* Un componente se considera EXCLUSIVO DEL PRODUCTO cuando la primera palabra
-     significativa de la descripción de la LISTA de materiales (el nombre del producto,
-     p.ej. "DEQUAZOL" en "DEQUAZOL R OVU T4 CJA x8") también aparece en la descripción del
-     COMPONENTE (p.ej. "CJA DEQUAZOL R OVU x8") — es decir, el envase/empaque fue impreso o
-     diseñado específicamente para ese producto, y no es un insumo genérico compartido por
-     varios productos. */
+  function esTokenNumericoOMedida(p){
+    return /^\d/.test(p) || /^[\d.,]+(MG|ML|G|UI|MCG|L|MM|CM|X|K)$/i.test(p) || /^\(/.test(p);
+  }
+
+  /* Palabras del "nombre base" del producto: se acumulan desde el inicio de la
+     descripción de la lista hasta toparse con una medida/dosis numérica o una forma
+     farmacéutica conocida (lo que ocurra primero). Ej.: "AB BRONCOL NF 1200 Polvo para
+     Suspensión Inyectable" -> ["AB","BRONCOL","NF"]; "DEQUAZOL R 500mg+..." -> ["DEQUAZOL","R"]. */
+  function palabrasBaseDelProducto(texto){
+    if(typeof texto !== 'string') return [];
+    var palabrasRaw = normalizeAccentsUpper(texto).trim().split(/\s+/);
+    var limpio = palabrasRaw.map(function(w){ return w.replace(/[^A-Z0-9]/g, ''); }).filter(Boolean);
+    var acumulado = [];
+    for(var i=0; i<limpio.length; i++){
+      var p = limpio[i];
+      if(esTokenNumericoOMedida(p)) break;
+      // Una forma farmacéutica solo se considera "frontera de fin de nombre" si NO es la
+      // primera palabra de la descripción — si aparece de entrada, es más probable que sea
+      // parte del propio nombre de marca (ej. "CREMA DEL DR. ZAIDMAN Crema Tópica", donde
+      // el primer "Crema" es parte del nombre y el segundo sí es la forma farmacéutica).
+      if(FORMAS_FARMACEUTICAS.indexOf(p) !== -1 && acumulado.length > 0) break;
+      acumulado.push(p);
+    }
+    return acumulado;
+  }
+
+  /* Un componente se considera EXCLUSIVO DEL PRODUCTO cuando el nombre base de la LISTA de
+     materiales (p.ej. "AB BRONCOL NF" en "AB BRONCOL NF 1200 Polvo para Suspensión
+     Inyectable") aparece, como frase, en la descripción del COMPONENTE (p.ej. "AMP INC 5mL
+     AB BRONCOL NF 1200 INY(S) MM") — es decir, el envase/empaque fue impreso o diseñado
+     específicamente para ese producto, y no es un insumo genérico compartido por varios
+     productos.
+     Se prueba primero la frase completa del nombre base; si no matchea, se van quitando
+     palabras desde el final (probablemente sabores/variantes que no son parte del nombre
+     de marca real) hasta encontrar coincidencia — nunca se prueba con una palabra suelta
+     de menos de 4 caracteres, ni con un candidato que termine en una palabra conectora
+     (ej. "SAL DE"), para evitar falsos positivos con nombres cortos o ambiguos como "AB"
+     o "SAL" por sí solas. */
   function isComponenteExclusivoDelProducto(descLista, descComponente, codigoComponente){
     // Solo los componentes cuyo código empieza con "1" (materiales tipo ZMEE, Mat. de
     // Envase y Empaque) pueden considerarse exclusivos del producto. Los que empiezan con
     // "5" son ZSEB (otro tipo de material) y no deben marcarse como exclusivos aunque su
-    // descripción coincida con el nombre del producto — antes se estaban contando por
-    // error porque la comparación solo miraba el texto, no el código.
+    // descripción coincida con el nombre del producto.
     if(typeof codigoComponente === 'string' && codigoComponente.trim() && !/^1/.test(codigoComponente.trim())){
       return false;
     }
-    var palabraProducto = primeraPalabraSignificativa(descLista);
-    if(!palabraProducto || palabraProducto.length < 3) return false;
     if(typeof descComponente !== 'string') return false;
-    var re = new RegExp('\\b' + palabraProducto.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b', 'i');
-    return re.test(descComponente);
+    var palabras = palabrasBaseDelProducto(descLista);
+    if(palabras.length === 0) return false;
+
+    // Se normaliza también la descripción del componente (mismo criterio: mayúsculas, sin
+    // tildes/diéresis) para que la comparación no falle por acentos distintos entre la
+    // lista y el componente (p.ej. "Ungüento" vs "UNGUENTO").
+    var descComponenteNorm = normalizeAccentsUpper(descComponente);
+
+    for(var n = palabras.length; n >= 1; n--){
+      var slice = palabras.slice(0, n);
+      var ultima = slice[slice.length-1];
+      if(PALABRAS_CONECTORAS.indexOf(ultima) !== -1) continue;
+      if(n === 1 && ultima.length < 4) continue;
+      var candidato = slice.join(' ');
+      var re = new RegExp('\\b' + candidato.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\s+/g, '\\s+') + '\\b', 'i');
+      if(re.test(descComponenteNorm)) return true;
+    }
+    return false;
   }
 
   /* Estado del material según el Maestro de Materiales (window.MM_ESTADO_MAP, publicado por
@@ -2225,13 +2440,38 @@ function formatFechaHoraCorta(d){
     return isSuspendedCode(estadoEnMaestro(material));
   }
 
+  /* true cuando el material de la lista está marcado como Categoría 3 (producto
+     reformulado 2024), según window.MM_CAT3_MAP publicado por el Maestro de Materiales
+     (detección automática por Texto de inspección, o marca manual). Esto es puramente
+     informativo: NO se simula un bloqueo real en la app — solo se usa para señalar/
+     recomendar qué listas y componentes deberían bloquearse a Z3 en SAP, para que la
+     persona lo haga manualmente allá. El estado real de bloqueo sigue siendo el que
+     efectivamente traiga el export de SAP. */
+  function isRowCat3(row){
+    const material = iMaterial !== -1 ? row[iMaterial] : '';
+    return !!(material && window.MM_CAT3_MAP && window.MM_CAT3_MAP[String(material).trim()]);
+  }
+
   /* true cuando la lista de materiales (o el material dueño en el Maestro) tiene estado Z3
-     — bloqueo definitivo. Se usa para excluir estas listas de las marcas de pendiente de
+     — bloqueo definitivo. Refleja únicamente el estado real registrado en SAP (Categoría 3
+     NO se incluye aquí: ver isRowCat3 para la recomendación de bloqueo, que se mantiene
+     separada). Se usa para excluir estas listas de las marcas de pendiente de
      Hv.1/actualización, ya que no tiene sentido actualizar algo bloqueado en definitiva. */
   function isRowZ3Bloqueada(row){
     if(isZ3Code(estadoCodeOf(row))) return true;
     const material = iMaterial !== -1 ? row[iMaterial] : '';
     return isZ3Code(estadoEnMaestro(material));
+  }
+
+  /* true cuando un componente de una lista Categoría 3 es, además, EXCLUSIVO de ese
+     producto (ver isComponenteExclusivoDelProducto): es la recomendación de que ESE
+     componente también debería bloquearse a Z3 en SAP (insumo diseñado específicamente
+     para la fórmula reformulada, no un envase genérico reutilizable). Al igual que
+     isRowCat3, es solo informativo — no simula ningún bloqueo real en la app. */
+  function isComponenteZ3PorCat3(row, codigoComponente, descComponente){
+    if(!isRowCat3(row)) return false;
+    const descLista = iDesc !== -1 ? row[iDesc] : '';
+    return isComponenteExclusivoDelProducto(descLista, descComponente, codigoComponente);
   }
 
   document.getElementById('bomLoadExcelBtn').addEventListener('click', ()=>{
@@ -3382,7 +3622,8 @@ function formatFechaHoraCorta(d){
     if(compBtn){
       compBtn.classList.toggle('loaded', COMP_ROWS.length>0);
       if(COMP_ROWS.length>0){
-        compBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg> Componentes cargados (${COMP_ROWS.length.toLocaleString('es-PE')})`;
+        compBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg> Componentes (${COMP_ROWS.length.toLocaleString('es-PE')})`;
+        compBtn.title = `Componentes cargados: ${COMP_ROWS.length.toLocaleString('es-PE')}. Clic para volver a cargar.`;
       }
     }
 
@@ -3390,7 +3631,8 @@ function formatFechaHoraCorta(d){
     if(vfabBtn){
       vfabBtn.classList.toggle('loaded', VFAB_ROWS.length>0);
       if(VFAB_ROWS.length>0){
-        vfabBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg> Versiones fab. cargadas (${VFAB_ROWS.length.toLocaleString('es-PE')})`;
+        vfabBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg> Vfab (${VFAB_ROWS.length.toLocaleString('es-PE')})`;
+        vfabBtn.title = `Versiones de Fabricación cargadas: ${VFAB_ROWS.length.toLocaleString('es-PE')}. Clic para volver a cargar.`;
       }
     }
   }
@@ -3653,20 +3895,34 @@ function formatFechaHoraCorta(d){
     const suspendidoOwn = isSuspendedCode(ownEstado);
     const suspendidoMaestro = isSuspendedCode(maestroEstado);
     const vfabBloqueadaDrawer = hasVfabBloqueada(row);
-    // Z3 = bloqueo definitivo: el código de material en el encabezado del drawer se
-    // muestra en rojo intenso, igual que en la tabla y en el Maestro de Materiales.
-    bomDrawerMaterialEl.style.color = (isZ3Code(ownEstado) || isZ3Code(maestroEstado)) ? '#C0392B' : '';
+    // esCat3Drawer es puramente informativo: indica que esta lista debería bloquearse a
+    // Z3 en SAP por ser Categoría 3 (producto reformulado). NO significa que ya esté
+    // bloqueada — ese estado real sigue viniendo de ownEstado/maestroEstado.
+    const esCat3Drawer = isRowCat3(row);
+    const cat3YaBloqueadaReal = esCat3Drawer && (isZ3Code(ownEstado) || isZ3Code(maestroEstado));
+    const cat3PendienteDeBloquear = esCat3Drawer && !cat3YaBloqueadaReal;
+    // Z3 = bloqueo definitivo real, ya registrado en SAP: el código de material se muestra
+    // en rojo intenso. Categoría 3 pendiente de bloquear se distingue en violeta, para no
+    // confundirla con un bloqueo real ya aplicado.
+    bomDrawerMaterialEl.style.color = (isZ3Code(ownEstado) || isZ3Code(maestroEstado)) ? '#C0392B' : (cat3PendienteDeBloquear ? 'var(--violet)' : '');
 
     const bomDStamp = document.getElementById('bomDStamp');
     if(bomDStamp){
       if(vfabBloqueadaDrawer){
-        // Prioridad más alta: un bloqueo de Versión de Fabricación es información
-        // operativa crítica (no se puede fabricar con esa versión), así que domina el
-        // sello por encima de Hv.1/conciliación/suspensión de material.
+        // Un bloqueo de Versión de Fabricación es información operativa crítica (no se
+        // puede fabricar con esa versión), así que domina el sello por encima de
+        // Hv.1/conciliación/suspensión de material.
         bomDStamp.style.display = 'block';
         bomDStamp.textContent = 'Vfab bloqueada';
         bomDStamp.style.borderColor = '#963B32';
         bomDStamp.style.color = '#963B32';
+      } else if(cat3PendienteDeBloquear){
+        // Recomendación informativa (no un bloqueo real): esta lista es Categoría 3 y
+        // todavía no tiene Z3 aplicado en SAP.
+        bomDStamp.style.display = 'block';
+        bomDStamp.textContent = 'Cat.3 · pendiente bloquear Z3';
+        bomDStamp.style.borderColor = 'var(--violet)';
+        bomDStamp.style.color = 'var(--violet)';
       } else if(pendingHv1 && pendingConc){
         bomDStamp.style.display = 'block';
         bomDStamp.textContent = 'Hv.1 · C';
@@ -3817,7 +4073,6 @@ function formatFechaHoraCorta(d){
       const maestroEstado = estadoEnMaestro(material);
       const bloqueadoZLista = isSuspendedCode(ownEstado) || isSuspendedCode(maestroEstado);
       const codigoZLista = isSuspendedCode(ownEstado) ? ownEstado : (isSuspendedCode(maestroEstado) ? maestroEstado : '');
-      const esZ3Lista = isZ3Code(ownEstado) || isZ3Code(maestroEstado);
 
       // Texto de inspección del Maestro de Materiales, correspondiente al material de la
       // LISTA (no a cada componente) — se busca por el código del material de la lista.
@@ -3828,6 +4083,15 @@ function formatFechaHoraCorta(d){
       const cat3Info = window.MM_CAT3_MAP && window.MM_CAT3_MAP[String(material||'').trim()];
       const esCat3 = !!cat3Info;
       const cat3Reformulado = cat3Info ? (cat3Info.reformulado || '') : '';
+
+      // esZ3Lista refleja ÚNICAMENTE el bloqueo Z3 real ya registrado en SAP — no se
+      // simula ningún bloqueo en la app. bloqueadoZ3PorCat3Lista es la RECOMENDACIÓN
+      // (informativa) de que esta lista debería bloquearse a Z3 en SAP por ser Categoría 3,
+      // para que la persona lo haga manualmente allá; se calcula aparte y no se mezcla con
+      // el estado real.
+      const esZ3Lista = isZ3Code(ownEstado) || isZ3Code(maestroEstado);
+      const bloqueadoZ3PorCat3Lista = esCat3 && !esZ3Lista;
+
 
       // Versiones de Fabricación de esta lista (Material + Lista mat.alternat.): se
       // resume en un texto con todas las versiones encontradas, y si alguna está
@@ -3842,11 +4106,11 @@ function formatFechaHoraCorta(d){
       if(comps.length === 0){
         dataRows.push({
           material, descLista, textoInspeccion, alt: altVal || '1', estadoLMat, activa, etapa,
-          bloqueadoZLista, codigoZLista, esZ3Lista, esCat3, cat3Reformulado,
+          bloqueadoZLista, codigoZLista, esZ3Lista, esCat3, cat3Reformulado, bloqueadoZ3PorCat3Lista,
           versionesFab, vfabBloqueadaLista, versionesFabBloqueadas,
           componente:'', descComponente:'', posicion:'', cantidad:'', unidad:'',
           bloqueadoZComponente:false, codigoZComponente:'', esZ3Componente:false,
-          exclusivo: false
+          exclusivo: false, bloqueadoZ3PorCat3Componente: false
         });
         return;
       }
@@ -3864,15 +4128,20 @@ function formatFechaHoraCorta(d){
         const bloqueadoZComponente = isSuspendedCode(estadoComp);
         const codigoZComponente = bloqueadoZComponente ? estadoComp : '';
         const esZ3Componente = isZ3Code(estadoComp);
+        const esExclusivo = isComponenteExclusivoDelProducto(descLista, descComp, codigoComp);
+        // Un componente exclusivo de una lista Categoría 3 se trata como bloqueado Z3,
+        // independientemente de su estado real en SAP — es un insumo específico de la
+        // fórmula reformulada, no reutilizable en otro producto.
+        const bloqueadoZ3PorCat3Componente = esCat3 && esExclusivo;
 
         dataRows.push({
           material, descLista, textoInspeccion, alt: altVal || '1', estadoLMat, activa, etapa,
-          bloqueadoZLista, codigoZLista, esZ3Lista, esCat3, cat3Reformulado,
+          bloqueadoZLista, codigoZLista, esZ3Lista, esCat3, cat3Reformulado, bloqueadoZ3PorCat3Lista,
           versionesFab, vfabBloqueadaLista, versionesFabBloqueadas,
           componente: codigoComp, descComponente: descComp, posicion: posComp,
           cantidad: cantComp, unidad: umComp,
           bloqueadoZComponente, codigoZComponente, esZ3Componente,
-          exclusivo: isComponenteExclusivoDelProducto(descLista, descComp, codigoComp)
+          exclusivo: esExclusivo, bloqueadoZ3PorCat3Componente
         });
       });
     });
@@ -3884,11 +4153,11 @@ function formatFechaHoraCorta(d){
 
     const headers = [
       'Material (Lista)','Descripción de LMat','Texto de inspección','Lista alt.','Estado LMat','Etapa',
-      '¿Categoría 3?','Producto reformulado',
-      '¿Bloqueo Z Lista?','Código Z Lista',
+      '¿Categoría 3?',
+      'Código Z Lista',
       'Versiones fabricación','¿Vfab bloqueada?','Versiones Vfab bloqueadas',
       'Componente','Denominación de componente','Posición','Cantidad','Unidad',
-      '¿Bloqueo Z Componente?','Código Z Componente',
+      'Código Z Componente',
       '¿Exclusivo del producto?'
     ];
 
@@ -3899,20 +4168,22 @@ function formatFechaHoraCorta(d){
     const FILL_Z3 = { patternType:'solid', fgColor:{ rgb:'F5D0CC' } };
     const FILL_ZBLOQUEO = { patternType:'solid', fgColor:{ rgb:'FCE8E6' } };
     const FILL_EXCLUSIVO = { patternType:'solid', fgColor:{ rgb:'FFF3D6' } };
+    const FILL_CAT3_PENDIENTE = { patternType:'solid', fgColor:{ rgb:'EAE6F5' } };
     const FONT_Z3 = { color:{ rgb:'C0392B' }, bold:true, sz:10, name:'Calibri' };
+    const FONT_CAT3_PENDIENTE = { color:{ rgb:'5B4B8A' }, bold:true, sz:10, name:'Calibri' };
     const FONT_NORMAL = { sz:10, name:'Calibri' };
 
     const aoa = [headers];
     dataRows.forEach(r=>{
       aoa.push([
         r.material, r.descLista, r.textoInspeccion || '—', r.alt, r.estadoLMat || '—', r.etapa || '—',
-        r.esCat3 ? 'Sí' : 'No', r.cat3Reformulado || '—',
-        r.bloqueadoZLista ? 'Sí' : 'No', r.codigoZLista || '—',
+        r.esCat3 ? 'Sí' : 'No',
+        r.codigoZLista || '—',
         r.versionesFab || '—', r.vfabBloqueadaLista ? 'Sí' : 'No', r.versionesFabBloqueadas || '—',
         r.componente || '—', r.descComponente || '—', r.posicion || '—',
         r.cantidad!=='' && r.cantidad!=null ? Number(r.cantidad) : '',
         r.unidad || '—',
-        r.bloqueadoZComponente ? 'Sí' : 'No', r.codigoZComponente || '—',
+        r.codigoZComponente || '—',
         r.exclusivo ? 'Sí' : 'No'
       ]);
     });
@@ -3922,11 +4193,11 @@ function formatFechaHoraCorta(d){
     // Ancho de columnas ajustado a un contenido típico de cada campo.
     ws['!cols'] = [
       {wch:14},{wch:34},{wch:38},{wch:9},{wch:12},{wch:16},
-      {wch:13},{wch:38},
-      {wch:13},{wch:12},
+      {wch:13},
+      {wch:12},
       {wch:20},{wch:14},{wch:24},
       {wch:14},{wch:32},{wch:10},{wch:11},{wch:9},
-      {wch:16},{wch:15},
+      {wch:15},
       {wch:16}
     ];
 
@@ -3944,18 +4215,20 @@ function formatFechaHoraCorta(d){
       ws[addr].s = { fill: HEADER_FILL, font: HEADER_FONT, alignment:{ vertical:'center', horizontal:'center', wrapText:true }, border: CELL_BORDER };
     }
 
-    // Estilo de cada fila de datos: violeta para Versión de Fabricación bloqueada (máxima
-    // prioridad, es información operativa crítica), rojo para bloqueo Z3 (en la lista o en
-    // el componente), rosado suave para otros bloqueos Z, ámbar para componente exclusivo
-    // del producto.
+    // Estilo de cada fila de datos: violeta claro para recomendación de bloqueo Z3 por
+    // Categoría 3 aún NO aplicada en SAP (es una sugerencia, no un bloqueo real), rojo
+    // para bloqueo Z3 real ya registrado en SAP (en la lista o en el componente), rosado
+    // suave para otros bloqueos Z reales, ámbar para componente exclusivo del producto.
     dataRows.forEach((r, i)=>{
       const rIdx = i+1;
       let fill = null;
       let font = FONT_NORMAL;
-      const esZ3 = r.esZ3Lista || r.esZ3Componente;
-      const bloqueadoZ = r.bloqueadoZLista || r.bloqueadoZComponente;
-      if(esZ3){ fill = FILL_Z3; font = FONT_Z3; }
-      else if(bloqueadoZ){ fill = FILL_ZBLOQUEO; }
+      const esZ3Real = r.esZ3Lista || r.esZ3Componente;
+      const bloqueadoZReal = r.bloqueadoZLista || r.bloqueadoZComponente;
+      const cat3Pendiente = r.bloqueadoZ3PorCat3Lista || r.bloqueadoZ3PorCat3Componente;
+      if(esZ3Real){ fill = FILL_Z3; font = FONT_Z3; }
+      else if(bloqueadoZReal){ fill = FILL_ZBLOQUEO; }
+      else if(cat3Pendiente){ fill = FILL_CAT3_PENDIENTE; font = FONT_CAT3_PENDIENTE; }
       else if(r.exclusivo){ fill = FILL_EXCLUSIVO; }
       for(let c=0; c<headers.length; c++){
         const addr = XLSX.utils.encode_cell({r:rIdx, c});
@@ -3980,7 +4253,7 @@ function formatFechaHoraCorta(d){
     // repetirse aunque tenga varios componentes), con sus Versiones de Fabricación y
     // Componentes exclusivos resumidos, y el estatus de bloqueo consolidado de las tres
     // fuentes (Lista, Versión de Fabricación, Componentes) para poder verificar de un
-    // vistazo que todo lo relacionado a ese producto reformulado está bien.
+    // vistazo qué falta bloquear a Z3 en SAP para cada producto reformulado.
     const cat3Keys = new Set();
     const cat3Rows = [];
     dataRows.forEach(r=>{
@@ -3993,25 +4266,37 @@ function formatFechaHoraCorta(d){
       const componentesExclusivos = filasDeEstaLista
         .filter(x => x.exclusivo && x.componente)
         .map(x => x.componente + (x.descComponente ? ' — ' + x.descComponente : ''));
-      const componentesBloqueados = filasDeEstaLista
+      // bloqueadoZLista/bloqueadoZComponente reflejan el estado REAL ya registrado en SAP.
+      // bloqueadoZ3PorCat3Lista/Componente son la RECOMENDACIÓN (pendiente de aplicar
+      // manualmente en SAP) — se muestran por separado, sin mezclarlas.
+      const listaBloqueadaReal = r.bloqueadoZLista;
+      const listaPendienteDeBloquear = r.bloqueadoZ3PorCat3Lista;
+      const componentesBloqueadosReal = filasDeEstaLista
         .filter(x => x.bloqueadoZComponente && x.componente)
         .map(x => x.componente + ' (' + x.codigoZComponente + ')');
+      const componentesPendientesDeBloquear = filasDeEstaLista
+        .filter(x => x.bloqueadoZ3PorCat3Componente && x.componente)
+        .map(x => x.componente + (x.descComponente ? ' — ' + x.descComponente : ''));
 
-      const listaBloqueada = r.bloqueadoZLista;
       const vfabBloqueada = r.vfabBloqueadaLista;
-      const algunComponenteBloqueado = componentesBloqueados.length > 0;
-      const todoOk = !listaBloqueada && !vfabBloqueada && !algunComponenteBloqueado;
+      const algunComponenteBloqueadoReal = componentesBloqueadosReal.length > 0;
+      // "OK" significa que no queda ninguna recomendación pendiente de aplicar en SAP —
+      // ya sea porque no hacía falta, o porque ya se bloqueó. El bloqueo Z real de otro
+      // origen (Z1/Z2, o Vfab bloqueada) se informa aparte, sin afectar este semáforo, ya
+      // que no es algo que esta hoja esté pidiendo resolver.
+      const todoOk = !listaPendienteDeBloquear && componentesPendientesDeBloquear.length===0;
 
       let estatusConsolidado;
       if(todoOk){
-        estatusConsolidado = 'OK — sin bloqueos';
+        estatusConsolidado = listaBloqueadaReal ? 'Ya bloqueada Z3 en SAP — sin pendientes' : 'Sin pendientes de bloqueo Z3';
       } else {
         const partes = [];
-        if(listaBloqueada) partes.push('Lista bloqueada (' + r.codigoZLista + ')');
-        if(vfabBloqueada) partes.push('Vfab bloqueada');
-        if(algunComponenteBloqueado) partes.push('Componente(s) bloqueado(s)');
+        if(listaPendienteDeBloquear) partes.push('PENDIENTE: bloquear la lista a Z3 en SAP');
+        if(componentesPendientesDeBloquear.length>0) partes.push('PENDIENTE: bloquear ' + componentesPendientesDeBloquear.length + ' componente(s) exclusivo(s) a Z3 en SAP');
         estatusConsolidado = partes.join(' · ');
       }
+      if(algunComponenteBloqueadoReal) estatusConsolidado += (estatusConsolidado?' · ':'') + 'Nota: hay componente(s) con otro bloqueo Z ya registrado en SAP';
+      if(vfabBloqueada) estatusConsolidado += (estatusConsolidado?' · ':'') + 'Nota: Vfab bloqueada';
 
       cat3Rows.push({
         material: r.material,
@@ -4019,11 +4304,12 @@ function formatFechaHoraCorta(d){
         cat3Reformulado: r.cat3Reformulado,
         alt: r.alt,
         estadoLMat: r.estadoLMat,
-        listaBloqueada, codigoZLista: r.codigoZLista,
+        listaBloqueadaReal, listaPendienteDeBloquear, codigoZLista: r.codigoZLista,
         versionesFab: r.versionesFab,
         vfabBloqueada, versionesFabBloqueadas: r.versionesFabBloqueadas,
         componentesExclusivos: componentesExclusivos.join(' | '),
-        componentesBloqueados: componentesBloqueados.join(' | '),
+        componentesBloqueadosReal: componentesBloqueadosReal.join(' | '),
+        componentesPendientesDeBloquear: componentesPendientesDeBloquear.join(' | '),
         estatusConsolidado, todoOk
       });
     });
@@ -4031,18 +4317,18 @@ function formatFechaHoraCorta(d){
     if(cat3Rows.length > 0){
       const cat3Headers = [
         'Material (Lista)','Descripción de LMat','Producto reformulado','Lista alt.','Estado LMat',
-        '¿Lista bloqueada (Z)?','Código Z Lista',
+        '¿Pendiente bloquear lista a Z3?','¿Lista ya bloqueada en SAP?','Código Z Lista',
         'Versiones fabricación','¿Vfab bloqueada?','Versiones Vfab bloqueadas',
-        'Componentes exclusivos del producto','Componentes bloqueados (Z)',
+        'Componentes exclusivos del producto','Componentes con bloqueo Z ya en SAP','Componentes exclusivos PENDIENTES de bloquear a Z3',
         'Estatus consolidado'
       ];
       const cat3Aoa = [cat3Headers];
       cat3Rows.forEach(r=>{
         cat3Aoa.push([
           r.material, r.descLista, r.cat3Reformulado || '—', r.alt, r.estadoLMat || '—',
-          r.listaBloqueada ? 'Sí' : 'No', r.codigoZLista || '—',
+          r.listaPendienteDeBloquear ? 'Sí' : 'No', r.listaBloqueadaReal ? 'Sí' : 'No', r.codigoZLista || '—',
           r.versionesFab || '—', r.vfabBloqueada ? 'Sí' : 'No', r.versionesFabBloqueadas || '—',
-          r.componentesExclusivos || '—', r.componentesBloqueados || '—',
+          r.componentesExclusivos || '—', r.componentesBloqueadosReal || '—', r.componentesPendientesDeBloquear || '—',
           r.estatusConsolidado
         ]);
       });
@@ -4050,10 +4336,10 @@ function formatFechaHoraCorta(d){
       const wsCat3 = XLSX.utils.aoa_to_sheet(cat3Aoa);
       wsCat3['!cols'] = [
         {wch:14},{wch:34},{wch:38},{wch:9},{wch:12},
-        {wch:14},{wch:12},
+        {wch:18},{wch:20},{wch:12},
         {wch:20},{wch:14},{wch:24},
-        {wch:44},{wch:34},
-        {wch:26}
+        {wch:44},{wch:34},{wch:34},
+        {wch:34}
       ];
       const cat3LastCol = XLSX.utils.encode_col(cat3Headers.length-1);
       const cat3LastRow = cat3Rows.length + 1;
@@ -4066,11 +4352,10 @@ function formatFechaHoraCorta(d){
         wsCat3[addr].s = { fill: HEADER_FILL, font: HEADER_FONT, alignment:{ vertical:'center', horizontal:'center', wrapText:true }, border: CELL_BORDER };
       }
       const FILL_CAT3_OK = { patternType:'solid', fgColor:{ rgb:'DEF0EF' } };
-      const FILL_CAT3_ALERTA = { patternType:'solid', fgColor:{ rgb:'F5D0CC' } };
       cat3Rows.forEach((r, i)=>{
         const rIdx = i+1;
-        const fill = r.todoOk ? FILL_CAT3_OK : FILL_CAT3_ALERTA;
-        const font = r.todoOk ? FONT_NORMAL : FONT_Z3;
+        const fill = r.todoOk ? FILL_CAT3_OK : FILL_CAT3_PENDIENTE;
+        const font = r.todoOk ? FONT_NORMAL : FONT_CAT3_PENDIENTE;
         for(let c=0; c<cat3Headers.length; c++){
           const addr = XLSX.utils.encode_cell({r:rIdx, c});
           if(!wsCat3[addr]) wsCat3[addr] = { t:'s', v:'' };
@@ -4086,27 +4371,32 @@ function formatFechaHoraCorta(d){
     // el formato sin depender de esta conversación.
     const legendAoa = [
       ['Leyenda de colores'],
-      ['Rojo — Bloqueo Z3 (bloqueo definitivo), ya sea en la lista de materiales o en el componente — ver columnas "Código Z Lista" / "Código Z Componente" para saber cuál'],
-      ['Rosado — Otro bloqueo Z (Z1/Z2, suspensión temporal/parcial), en la lista o en el componente'],
+      ['Rojo — Bloqueo Z3 (bloqueo definitivo) YA REGISTRADO EN SAP, ya sea en la lista de materiales o en el componente — ver columnas "Código Z Lista" / "Código Z Componente" para saber cuál'],
+      ['Rosado — Otro bloqueo Z (Z1/Z2, suspensión temporal/parcial) YA REGISTRADO EN SAP, en la lista o en el componente'],
+      ['Violeta claro — RECOMENDACIÓN: esta app no modifica SAP, así que este color solo señala que la lista (o un componente exclusivo suyo) debería bloquearse a Z3 en SAP por ser Categoría 3, y todavía no tiene ese bloqueo aplicado allá. Es una sugerencia para que lo hagas manualmente, no un estado real.'],
       ['Ámbar — Componente exclusivo del producto (su descripción incluye el nombre del producto de la lista, p.ej. "CJA DEQUAZOL R OVU x8" para la lista "DEQUAZOL R OVU T4 CJA x8") — solo se considera exclusivo si el código del componente empieza con "1" (ZMEE); los que empiezan con "5" (ZSEB) no cuentan aunque el texto coincida.'],
       [''],
       ['Nota: el bloqueo Z de la Lista de materiales y el bloqueo Z del Componente son independientes entre sí — una lista sana puede tener un componente bloqueado, y viceversa. Revisa ambas columnas por separado.'],
       ['Nota: la columna "Texto de inspección" corresponde únicamente al material de la lista (el producto), tal como figura en el Maestro de Materiales — no aplica a los componentes. Si aparece "—" es porque el Maestro de Materiales no está cargado en la otra pestaña, o ese material no tiene texto de inspección.'],
       ['Nota: la columna "Etapa" corresponde al Texto de alternativa de la lista de materiales (p.ej. Envase, Acondicionado, etc.), tal como aparece en el export de SAP.'],
       ['Nota: las Versiones de Fabricación se cruzan con la lista de materiales por Material + Lista mat.alternat., considerando solo las versiones con Utilización LMat = 1. La columna "¿Vfab bloqueada?" indica Sí cuando el bloqueo de una versión (columna AJ del export) = "1" — es independiente del bloqueo Z del material.'],
-      ['Nota: la columna "¿Categoría 3?" indica si el material de la lista corresponde a un producto reformulado 2024 (base ASCA), detectado por coincidencia del Texto de inspección del Maestro de Materiales, o marcado manualmente desde la ficha del material. La hoja "Resumen Categoría 3" reúne una fila por cada lista Cat3 única, con su estatus consolidado de bloqueo (Lista + Versión de Fabricación + Componentes) — verde si todo está sano, rojo si hay algún bloqueo que revisar.'],
+      ['Nota: la columna "¿Categoría 3?" indica si el material de la lista corresponde a un producto reformulado 2024 (base ASCA), detectado por coincidencia del Texto de inspección del Maestro de Materiales, o marcado manualmente desde la ficha del material.'],
+      ['Nota: ESTA APP NO BLOQUEA NADA EN SAP — solo identifica qué debería bloquearse a Z3 allá. Esa recomendación se detalla en la hoja "Resumen Categoría 3" (columnas "¿Pendiente bloquear lista a Z3?" y "Componentes exclusivos PENDIENTES de bloquear a Z3"), separada del estado real ya registrado en SAP ("¿Lista ya bloqueada en SAP?", "Código Z Lista"), para que sepas exactamente qué falta hacer manualmente.'],
+      ['Nota: la hoja "Resumen Categoría 3" reúne una fila por cada lista Cat3 única. Violeta claro = todavía queda algo pendiente de bloquear a Z3 en SAP (la lista y/o algún componente exclusivo). Verde = no queda ninguna recomendación pendiente (ya se bloqueó, o no hacía falta). El estatus también anota aparte si hay otro bloqueo Z ya registrado en SAP, o si hay una Versión de Fabricación bloqueada — esos son datos informativos, no algo que la hoja te pida resolver.'],
     ];
     const wsLegend = XLSX.utils.aoa_to_sheet(legendAoa);
     wsLegend['!cols'] = [{wch:110}];
     wsLegend['A1'].s = { font:{ bold:true, sz:12, name:'Calibri' } };
     wsLegend['A2'].s = { fill:FILL_Z3, font:FONT_Z3 };
     wsLegend['A3'].s = { fill:FILL_ZBLOQUEO, font:FONT_NORMAL };
-    wsLegend['A4'].s = { fill:FILL_EXCLUSIVO, font:FONT_NORMAL };
-    wsLegend['A6'].s = { font:{ italic:true, sz:10, name:'Calibri', color:{ rgb:'5C6B77' } } };
+    wsLegend['A4'].s = { fill:FILL_CAT3_PENDIENTE, font:FONT_CAT3_PENDIENTE };
+    wsLegend['A5'].s = { fill:FILL_EXCLUSIVO, font:FONT_NORMAL };
     wsLegend['A7'].s = { font:{ italic:true, sz:10, name:'Calibri', color:{ rgb:'5C6B77' } } };
     wsLegend['A8'].s = { font:{ italic:true, sz:10, name:'Calibri', color:{ rgb:'5C6B77' } } };
     wsLegend['A9'].s = { font:{ italic:true, sz:10, name:'Calibri', color:{ rgb:'5C6B77' } } };
     wsLegend['A10'].s = { font:{ italic:true, sz:10, name:'Calibri', color:{ rgb:'5C6B77' } } };
+    wsLegend['A11'].s = { font:{ italic:true, sz:10, name:'Calibri', color:{ rgb:'5C6B77' } } };
+    wsLegend['A12'].s = { font:{ italic:true, sz:10, name:'Calibri', color:{ rgb:'5C6B77' } } };
     XLSX.utils.book_append_sheet(wb, wsLegend, 'Leyenda');
 
     XLSX.writeFile(wb, `lmat_detalle_componentes_${new Date().toISOString().slice(0,10)}.xlsx`);

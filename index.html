@@ -525,6 +525,57 @@
     .comp-item{ display:flex; flex-direction:column; gap:3px; }
     .comp-item .c-qty{ text-align:left; }
   }
+
+  /* ================= ÁRBOL DEL PRODUCTO ================= */
+  .arbol-card{
+    background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-lg);
+    padding:20px 22px; margin-bottom:16px; box-shadow:var(--shadow-sm);
+  }
+  .arbol-resumen{
+    display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin-bottom:18px;
+    padding-bottom:14px; border-bottom:1px solid var(--border-soft);
+  }
+  .arbol-resumen h2{ font-family:var(--display); font-size:19px; margin:0; color:var(--ink); }
+  .arbol-resumen .badge{ font-size:11px; }
+  .arbol-timeline{ display:flex; flex-direction:column; gap:0; }
+  .arbol-nodo{
+    position:relative; display:flex; gap:16px; padding:16px 4px 16px 4px;
+  }
+  .arbol-nodo:not(:last-child)::before{
+    content:''; position:absolute; left:19px; top:44px; bottom:-16px; width:2px;
+    background:var(--border);
+  }
+  .arbol-nodo-marker{
+    flex:none; width:40px; height:40px; border-radius:50%; display:flex; align-items:center;
+    justify-content:center; font-family:var(--mono); font-weight:700; font-size:11px;
+    background:var(--navy); color:#fff; z-index:1; border:3px solid var(--surface);
+    box-shadow:0 0 0 1px var(--border);
+  }
+  .arbol-nodo.warn .arbol-nodo-marker{ background:var(--brick); }
+  .arbol-nodo.ok .arbol-nodo-marker{ background:var(--teal); }
+  .arbol-nodo-body{ flex:1; min-width:0; padding-top:2px; }
+  .arbol-nodo-etapa{
+    font-family:var(--mono); font-size:10.5px; text-transform:uppercase; letter-spacing:.06em;
+    color:var(--ink-faint); margin-bottom:4px;
+  }
+  .arbol-nodo-titulo{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:4px; }
+  .arbol-nodo-titulo .mat-code{ font-family:var(--mono); font-weight:700; color:var(--navy-deep); font-size:14.5px; }
+  .arbol-nodo-desc{ font-size:13px; color:var(--ink); margin-bottom:6px; }
+  .arbol-nodo-meta{ display:flex; flex-wrap:wrap; gap:6px; align-items:center; font-size:12px; color:var(--ink-soft); }
+  .arbol-vfab{
+    display:inline-flex; align-items:center; gap:5px; padding:3px 10px; border-radius:8px;
+    background:var(--violet-soft); color:var(--violet); font-family:var(--mono); font-weight:700; font-size:12.5px;
+  }
+  .arbol-warning{
+    margin-top:8px; padding:9px 12px; background:var(--brick-soft); border:1px solid var(--brick);
+    color:var(--brick); border-radius:8px; font-size:12.5px; display:flex; gap:8px; align-items:flex-start;
+  }
+  .arbol-warning svg{ width:15px; height:15px; flex:none; margin-top:1px; }
+  .arbol-info{
+    margin-top:8px; padding:9px 12px; background:var(--teal-soft); border:1px solid var(--teal);
+    color:#0A5352; border-radius:8px; font-size:12.5px; display:flex; gap:8px; align-items:flex-start;
+  }
+  .arbol-info svg{ width:15px; height:15px; flex:none; margin-top:1px; color:var(--teal); }
 </style>
 </head>
 <body>
@@ -544,6 +595,7 @@
   <div class="suite-tabs">
     <button class="suite-tab active" data-tab="mm" id="tabBtnMM">Maestro de Materiales <span class="tab-badge" id="tabBadgeMM">0</span></button>
     <button class="suite-tab" data-tab="bom" id="tabBtnBOM">Listas de Materiales <span class="tab-badge" id="tabBadgeBOM">0</span></button>
+    <button class="suite-tab" data-tab="arbol" id="tabBtnArbol">Árbol del producto</button>
   </div>
 </div>
 
@@ -773,6 +825,48 @@
 
 </section>
 
+<!-- ========================= VISTA 3: ÁRBOL DEL PRODUCTO ========================= -->
+<section class="app-view" id="view-arbol">
+
+  <header class="top top-collapsed" id="arbolHeaderTop">
+    <button class="header-toggle" id="arbolHeaderToggle" title="Mostrar/ocultar detalles del encabezado" aria-label="Mostrar/ocultar detalles del encabezado">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M6 9l6 6 6-6"/></svg>
+    </button>
+    <p class="eyebrow"><span class="dot"></span>SAP · TRAZABILIDAD DE ETAPAS</p>
+    <h1 class="title">Árbol del producto</h1>
+    <p class="subtitle">A partir de un código de Acondicionado, reconstruye retrocediendo por sus componentes (posición 0010) las etapas previas — Envase, Recubrimiento/Inspección si existen, y Fabricación — hasta el origen, calculando la Versión de Fabricación de cada etapa.</p>
+  </header>
+
+  <div class="toolbar" style="position:static;">
+    <div class="toolbar-row">
+      <div class="search-box" style="max-width:320px;">
+        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="9" cy="9" r="6"/><path d="M17 17l-4-4" stroke-linecap="round"/></svg>
+        <input type="text" id="arbolMaterialInput" placeholder="Código de Material de Acondicionado…" list="arbolMaterialSugerencias">
+        <datalist id="arbolMaterialSugerencias"></datalist>
+      </div>
+      <select id="arbolAltSelect" style="min-width:170px;"><option value="">Alternativa: —</option></select>
+      <button class="btn btn-primary" id="arbolBuildBtn" type="button">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v18M5 10l7-7 7 7"/></svg>
+        Construir árbol
+      </button>
+      <span class="count" id="arbolStatus" style="margin-left:auto; font-family:var(--mono); font-size:12px; color:var(--ink-soft);"></span>
+    </div>
+  </div>
+
+  <main class="view-main">
+    <div id="arbolEmptyState" class="empty-state">
+      <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><path d="M12 22v-8M12 14l-6-6M12 14l6-6M12 6V2"/><circle cx="12" cy="14" r="1.5"/></svg>
+      <h3>Sin árbol construido</h3>
+      <p id="arbolEmptyMsg">Carga Listas de Materiales y Componentes en la pestaña "Listas de Materiales", luego ingresa aquí un código de Material de Acondicionado y su Alternativa.</p>
+    </div>
+
+    <div id="arbolResultado" style="display:none;"></div>
+
+    <footer class="page-footer">ÁRBOL DEL PRODUCTO — Reconstruido a partir de Listas de Materiales y Componentes</footer>
+  </main>
+
+</section>
+
 <div class="overlay" id="bomOverlay"></div>
 <div class="drawer" id="bomDrawer">
   <div class="drawer-header">
@@ -833,18 +927,22 @@ function formatFechaHoraCorta(d){
 (function(){
   var tabBtnMM = document.getElementById('tabBtnMM');
   var tabBtnBOM = document.getElementById('tabBtnBOM');
+  var tabBtnArbol = document.getElementById('tabBtnArbol');
   var viewMM = document.getElementById('view-mm');
   var viewBOM = document.getElementById('view-bom');
+  var viewArbol = document.getElementById('view-arbol');
 
   function activate(tab){
-    var isMM = tab === 'mm';
-    tabBtnMM.classList.toggle('active', isMM);
-    tabBtnBOM.classList.toggle('active', !isMM);
-    viewMM.classList.toggle('active', isMM);
-    viewBOM.classList.toggle('active', !isMM);
+    tabBtnMM.classList.toggle('active', tab==='mm');
+    tabBtnBOM.classList.toggle('active', tab==='bom');
+    tabBtnArbol.classList.toggle('active', tab==='arbol');
+    viewMM.classList.toggle('active', tab==='mm');
+    viewBOM.classList.toggle('active', tab==='bom');
+    viewArbol.classList.toggle('active', tab==='arbol');
   }
   tabBtnMM.addEventListener('click', function(){ activate('mm'); });
   tabBtnBOM.addEventListener('click', function(){ activate('bom'); });
+  tabBtnArbol.addEventListener('click', function(){ activate('arbol'); });
 
   /* Expuesto globalmente para que otras vistas (p.ej. el Maestro de Materiales, al saltar
      a una lista de materiales donde un código aparece como componente) puedan cambiar de
@@ -2395,11 +2493,13 @@ function formatFechaHoraCorta(d){
      (ej. "SAL DE"), para evitar falsos positivos con nombres cortos o ambiguos como "AB"
      o "SAL" por sí solas. */
   function isComponenteExclusivoDelProducto(descLista, descComponente, codigoComponente){
-    // Solo los componentes cuyo código empieza con "1" (materiales tipo ZMEE, Mat. de
-    // Envase y Empaque) pueden considerarse exclusivos del producto. Los que empiezan con
-    // "5" son ZSEB (otro tipo de material) y no deben marcarse como exclusivos aunque su
-    // descripción coincida con el nombre del producto.
-    if(typeof codigoComponente === 'string' && codigoComponente.trim() && !/^1/.test(codigoComponente.trim())){
+    // Solo los componentes cuyo código empieza con "1100" (materiales tipo ZMEE, Mat. de
+    // Envase y Empaque) pueden considerarse exclusivos del producto por este criterio de
+    // coincidencia de nombre. Los que empiezan con "5" son ZSEB (otro tipo de material) y
+    // no deben marcarse como exclusivos aunque su descripción coincida con el nombre del
+    // producto. Los que empiezan con "1000" son ZMPR (Materias Primas) — esos usan un
+    // criterio totalmente distinto (ver isMateriaPrimaExclusiva), no coincidencia de texto.
+    if(typeof codigoComponente === 'string' && codigoComponente.trim() && !/^1100/.test(codigoComponente.trim())){
       return false;
     }
     if(typeof descComponente !== 'string') return false;
@@ -2422,6 +2522,46 @@ function formatFechaHoraCorta(d){
     }
     return false;
   }
+
+  /* Código de MATERIA PRIMA (ZMPR): empieza con "1000", a diferencia de ZMEE ("1100...",
+     material de envase y empaque). */
+  function isCodigoZMPR(codigoComponente){
+    return typeof codigoComponente === 'string' && /^1000/.test(codigoComponente.trim());
+  }
+
+  /* Construye el mapa código de materia prima -> Set de listas (clave normKey
+     Material||Alt) donde ese código aparece como componente, recorriendo TODO el archivo
+     de componentes cargado (COMP_ROWS), no solo las filas filtradas en pantalla — así el
+     criterio de exclusividad ("aparece en una sola lista de materiales") es correcto sin
+     importar qué filtros tenga aplicados el usuario en ese momento. Se recalcula cada vez
+     que se exporta, para reflejar siempre los datos más recientes cargados. */
+  function buildZmprListasMap(){
+    var map = {};
+    for(var i=0; i<COMP_ROWS.length; i++){
+      var row = COMP_ROWS[i];
+      var codigo = cComponente!==-1 ? String(row[cComponente]||'').trim() : '';
+      if(!isCodigoZMPR(codigo)) continue;
+      var key = normKey(row[cMaterial], row[cAlt]);
+      if(!map[codigo]) map[codigo] = {};
+      map[codigo][key] = true;
+    }
+    return map;
+  }
+
+  /* Una materia prima (ZMPR) es EXCLUSIVA cuando aparece como componente en una única
+     lista de materiales de todo el archivo cargado — a diferencia de la mayoría de
+     materias primas (lactosa, talco, estearato de magnesio…), que son insumos genéricos
+     compartidos por muchos productos distintos. No se usa coincidencia de texto/nombre
+     aquí, solo el conteo de listas donde aparece. */
+  function isMateriaPrimaExclusiva(codigoComponente, zmprListasMap){
+    if(!isCodigoZMPR(codigoComponente)) return false;
+    var codigo = codigoComponente.trim();
+    var listas = zmprListasMap[codigo];
+    if(!listas) return false;
+    return Object.keys(listas).length === 1;
+  }
+
+
 
   /* Estado del material según el Maestro de Materiales (window.MM_ESTADO_MAP, publicado por
      esa app). Permite detectar materiales suspendidos (Z1/Z2/Z3…) aunque el propio registro
@@ -2600,6 +2740,9 @@ function formatFechaHoraCorta(d){
       }
 
       buildComponentMap();
+      window.BOM_COMP_ROWS = COMP_ROWS;
+      window.BOM_COMP_COLUMNS = COMP_COLUMNS;
+      if(window.__refreshArbolView){ try{ window.__refreshArbolView(); }catch(e){} }
       updateAll();
 
       /* Se espera (await) a que termine el guardado en Supabase antes de mostrar el
@@ -2879,6 +3022,8 @@ function formatFechaHoraCorta(d){
       if(cMaterial === undefined || cAlt === undefined || cComponente === undefined) return false;
 
       buildComponentMap();
+      window.BOM_COMP_ROWS = COMP_ROWS;
+      window.BOM_COMP_COLUMNS = COMP_COLUMNS;
       return true;
     }catch(e){
       console.error('Error cargando Componentes desde Supabase', e);
@@ -2997,6 +3142,12 @@ function formatFechaHoraCorta(d){
       });
     }
   }
+
+  /* Índices de columna de Componentes, publicados globalmente (solo lectura) para que la
+     vista "Árbol del producto" pueda leer el Núm.posición sin duplicar lógica de parseo. */
+  window.__bomCompIdx = function(){
+    return { cMaterial, cAlt, cPos, cComponente, cDenom };
+  };
 
   function getComponentsFor(material, alt){
     const key = normKey(material, alt);
@@ -3218,6 +3369,12 @@ function formatFechaHoraCorta(d){
     const d2 = document.getElementById('bomCreadoHasta'); if(d2) d2.value = '';
     FILTER_DEFS.forEach(def => renderFilterPanel(def, ROWS));
     ROWS.forEach((r, idx) => { r.__ridx = idx; });
+
+    // Publicado globalmente (solo lectura) para que la vista "Árbol del producto" pueda
+    // usar las mismas Listas de Materiales ya cargadas aquí, sin pedir cargarlas de nuevo.
+    window.BOM_ROWS = ROWS;
+    window.BOM_COLUMNS = COLUMNS;
+    if(window.__refreshArbolView){ try{ window.__refreshArbolView(); }catch(e){} }
 
     updateAll();
   }
@@ -4054,6 +4211,12 @@ function formatFechaHoraCorta(d){
 
     const filtered = window.__bomLastFiltered || getFiltered();
 
+    // Mapa código de materia prima (ZMPR) -> listas donde aparece, calculado sobre TODO el
+    // archivo de componentes cargado (no solo las filas filtradas), para que el criterio
+    // de exclusividad ("aparece en una sola lista de materiales") sea correcto sin
+    // importar los filtros activos en pantalla en este momento.
+    const zmprListasMap = buildZmprListasMap();
+
     // Una fila por cada componente de cada lista de materiales filtrada. Si una lista no
     // tiene componentes cargados, igual se incluye una fila (con las columnas de
     // componente vacías) para no "perder" esa lista del reporte.
@@ -4111,7 +4274,7 @@ function formatFechaHoraCorta(d){
           versionesFab, vfabBloqueadaLista, versionesFabBloqueadas,
           componente:'', descComponente:'', posicion:'', cantidad:'', unidad:'',
           bloqueadoZComponente:false, codigoZComponente:'', esZ3Componente:false,
-          exclusivo: false, bloqueadoZ3PorCat3Componente: false
+          exclusivo: false, esMateriaPrimaExclusiva: false, bloqueadoZ3PorCat3Componente: false
         });
         return;
       }
@@ -4130,10 +4293,14 @@ function formatFechaHoraCorta(d){
         const codigoZComponente = bloqueadoZComponente ? estadoComp : '';
         const esZ3Componente = isZ3Code(estadoComp);
         const esExclusivo = isComponenteExclusivoDelProducto(descLista, descComp, codigoComp);
-        // Un componente exclusivo de una lista Categoría 3 se trata como bloqueado Z3,
-        // independientemente de su estado real en SAP — es un insumo específico de la
-        // fórmula reformulada, no reutilizable en otro producto.
-        const bloqueadoZ3PorCat3Componente = esCat3 && esExclusivo;
+        // Materia prima (ZMPR, código "1000...") exclusiva: aparece en una sola lista de
+        // materiales de todo el archivo cargado. Criterio independiente del de exclusividad
+        // de envase/empaque (ZMEE) — no usa coincidencia de nombre, solo conteo de listas.
+        const esMateriaPrimaExclusiva = isMateriaPrimaExclusiva(codigoComp, zmprListasMap);
+        // Un componente exclusivo (envase/empaque o materia prima) de una lista Categoría 3
+        // se trata como bloqueado Z3, independientemente de su estado real en SAP — es un
+        // insumo específico de la fórmula reformulada, no reutilizable en otro producto.
+        const bloqueadoZ3PorCat3Componente = esCat3 && (esExclusivo || esMateriaPrimaExclusiva);
 
         dataRows.push({
           material, descLista, textoInspeccion, alt: altVal || '1', centro, estadoLMat, activa, etapa,
@@ -4142,7 +4309,7 @@ function formatFechaHoraCorta(d){
           componente: codigoComp, descComponente: descComp, posicion: posComp,
           cantidad: cantComp, unidad: umComp,
           bloqueadoZComponente, codigoZComponente, esZ3Componente,
-          exclusivo: esExclusivo, bloqueadoZ3PorCat3Componente
+          exclusivo: esExclusivo, esMateriaPrimaExclusiva, bloqueadoZ3PorCat3Componente
         });
       });
     });
@@ -4172,7 +4339,7 @@ function formatFechaHoraCorta(d){
       'Versiones fabricación','¿Vfab bloqueada?','Versiones Vfab bloqueadas',
       'Componente','Denominación de componente','Posición','Cantidad','Unidad',
       'Código Z Componente',
-      '¿Exclusivo del producto?'
+      '¿Exclusivo del producto?','¿Materia prima exclusiva (ZMPR)?'
     ];
 
     const HEADER_FILL = { patternType:'solid', fgColor:{ rgb:'1F3B57' } };
@@ -4198,7 +4365,7 @@ function formatFechaHoraCorta(d){
         r.cantidad!=='' && r.cantidad!=null ? Number(r.cantidad) : '',
         r.unidad || '—',
         r.codigoZComponente || '—',
-        r.exclusivo ? 'Sí' : 'No'
+        r.exclusivo ? 'Sí' : 'No', r.esMateriaPrimaExclusiva ? 'Sí' : 'No'
       ]);
     });
 
@@ -4212,7 +4379,7 @@ function formatFechaHoraCorta(d){
       {wch:20},{wch:14},{wch:24},
       {wch:14},{wch:32},{wch:10},{wch:11},{wch:9},
       {wch:15},
-      {wch:16}
+      {wch:16},{wch:22}
     ];
 
     // Fila de encabezado congelada y con autofiltro (búsqueda/orden nativo de Excel en
@@ -4255,7 +4422,7 @@ function formatFechaHoraCorta(d){
       if(esZ3Real){ fill = FILL_Z3; font = FONT_Z3; }
       else if(bloqueadoZReal){ fill = FILL_ZBLOQUEO; }
       else if(cat3Pendiente){ fill = FILL_CAT3_PENDIENTE; font = FONT_CAT3_PENDIENTE; }
-      else if(r.exclusivo){ fill = FILL_EXCLUSIVO; }
+      else if(r.exclusivo || r.esMateriaPrimaExclusiva){ fill = FILL_EXCLUSIVO; }
       for(let c=0; c<headers.length; c++){
         const addr = XLSX.utils.encode_cell({r:rIdx, c});
         // Si aoa_to_sheet no generó celda para un valor vacío (p.ej. cantidad ''), se crea
@@ -4400,7 +4567,7 @@ function formatFechaHoraCorta(d){
       ['Rojo — Bloqueo Z3 (bloqueo definitivo) YA REGISTRADO EN SAP, ya sea en la lista de materiales o en el componente — ver columnas "Código Z Lista" / "Código Z Componente" para saber cuál'],
       ['Rosado — Otro bloqueo Z (Z1/Z2, suspensión temporal/parcial) YA REGISTRADO EN SAP, en la lista o en el componente'],
       ['Violeta claro — RECOMENDACIÓN: esta app no modifica SAP, así que este color solo señala que la lista (o un componente exclusivo suyo) debería bloquearse a Z3 en SAP por ser Categoría 3, y todavía no tiene ese bloqueo aplicado allá. Es una sugerencia para que lo hagas manualmente, no un estado real.'],
-      ['Ámbar — Componente exclusivo del producto (su descripción incluye el nombre del producto de la lista, p.ej. "CJA DEQUAZOL R OVU x8" para la lista "DEQUAZOL R OVU T4 CJA x8") — solo se considera exclusivo si el código del componente empieza con "1" (ZMEE); los que empiezan con "5" (ZSEB) no cuentan aunque el texto coincida.'],
+      ['Ámbar — Componente exclusivo del producto. Aplica por dos criterios distintos, ver columnas "¿Exclusivo del producto?" (ZMEE) y "¿Materia prima exclusiva (ZMPR)?": (1) ZMEE (código "1100...", envase/empaque) — su descripción incluye el nombre del producto de la lista, p.ej. "CJA DEQUAZOL R OVU x8" para la lista "DEQUAZOL R OVU T4 CJA x8"; los ZSEB (código "5...") nunca cuentan aunque el texto coincida. (2) ZMPR (código "1000...", materia prima) — aparece como componente en una única lista de materiales de todo el archivo cargado; no usa coincidencia de texto, solo el conteo de listas donde se usa.'],
       ['Blanco / gris muy claro — Sin ninguna alerta de las anteriores. Estas dos tonalidades se alternan cada vez que cambia el Material de la columna A, para distinguir de un vistazo dónde termina una lista de materiales y empieza la siguiente (cada lista puede ocupar varias filas, una por componente). Las filas se reordenan por Material al exportar, independientemente del orden en que estuviera la tabla en pantalla.'],
       [''],
       ['Nota: el bloqueo Z de la Lista de materiales y el bloqueo Z del Componente son independientes entre sí — una lista sana puede tener un componente bloqueado, y viceversa. Revisa ambas columnas por separado.'],
@@ -4408,6 +4575,7 @@ function formatFechaHoraCorta(d){
       ['Nota: la columna "Etapa" corresponde al Texto de alternativa de la lista de materiales (p.ej. Envase, Acondicionado, etc.), tal como aparece en el export de SAP.'],
       ['Nota: las Versiones de Fabricación se cruzan con la lista de materiales por Material + Lista mat.alternat., considerando solo las versiones con Utilización LMat = 1. La columna "¿Vfab bloqueada?" indica Sí cuando el bloqueo de una versión (columna AJ del export) = "1" — es independiente del bloqueo Z del material.'],
       ['Nota: la columna "¿Categoría 3?" indica si el material de la lista corresponde a un producto reformulado 2024 (base ASCA), detectado por coincidencia del Texto de inspección del Maestro de Materiales, o marcado manualmente desde la ficha del material.'],
+      ['Nota: la columna "¿Materia prima exclusiva (ZMPR)?" solo aplica a componentes cuyo código empieza con "1000" (materia prima). Se considera exclusiva cuando ese código aparece como componente en una única lista de materiales de todo el archivo cargado — es decir, no se comparte con ningún otro producto. Las materias primas comunes (lactosa, talco, estearato de magnesio, etc.) suelen aparecer en decenas o cientos de listas distintas y por tanto no se marcan. Este cálculo considera todas las etapas (Fabricación, Recubrimiento, Envase, etc.), no solo "Fabricación".'],
       ['Nota: ESTA APP NO BLOQUEA NADA EN SAP — solo identifica qué debería bloquearse a Z3 allá. Esa recomendación se detalla en la hoja "Resumen Categoría 3" (columnas "¿Pendiente bloquear lista a Z3?" y "Componentes exclusivos PENDIENTES de bloquear a Z3"), separada del estado real ya registrado en SAP ("¿Lista ya bloqueada en SAP?", "Código Z Lista"), para que sepas exactamente qué falta hacer manualmente.'],
       ['Nota: la hoja "Resumen Categoría 3" reúne una fila por cada lista Cat3 única. Violeta claro = todavía queda algo pendiente de bloquear a Z3 en SAP (la lista y/o algún componente exclusivo). Verde = no queda ninguna recomendación pendiente (ya se bloqueó, o no hacía falta). El estatus también anota aparte si hay otro bloqueo Z ya registrado en SAP, o si hay una Versión de Fabricación bloqueada — esos son datos informativos, no algo que la hoja te pida resolver.'],
     ];
@@ -4425,6 +4593,7 @@ function formatFechaHoraCorta(d){
     wsLegend['A11'].s = { font:{ italic:true, sz:10, name:'Calibri', color:{ rgb:'5C6B77' } } };
     wsLegend['A12'].s = { font:{ italic:true, sz:10, name:'Calibri', color:{ rgb:'5C6B77' } } };
     wsLegend['A13'].s = { font:{ italic:true, sz:10, name:'Calibri', color:{ rgb:'5C6B77' } } };
+    wsLegend['A14'].s = { font:{ italic:true, sz:10, name:'Calibri', color:{ rgb:'5C6B77' } } };
     XLSX.utils.book_append_sheet(wb, wsLegend, 'Leyenda');
 
     XLSX.writeFile(wb, `lmat_detalle_componentes_${new Date().toISOString().slice(0,10)}.xlsx`);
@@ -4639,6 +4808,467 @@ function formatFechaHoraCorta(d){
     updateUltimaCargaBom();
     if(window.__globalLoading) window.__globalLoading.end();
   })();
+})();
+</script>
+
+<script>
+/* ============================================================
+   APP 3 — ÁRBOL DEL PRODUCTO (ids con prefijo "arbol")
+
+   Reconstruye, a partir de un Material de Acondicionado + su Alternativa,
+   la cadena de etapas previas (Envase, Recubrimiento/Inspección si
+   existen, Fabricación), usando dos fuentes con roles distintos:
+
+   - COMPONENTES: solo para saber el CÓDIGO del material de la etapa
+     previa — se toma el componente de la posición 0010 (primera
+     posición) de la lista (Material, Alt) actual.
+   - LISTAS DE MATERIALES (BOM): ahí se lee la ALTERNATIVA real de ese
+     material — nunca se calcula ni se adivina. Se busca, entre las
+     alternativas registradas de ese material, la que coincide
+     numéricamente con la alternativa de la etapa actual (regla
+     confirmada: Acondicionado alt.N -> se toma Envase alt.N si existe).
+     Si esa alternativa no existe registrada, es una INCONSISTENCIA que
+     se señala como advertencia, sin inventar un valor.
+
+   La Versión de Fabricación (4 dígitos) se calcula DESPUÉS de reconstruir
+   la cadena real de (Material, Alternativa, Etapa), solo como etiqueta
+   descriptiva — nunca al revés.
+   ============================================================ */
+(function(){
+
+  var ETAPA_FABRICACION = 'FABRICACION';
+
+  /* Normaliza un valor de "Lista mat.alternat." a string comparable: vacío/null -> '1'
+     (misma convención que el resto de la app), y recorta espacios. */
+  function normAlt(v){
+    var s = (v===null||v===undefined) ? '' : String(v).trim();
+    return s === '' ? '1' : s;
+  }
+
+  function normMat(v){
+    return (v===null||v===undefined) ? '' : String(v).trim();
+  }
+
+  function keyOf(material, alt){
+    return normMat(material) + '||' + normAlt(alt);
+  }
+
+  /* Normaliza el nombre de una etapa para comparar de forma tolerante a variantes como
+     "FABRICACION - C. COG", "FABRICACION-R", etc. — cualquier etapa cuyo nombre normalizado
+     contenga "FABRICACION" se considera la etapa de Fabricación (fin del retroceso). */
+  function normEtapa(v){
+    if(v===null||v===undefined) return '';
+    var s = String(v).normalize('NFKD').replace(/[\u0300-\u036f]/g,'').toUpperCase().trim();
+    return s;
+  }
+  function esEtapaFabricacion(etapaTexto){
+    return normEtapa(etapaTexto).indexOf(ETAPA_FABRICACION) !== -1;
+  }
+
+  /* Alternativas de conciliación (60-69) y reacondicionado (95-99), mismo criterio que ya
+     usa el resto de la app (ver isConciliacionAltList / isReacondicionadoAltList en BOM). */
+  function esConciliacion(altStr){
+    return /^6\d$/.test(altStr);
+  }
+  function esReacondicionado(altStr){
+    return /^9[5-9]$/.test(altStr);
+  }
+
+  /* Mapeo de alternativa de conciliación (66,67,68,69…) a una única letra para el dígito 2
+     de la Versión de Fabricación: 66->C, 67->D, 68->E, 69->F… (empezando en C). Confirmado
+     con los ejemplos del usuario: envase alt.66 -> acondicionado dígito2 = 'C'. */
+  function letraParaAltPrevia(altStr){
+    var n = parseInt(altStr, 10);
+    if(isNaN(n)) return '0';
+    if(n>=1 && n<=9) return String(n);
+    if(n>=66 && n<=90){
+      var letra = String.fromCharCode('C'.charCodeAt(0) + (n-66));
+      return letra;
+    }
+    // Alternativas de reacondicionado (95-99) no deberían aparecer nunca como "etapa
+    // previa" de otra (confirmado por el usuario: el reacondicionado solo existe en
+    // Acondicionado, no es antecedido por nada) — se deja constancia con '?' si ocurriera,
+    // en vez de fallar silenciosamente.
+    return '?';
+  }
+
+  /* Calcula la Versión de Fabricación (4 dígitos) de una etapa, dada su propia alternativa
+     y la alternativa de la etapa previa (null si no hay etapa previa, es decir, es la
+     propia Fabricación). */
+  function calcularVersionFabricacion(altPropiaStr, altPreviaStr, esFabricacion){
+    // Caso reacondicionado: solo aplica a Acondicionado, formato fijo '00' + alternativa.
+    if(esReacondicionado(altPropiaStr)){
+      return '00' + altPropiaStr;
+    }
+    var digito1 = '1';
+    var digito2;
+    if(esFabricacion || altPreviaStr===null || altPreviaStr===undefined){
+      digito2 = '0';
+    } else {
+      digito2 = letraParaAltPrevia(altPreviaStr);
+    }
+    var digitos34;
+    if(esConciliacion(altPropiaStr)){
+      digitos34 = altPropiaStr; // ya son 2 dígitos (66, 67...)
+    } else {
+      var n = parseInt(altPropiaStr, 10);
+      digitos34 = isNaN(n) ? altPropiaStr : String(n).padStart(2, '0');
+    }
+    return digito1 + digito2 + digitos34;
+  }
+
+  /* Caché de los índices: se reconstruyen solo si la referencia de window.BOM_ROWS /
+     window.BOM_COMP_ROWS cambió desde la última vez (es decir, se cargó un archivo nuevo).
+     Evita recorrer miles de filas en cada árbol que el usuario construya durante la misma
+     sesión, ya que antes se reconstruían desde cero en cada clic. */
+  var __bomIndexCache = { rowsRef: null, index: null };
+  var __compIndexCache = { rowsRef: null, index: null };
+
+  /* Construye un índice Material||Alt -> fila cruda del BOM (window.BOM_ROWS), agregando
+     además un índice auxiliar Material -> [alternativas registradas] para poder listar
+     "qué alternativas tiene este material" cuando hay que buscar cuál coincide. */
+  function buildBomIndex(){
+    var rows = window.BOM_ROWS || [];
+    if(__bomIndexCache.rowsRef === rows && __bomIndexCache.index){
+      return __bomIndexCache.index;
+    }
+    var cols = window.BOM_COLUMNS || [];
+    var idx = {};
+    cols.forEach(function(c,i){ idx[c]=i; });
+    var iMaterial = idx['Material'];
+    var iAlt = idx['Lista mat.alternat.'];
+    var iDesc = idx['Descripción de LMat'];
+    var iEstado = idx['Stat.txt.breve'];
+    var iTexto = idx['Texto de alternativa'];
+    var iCentro = idx['Centro-instalación'];
+    var iUtil = idx['Utilización LMat'];
+
+    var byKey = {};
+    var altsByMaterial = {};
+    rows.forEach(function(row){
+      // Igual que en el resto de la app (carga del BOM principal): solo se consideran
+      // registros con Utilización LMat = 1. Un mismo Material puede tener varias filas en
+      // el export con distinta Utilización (ej. "ACONDICIONADO" con Utilización=1 y
+      // "FORMULA CUALI-CUANTITATIVA" con Utilización=8 para el mismo Material+Alt) — sin
+      // este filtro se podría tomar por error la fila equivocada.
+      if(iUtil!==undefined && String(row[iUtil]??'').trim() !== '1') return;
+      var mat = normMat(iMaterial!==undefined ? row[iMaterial] : '');
+      if(!mat) return;
+      var alt = normAlt(iAlt!==undefined ? row[iAlt] : '');
+      var key = mat + '||' + alt;
+      var entry = {
+        material: mat, alt: alt,
+        descripcion: iDesc!==undefined ? row[iDesc] : '',
+        estado: iEstado!==undefined ? row[iEstado] : '',
+        etapa: iTexto!==undefined ? row[iTexto] : '',
+        centro: iCentro!==undefined ? row[iCentro] : ''
+      };
+      byKey[key] = entry;
+      if(!altsByMaterial[mat]) altsByMaterial[mat] = [];
+      altsByMaterial[mat].push(entry);
+    });
+    var result = { byKey: byKey, altsByMaterial: altsByMaterial, iMaterial: iMaterial, iAlt: iAlt };
+    __bomIndexCache = { rowsRef: rows, index: result };
+    return result;
+  }
+
+  /* Devuelve el componente de la posición 0010 (posición mínima) de una lista
+     (Material, Alt), leyendo window.BOM_COMP_ROWS. Se usa SOLO para conocer el código del
+     material de la etapa previa — nunca su alternativa (eso se lee del BOM real). */
+  function buildCompFirstPosIndex(){
+    var rows = window.BOM_COMP_ROWS || [];
+    if(__compIndexCache.rowsRef === rows && __compIndexCache.index){
+      return __compIndexCache.index;
+    }
+    var cols = window.BOM_COMP_COLUMNS || [];
+    var idx = {};
+    cols.forEach(function(c,i){ idx[c]=i; });
+    var iMaterial = idx['Material'];
+    var iAlt = idx['Lista mat.alternat.'];
+    var iPos = idx['Núm.posición'];
+    var iComponente = idx['Componente'];
+    var iDenom = idx['Denominación de componente'];
+
+    var firstByKey = {};
+    rows.forEach(function(row){
+      var mat = normMat(iMaterial!==undefined ? row[iMaterial] : '');
+      if(!mat) return;
+      var alt = normAlt(iAlt!==undefined ? row[iAlt] : '');
+      var key = mat + '||' + alt;
+      var pos = iPos!==undefined ? String(row[iPos]||'').trim() : '';
+      var current = firstByKey[key];
+      if(!current || (pos && pos < current.pos)){
+        firstByKey[key] = {
+          pos: pos,
+          componente: iComponente!==undefined ? normMat(row[iComponente]) : '',
+          denominacion: iDenom!==undefined ? row[iDenom] : ''
+        };
+      }
+    });
+    var result2 = { firstByKey: firstByKey };
+    __compIndexCache = { rowsRef: rows, index: result2 };
+    return result2;
+  }
+
+  /* Algoritmo principal: reconstruye la cadena de etapas retrocediendo desde
+     (materialInicial, altInicial) hasta llegar a una lista cuya Etapa sea Fabricación (o
+     hasta que no se pueda seguir retrocediendo). Devuelve un array de nodos, del más
+     reciente (Acondicionado, índice 0) al más antiguo (Fabricación, último índice), cada
+     uno con su Versión de Fabricación calculada y advertencias si las hay.
+     No lanza excepción: cualquier problema se refleja como advertencia en el nodo
+     correspondiente y el retroceso se detiene ahí. */
+  function construirArbol(materialInicial, altInicial){
+    var bomIdx = buildBomIndex();
+    var compIdx = buildCompFirstPosIndex();
+
+    var nodos = [];
+    var matActual = normMat(materialInicial);
+    var altActual = normAlt(altInicial);
+    var visitados = {}; // salvaguarda anti-ciclos infinitos por datos inconsistentes
+
+    while(true){
+      var key = keyOf(matActual, altActual);
+      if(visitados[key]){
+        nodos[nodos.length-1].advertencias.push('Se detectó un ciclo (esta combinación Material+Alternativa ya apareció antes en la cadena) — se detiene el retroceso aquí para evitar un bucle infinito.');
+        break;
+      }
+      visitados[key] = true;
+
+      var bomEntry = bomIdx.byKey[key];
+      var advertencias = [];
+      if(!bomEntry){
+        advertencias.push('No se encontró la combinación Material ' + matActual + ' + Alternativa ' + altActual + ' en las Listas de Materiales cargadas. No se puede confirmar esta etapa ni seguir retrocediendo desde aquí.');
+      }
+
+      var esFab = bomEntry ? esEtapaFabricacion(bomEntry.etapa) : false;
+
+      // La Versión de Fabricación de este nodo depende de la alternativa de la ETAPA
+      // PREVIA (dígito 2) — que todavía no se conoce en este punto, porque el algoritmo
+      // avanza hacia atrás (de Acondicionado hacia Fabricación). Se calcula en una segunda
+      // pasada al final, una vez reconstruida toda la cadena real.
+      var nodo = {
+        material: matActual,
+        alt: altActual,
+        descripcion: bomEntry ? bomEntry.descripcion : '',
+        etapa: bomEntry ? bomEntry.etapa : '(no encontrada)',
+        estado: bomEntry ? bomEntry.estado : '',
+        centro: bomEntry ? bomEntry.centro : '',
+        esFabricacion: esFab || !bomEntry,
+        version: null,
+        advertencias: advertencias
+      };
+      nodos.push(nodo);
+
+      if(!bomEntry){
+        break; // no se puede seguir sin confirmar esta etapa
+      }
+      if(esFab){
+        break; // llegamos al origen del árbol
+      }
+
+      // Las alternativas de reacondicionado (95-99) no tienen una etapa previa real en el
+      // sentido de este árbol: solo existen como Acondicionado, y su componente de
+      // posición 0010 suele apuntar de vuelta a otro material de Acondicionado (el
+      // producto que se está reacondicionando), no a una cadena Fabricación->Envase — así
+      // que no tiene sentido intentar retroceder desde aquí (confirmado por el usuario).
+      if(esReacondicionado(altActual)){
+        nodo.finNatural = true;
+        nodo.finNaturalInfo = 'Esta es una alternativa de reacondicionado (' + altActual + ') — no tiene una etapa previa de Fabricación/Envase asociada en este árbol, así que el retroceso se detiene aquí.';
+        break;
+      }
+
+      // Retroceder: buscar el componente de posición 0010 de esta lista para obtener el
+      // CÓDIGO de la etapa previa (no su alternativa).
+      var compEntry = compIdx.firstByKey[key];
+      if(!compEntry){
+        nodo.advertencias.push('Esta lista no tiene componentes cargados (o ninguno en posición 0010), así que no se puede identificar la etapa previa. Verifica que el archivo de Componentes esté cargado y actualizado.');
+        break;
+      }
+      var codigoPrevio = compEntry.componente;
+      if(!codigoPrevio){
+        nodo.advertencias.push('El componente de la posición ' + (compEntry.pos||'0010') + ' no tiene código de Material válido.');
+        break;
+      }
+
+      // Buscar, entre las alternativas registradas de ese material en el BOM, la que
+      // coincide numéricamente con la alternativa de la etapa ACTUAL (regla confirmada:
+      // etapa alt.N -> etapa previa alt.N, si existe).
+      var candidatas = bomIdx.altsByMaterial[codigoPrevio] || [];
+      var coincide = candidatas.filter(function(c){ return c.alt === altActual; });
+
+      if(candidatas.length === 0){
+        // El componente de la posición 0010 no tiene NINGUNA lista de materiales propia
+        // registrada — esto es esperable y correcto para materias primas que se usan
+        // directamente en esta etapa sin pasar por una Fabricación separada (ej. "Agua
+        // para Inyección" directo en Envase). No es un error de datos: es el fin natural
+        // de esta rama del árbol, así que se informa sin marcarlo como inconsistencia.
+        nodo.finNatural = true;
+        nodo.finNaturalInfo = 'La etapa previa (componente ' + codigoPrevio + (compEntry.denominacion ? ' — ' + compEntry.denominacion : '') + ') no tiene una lista de materiales propia en SAP — se usa directo como materia prima en esta etapa, sin una Fabricación separada. El árbol termina aquí.';
+        break;
+      }
+      if(coincide.length === 0){
+        var altsDisponibles = candidatas.map(function(c){ return c.alt; }).join(', ');
+        nodo.advertencias.push('INCONSISTENCIA: el componente de la etapa previa es el material ' + codigoPrevio + ', pero no tiene registrada la Alternativa ' + altActual + ' en las Listas de Materiales (alternativas disponibles para ese material: ' + altsDisponibles + '). Se detiene el retroceso — revisar manualmente.');
+        break;
+      }
+      if(coincide.length > 1){
+        nodo.advertencias.push('El material ' + codigoPrevio + ' tiene más de una fila registrada con Alternativa ' + altActual + ' (posiblemente distintos Centros). Se usó la primera encontrada.');
+      }
+
+      var siguiente = coincide[0];
+      matActual = siguiente.material;
+      altActual = siguiente.alt;
+    }
+
+    // Segunda pasada (ahora que la cadena completa es conocida): se calcula la Versión de
+    // Fabricación de cada nodo usando la alternativa del nodo SIGUIENTE en el array (que,
+    // como el array va de Acondicionado hacia Fabricación, es justamente su etapa previa
+    // real) y se marca advertencia de "lista inactiva" donde corresponda.
+    nodos.forEach(function(n, i){
+      var altPrevia = (i < nodos.length-1) ? nodos[i+1].alt : null;
+      n.version = calcularVersionFabricacion(n.alt, altPrevia, n.esFabricacion);
+      if(n.estado && String(n.estado).trim().toLowerCase()==='inactivo'){
+        n.advertencias.push('Esta lista de materiales figura como INACTIVA en SAP. Se incluye igual en el árbol, tal como se indicó, marcado aquí como advertencia.');
+      }
+    });
+
+    return nodos;
+  }
+
+  /* ---------- UI ---------- */
+  var materialInput = document.getElementById('arbolMaterialInput');
+  var altSelect = document.getElementById('arbolAltSelect');
+  var buildBtn = document.getElementById('arbolBuildBtn');
+  var statusEl = document.getElementById('arbolStatus');
+  var emptyState = document.getElementById('arbolEmptyState');
+  var emptyMsg = document.getElementById('arbolEmptyMsg');
+  var resultado = document.getElementById('arbolResultado');
+
+  function esc(v){
+    if(v===null||v===undefined) return '';
+    return String(v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  /* Al escribir/perder foco en el código de Material, se listan sus alternativas
+     disponibles (según el BOM cargado) en el select, para que el usuario elija una
+     existente en vez de escribirla a mano. */
+  function actualizarAlternativasDisponibles(){
+    var mat = normMat(materialInput.value);
+    altSelect.innerHTML = '<option value="">Alternativa: —</option>';
+    if(!mat || !window.BOM_ROWS){ return; }
+    var bomIdx = buildBomIndex();
+    var candidatas = (bomIdx.altsByMaterial[mat] || []).slice().sort(function(a,b){
+      return a.alt.localeCompare(b.alt, undefined, {numeric:true});
+    });
+    candidatas.forEach(function(c){
+      var opt = document.createElement('option');
+      opt.value = c.alt;
+      var estadoTxt = c.estado ? ' — ' + c.estado : '';
+      opt.textContent = 'Alt. ' + c.alt + ' (' + (c.etapa||'—') + ')' + estadoTxt;
+      altSelect.appendChild(opt);
+    });
+    if(candidatas.length === 1){ altSelect.value = candidatas[0].alt; }
+  }
+  materialInput.addEventListener('change', actualizarAlternativasDisponibles);
+  materialInput.addEventListener('blur', actualizarAlternativasDisponibles);
+
+  function renderNodo(nodo, index, total){
+    var esUltimo = index === total-1;
+    var cls = nodo.advertencias.length>0 ? 'warn' : (esUltimo && ((nodo.etapa && esEtapaFabricacion(nodo.etapa)) || nodo.finNatural) ? 'ok' : '');
+    var marker = (index+1);
+    var warningsHtml = nodo.advertencias.map(function(w){
+      return '<div class="arbol-warning"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 9v4M12 17h.01M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z"/></svg><span>'+esc(w)+'</span></div>';
+    }).join('');
+    var finNaturalHtml = nodo.finNatural ? '<div class="arbol-info"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 16v-4M12 8h.01"/><circle cx="12" cy="12" r="10"/></svg><span>'+esc(nodo.finNaturalInfo||'Fin del árbol: no hay una etapa de Fabricación previa registrada.')+'</span></div>' : '';
+    return '<div class="arbol-nodo '+cls+'">'+
+      '<div class="arbol-nodo-marker">'+marker+'</div>'+
+      '<div class="arbol-nodo-body">'+
+        '<div class="arbol-nodo-etapa">'+esc(nodo.etapa||'—')+'</div>'+
+        '<div class="arbol-nodo-titulo">'+
+          '<span class="mat-code" data-copy-code="'+esc(nodo.material)+'" title="Clic para copiar el código">'+esc(nodo.material)+'</span>'+
+          '<span class="badge badge-neutro">Alt. '+esc(nodo.alt)+'</span>'+
+          (nodo.estado ? '<span class="badge '+(String(nodo.estado).trim().toLowerCase()==='activo'?'badge-activo':'badge-inactivo')+'"><span class="dot"></span>'+esc(nodo.estado)+'</span>' : '')+
+          '<span class="arbol-vfab">VFab '+esc(nodo.version)+'</span>'+
+        '</div>'+
+        (nodo.descripcion ? '<div class="arbol-nodo-desc">'+esc(nodo.descripcion)+'</div>' : '')+
+        (nodo.centro ? '<div class="arbol-nodo-meta">Centro '+esc(nodo.centro)+'</div>' : '')+
+        warningsHtml+
+        finNaturalHtml+
+      '</div>'+
+    '</div>';
+  }
+
+  function renderArbol(nodos, materialInicial, altInicial){
+    if(nodos.length === 0){
+      resultado.innerHTML = '<div class="arbol-card">No se pudo construir ningún nodo.</div>';
+      return;
+    }
+    var totalAdvertencias = nodos.reduce(function(sum,n){ return sum + n.advertencias.length; }, 0);
+    var resumenHtml = '<div class="arbol-card">'+
+      '<div class="arbol-resumen">'+
+        '<h2>Árbol de '+esc(materialInicial)+' (alt. '+esc(altInicial)+')</h2>'+
+        '<span class="badge '+(totalAdvertencias>0?'badge-suspendido':'badge-activo')+'">'+
+          (totalAdvertencias>0 ? totalAdvertencias+' advertencia'+(totalAdvertencias!==1?'s':'') : 'Sin advertencias')+
+        '</span>'+
+        '<span class="badge badge-neutro">'+nodos.length+' etapa'+(nodos.length!==1?'s':'')+' reconstruida'+(nodos.length!==1?'s':'')+'</span>'+
+      '</div>'+
+      '<div class="arbol-timeline">'+
+        nodos.map(function(n,i){ return renderNodo(n, i, nodos.length); }).join('')+
+      '</div>'+
+    '</div>';
+    resultado.innerHTML = resumenHtml;
+  }
+
+  buildBtn.addEventListener('click', function(){
+    var mat = normMat(materialInput.value);
+    var alt = altSelect.value;
+    if(!mat){
+      alert('Ingresa un código de Material de Acondicionado.');
+      return;
+    }
+    if(!window.BOM_ROWS || window.BOM_ROWS.length===0){
+      alert('No hay Listas de Materiales cargadas. Carga el Excel en la pestaña "Listas de Materiales" primero.');
+      return;
+    }
+    if(!window.BOM_COMP_ROWS || window.BOM_COMP_ROWS.length===0){
+      alert('No hay Componentes cargados. Carga el archivo de Componentes en la pestaña "Listas de Materiales" primero.');
+      return;
+    }
+    if(!alt){
+      // Si el material tiene una sola alternativa registrada, se usa esa automáticamente.
+      actualizarAlternativasDisponibles();
+      if(altSelect.options.length === 2){
+        alt = altSelect.options[1].value;
+        altSelect.value = alt;
+      } else {
+        alert('Selecciona la Alternativa de lista de materiales de ese Material.');
+        return;
+      }
+    }
+
+    var nodos = construirArbol(mat, alt);
+    emptyState.style.display = 'none';
+    resultado.style.display = 'block';
+    renderArbol(nodos, mat, normAlt(alt));
+
+    var totalAdv = nodos.reduce(function(s,n){ return s+n.advertencias.length; }, 0);
+    statusEl.textContent = nodos.length + ' etapa(s) · ' + (totalAdv>0 ? totalAdv+' advertencia(s)' : 'sin advertencias');
+  });
+
+  /* Se refresca automáticamente si el usuario carga/actualiza Listas de Materiales o
+     Componentes mientras está en esta pestaña — solo actualiza las sugerencias de
+     alternativas, no reconstruye un árbol ya mostrado (para no sorprender al usuario
+     recalculando algo que no pidió de nuevo). */
+  window.__refreshArbolView = function(){
+    if(materialInput.value){ actualizarAlternativasDisponibles(); }
+  };
+
+  var arbolHeader = document.getElementById('arbolHeaderTop');
+  var arbolToggle = document.getElementById('arbolHeaderToggle');
+  if(arbolHeader && arbolToggle){
+    arbolToggle.addEventListener('click', function(){ arbolHeader.classList.toggle('top-collapsed'); });
+  }
+
 })();
 </script>
 </body>

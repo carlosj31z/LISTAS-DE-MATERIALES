@@ -731,7 +731,7 @@
     display:flex; flex-direction:column; gap:2px;
   }
   .arbol-comp-row{
-    position:relative; display:flex; align-items:center; gap:8px; padding:6px 10px;
+    position:relative; display:flex; align-items:center; flex-wrap:wrap; gap:4px 8px; padding:7px 10px;
     border-radius:7px; font-size:12.5px; background:var(--surface-alt);
     opacity:0; transform:translateY(-6px) scaleY(0.85); transform-origin:top;
     animation:arbolRootGrow .38s var(--ease) forwards;
@@ -745,7 +745,14 @@
     to{ opacity:1; transform:translateY(0) scaleY(1); }
   }
   .arbol-comp-row .c-code{ font-family:var(--mono); font-weight:600; color:var(--navy-deep); flex:none; }
-  .arbol-comp-row .c-desc{ flex:1; min-width:0; color:var(--ink-soft); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  /* La descripción ya no se trunca con "…": se le da todo el ancho disponible en su
+     propia línea (basis 100%) y se le permite hacer salto de línea (white-space:normal),
+     para que el texto completo del componente sea siempre legible, sin importar su
+     longitud — el código, cantidad y badge Z quedan arriba, en su propia fila. */
+  .arbol-comp-row .c-desc{
+    flex:1 1 100%; order:3; min-width:0; color:var(--ink-soft);
+    overflow:visible; text-overflow:unset; white-space:normal; word-break:break-word; line-height:1.4;
+  }
   .arbol-comp-row .c-z{
     flex:none; font-family:var(--mono); font-size:10px; font-weight:700; padding:1px 7px; border-radius:8px;
   }
@@ -6018,10 +6025,10 @@ function formatFechaHoraCorta(d){
     var filas = nodo.componentes.map(function(c, i){
       var zBadge = badgeZComponente(c.componente);
       return '<div class="arbol-comp-row" style="animation-delay:'+(i*0.045)+'s" data-copy-code="'+esc(c.componente)+'" title="Clic para copiar el código">'+
-        '<span class="c-code">'+esc(c.componente)+'</span>'+
+        '<span class="c-code" style="order:1;">'+esc(c.componente)+'</span>'+
+        (c.cantidad!==''&&c.cantidad!=null ? '<span style="order:2; font-family:var(--mono); font-size:11px; color:var(--ink-faint); flex:none;">'+esc(c.cantidad)+' '+esc(c.um||'')+'</span>' : '')+
+        (zBadge ? zBadge.replace('class="c-z', 'style="order:2;" class="c-z') : '<span style="order:2;" class="c-z ok">Sin Z</span>')+
         '<span class="c-desc">'+esc(c.denominacion||'')+'</span>'+
-        (c.cantidad!==''&&c.cantidad!=null ? '<span style="font-family:var(--mono); font-size:11px; color:var(--ink-faint); flex:none;">'+esc(c.cantidad)+' '+esc(c.um||'')+'</span>' : '')+
-        (zBadge || '<span class="c-z ok">Sin Z</span>')+
       '</div>';
     }).join('');
     return '<div class="arbol-comp-list">'+filas+'</div>';

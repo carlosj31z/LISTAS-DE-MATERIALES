@@ -800,6 +800,70 @@
   }
   .arbol-destino-btn:hover{ background:var(--teal-soft); border-color:var(--teal); }
   .arbol-destino-btn .mat-code{ font-family:var(--mono); font-weight:700; color:var(--navy-deep); font-size:13.5px; }
+
+  /* ================= EXPLOSIÓN MASIVA ================= */
+  .expl-card{
+    background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-lg);
+    padding:20px 22px; margin-bottom:16px; box-shadow:var(--shadow-sm); max-width:1100px; margin-left:auto; margin-right:auto;
+  }
+  .expl-card-header{ display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; margin-bottom:6px; }
+  .expl-card-header h2{ font-family:var(--display); font-size:17px; margin:0; color:var(--ink); }
+  .expl-card-actions{ display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+  .expl-hint{ font-size:12.5px; color:var(--ink-faint); margin:0 0 14px; }
+  .expl-input-table-wrap{ border:1px solid var(--border); border-radius:10px; overflow:hidden; max-height:360px; overflow-y:auto; }
+  .expl-input-table{ width:100%; border-collapse:collapse; font-size:13px; }
+  .expl-input-table thead th{
+    position:sticky; top:0; background:var(--surface-alt); text-align:left; padding:9px 12px;
+    font-family:var(--mono); font-size:11px; text-transform:uppercase; letter-spacing:.04em; color:var(--ink-soft);
+    border-bottom:1px solid var(--border); z-index:1;
+  }
+  .expl-input-table td{ padding:4px 8px; border-bottom:1px solid var(--border-soft); }
+  .expl-input-table tr:last-child td{ border-bottom:none; }
+  .expl-input-table input[type=text]{
+    width:100%; border:1px solid transparent; background:transparent; padding:7px 8px; border-radius:7px;
+    font-family:var(--mono); font-size:13px; color:var(--ink); transition:border-color .15s, background .15s;
+  }
+  .expl-input-table input[type=text]:focus{ outline:none; border-color:var(--teal); background:var(--teal-soft); }
+  .expl-input-table input[type=text].expl-invalid{ border-color:var(--brick); background:var(--brick-soft); }
+  .expl-row-remove{
+    width:26px; height:26px; border-radius:50%; border:none; background:transparent; color:var(--ink-faint);
+    cursor:pointer; display:flex; align-items:center; justify-content:center; transition:background .15s, color .15s;
+  }
+  .expl-row-remove:hover{ background:var(--brick-soft); color:var(--brick); }
+  .expl-row-num{ font-family:var(--mono); font-size:11px; color:var(--ink-faint); text-align:center; }
+  .expl-run-row{ display:flex; align-items:center; justify-content:space-between; margin-top:14px; flex-wrap:wrap; gap:10px; }
+
+  /* Tabla de confirmación de VFab ambigua/faltante (paso 2). */
+  .expl-resolver-row{
+    display:flex; align-items:center; gap:12px; padding:10px 4px; border-bottom:1px solid var(--border-soft); flex-wrap:wrap;
+  }
+  .expl-resolver-row:last-child{ border-bottom:none; }
+  .expl-resolver-row .mat-code{ font-family:var(--mono); font-weight:700; color:var(--navy-deep); flex:none; min-width:110px; }
+  .expl-resolver-row select{ flex:1; min-width:220px; padding:7px 10px; border-radius:8px; border:1px solid var(--border); font-family:var(--mono); font-size:12.5px; }
+
+  /* Tabla de resultados (paso 3): una fila resumen por producto explotado, expandible
+     para ver el árbol completo sin perder ningún detalle. */
+  .expl-result-table{ width:100%; border-collapse:collapse; font-size:13px; }
+  .expl-result-table thead th{
+    text-align:left; padding:10px 12px; background:var(--surface-alt); font-family:var(--mono); font-size:11px;
+    text-transform:uppercase; letter-spacing:.04em; color:var(--ink-soft); border-bottom:1px solid var(--border);
+  }
+  .expl-result-table td{ padding:10px 12px; border-bottom:1px solid var(--border-soft); vertical-align:top; }
+  .expl-result-row{ cursor:pointer; transition:background .12s; }
+  .expl-result-row:hover{ background:var(--surface-alt); }
+  .expl-result-row.expandido{ background:var(--teal-soft); }
+  .expl-result-row .chev{ transition:transform .2s var(--ease); display:inline-block; }
+  .expl-result-row.expandido .chev{ transform:rotate(90deg); }
+  .expl-motivo{
+    display:inline-flex; align-items:center; gap:5px; padding:3px 9px; border-radius:20px; font-size:11.5px; font-weight:600;
+  }
+  .expl-motivo.ok{ background:var(--teal-soft); color:#0A5352; }
+  .expl-motivo.z{ background:var(--brick-soft); color:var(--brick); }
+  .expl-motivo.vfab{ background:var(--violet-soft); color:var(--violet); }
+  .expl-motivo.inactiva{ background:var(--amber-soft); color:var(--amber); }
+  .expl-motivo.incoherencia{ background:#EAE6F5; color:#5B4B8A; }
+  .expl-detalle-row td{ background:var(--surface-alt); padding:0; }
+  .expl-detalle-inner{ padding:16px 20px 20px 44px; }
 </style>
 </head>
 <body>
@@ -820,6 +884,7 @@
     <button class="suite-tab active" data-tab="mm" id="tabBtnMM">Maestro de Materiales <span class="tab-badge" id="tabBadgeMM">0</span></button>
     <button class="suite-tab" data-tab="bom" id="tabBtnBOM">Listas de Materiales <span class="tab-badge" id="tabBadgeBOM">0</span></button>
     <button class="suite-tab" data-tab="arbol" id="tabBtnArbol">Árbol del producto</button>
+    <button class="suite-tab" data-tab="explosion" id="tabBtnExplosion">Explosión masiva</button>
   </div>
 </div>
 
@@ -1096,6 +1161,82 @@
 
 </section>
 
+<!-- ========================= VISTA 4: EXPLOSIÓN MASIVA ========================= -->
+<section class="app-view" id="view-explosion">
+
+  <header class="top top-collapsed" id="explosionHeaderTop">
+    <button class="header-toggle" id="explosionHeaderToggle" title="Mostrar/ocultar detalles del encabezado" aria-label="Mostrar/ocultar detalles del encabezado">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M6 9l6 6 6-6"/></svg>
+    </button>
+    <p class="eyebrow"><span class="dot"></span>SAP · GENERACIÓN MASIVA DE ÁRBOLES</p>
+    <h1 class="title">Explosión masiva</h1>
+    <p class="subtitle">Pega desde Excel una lista de Materiales (Acondicionado) con su Versión de Fabricación — o elige una VFab real disponible por fila — y genera todos los árboles de una vez, viendo en qué etapa y por qué motivo se detiene cada uno (bloqueo Z, Vfab bloqueada, o lista de materiales bloqueada/inactiva).</p>
+  </header>
+
+  <main class="view-main">
+    <div class="expl-card">
+      <div class="expl-card-header">
+        <h2>1. Ingresa los productos a explotar</h2>
+        <div class="expl-card-actions">
+          <button type="button" class="btn btn-ghost" id="explAddRowBtn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+            Agregar fila
+          </button>
+          <button type="button" class="btn btn-ghost" id="explClearBtn">Vaciar todo</button>
+        </div>
+      </div>
+      <p class="expl-hint">Puedes pegar directamente desde Excel dos columnas (Material, Versión de Fabricación) — la Versión de Fabricación es opcional: si la dejas vacía, podrás elegir entre las versiones reales disponibles para ese material antes de ejecutar.</p>
+      <div class="expl-input-table-wrap">
+        <table class="expl-input-table" id="explInputTable">
+          <thead>
+            <tr><th style="width:36px;"></th><th>Material</th><th>Versión de Fabricación (opcional)</th><th style="width:36px;"></th></tr>
+          </thead>
+          <tbody id="explInputBody"></tbody>
+        </table>
+      </div>
+      <div class="expl-run-row">
+        <span class="count" id="explInputCount" style="font-family:var(--mono); font-size:12px; color:var(--ink-soft);"></span>
+        <button type="button" class="btn btn-primary" id="explRunBtn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8Z"/></svg>
+          Ejecutar explosión masiva
+        </button>
+      </div>
+    </div>
+
+    <div class="expl-card" id="explResolverCard" style="display:none;">
+      <div class="expl-card-header"><h2>2. Confirma la Versión de Fabricación de cada fila</h2></div>
+      <p class="expl-hint">Estas filas no traían una Versión de Fabricación válida, o tienen más de una registrada para ese Material. Elige cuál usar — solo se muestran versiones reales, tal como están cargadas en Listas de Materiales.</p>
+      <div id="explResolverBody"></div>
+      <div class="expl-run-row">
+        <button type="button" class="btn btn-primary" id="explConfirmarBtn">Confirmar y generar árboles</button>
+      </div>
+    </div>
+
+    <div class="expl-card" id="explResultCard" style="display:none;">
+      <div class="expl-card-header">
+        <h2>3. Resultado</h2>
+        <div class="expl-card-actions">
+          <span class="badge badge-neutro" id="explResumenBadge"></span>
+          <button type="button" class="btn btn-success" id="explExportBtn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            Exportar a Excel
+          </button>
+        </div>
+      </div>
+      <div id="explResultBody"></div>
+    </div>
+
+    <div id="explEmptyState" class="empty-state">
+      <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8Z"/></svg>
+      <h3>Sin explosión ejecutada todavía</h3>
+      <p>Completa la tabla de arriba con los Materiales a explotar y presiona "Ejecutar explosión masiva".</p>
+    </div>
+
+    <footer class="page-footer">EXPLOSIÓN MASIVA — Árboles generados en lote a partir de Listas de Materiales, Componentes y Versiones de Fabricación</footer>
+  </main>
+
+</section>
+
 <div class="overlay" id="bomOverlay"></div>
 <div class="drawer" id="bomDrawer">
   <div class="drawer-header">
@@ -1188,21 +1329,26 @@ function formatFechaHoraCorta(d){
   var tabBtnMM = document.getElementById('tabBtnMM');
   var tabBtnBOM = document.getElementById('tabBtnBOM');
   var tabBtnArbol = document.getElementById('tabBtnArbol');
+  var tabBtnExplosion = document.getElementById('tabBtnExplosion');
   var viewMM = document.getElementById('view-mm');
   var viewBOM = document.getElementById('view-bom');
   var viewArbol = document.getElementById('view-arbol');
+  var viewExplosion = document.getElementById('view-explosion');
 
   function activate(tab){
     tabBtnMM.classList.toggle('active', tab==='mm');
     tabBtnBOM.classList.toggle('active', tab==='bom');
     tabBtnArbol.classList.toggle('active', tab==='arbol');
+    tabBtnExplosion.classList.toggle('active', tab==='explosion');
     viewMM.classList.toggle('active', tab==='mm');
     viewBOM.classList.toggle('active', tab==='bom');
     viewArbol.classList.toggle('active', tab==='arbol');
+    viewExplosion.classList.toggle('active', tab==='explosion');
   }
   tabBtnMM.addEventListener('click', function(){ activate('mm'); });
   tabBtnBOM.addEventListener('click', function(){ activate('bom'); });
   tabBtnArbol.addEventListener('click', function(){ activate('arbol'); });
+  tabBtnExplosion.addEventListener('click', function(){ activate('explosion'); });
 
   /* Expuesto globalmente para que otras vistas (p.ej. el Maestro de Materiales, al saltar
      a una lista de materiales donde un código aparece como componente) puedan cambiar de
@@ -5606,6 +5752,26 @@ function formatFechaHoraCorta(d){
   /* Completa cada nodo sin Versión de Fabricación real con la fórmula de 4 dígitos
      (respaldo), y anota sus componentes reales (para el botón "ojo"). Se aplica sobre un
      árbol YA completo (array de nodos, de Acondicionado hacia Fabricación). */
+  /* Verifica que los dígitos 3-4 de una Versión de Fabricación REAL coincidan con la
+     PROPIA Alternativa de esa lista — confirmado por el usuario: si la VFab es "1166"
+     pero está registrada contra la Alternativa "1" de la lista, es un error real en SAP
+     (debería estar contra la Alternativa "66"). Solo aplica a VFab puramente numéricas de
+     4 dígitos (hay códigos especiales tipo "VF01", "3MO1" que no siguen este patrón y no
+     se evalúan), y no aplica a reacondicionados (formato fijo "00XX", sin relación con la
+     alternativa propia en ese sentido). Devuelve null si no aplica o si es coherente, o el
+     texto de advertencia si detecta la incoherencia. */
+  function verificarCoherenciaDigitos34(version, altPropia){
+    var v = String(version||'').trim();
+    if(!/^\d{4}$/.test(v)) return null; // no es una VFab numérica de 4 dígitos: no se evalúa
+    if(esReacondicionado(altPropia)) return null;
+    var d34 = v.slice(2);
+    var altNorm = altPropia.length <= 2 ? altPropia.padStart(2, '0') : altPropia;
+    if(d34 !== altNorm){
+      return 'INCOHERENCIA: la Versión de Fabricación ' + v + ' está registrada contra la Alternativa ' + altPropia + ', pero sus dígitos 3-4 ("' + d34 + '") indican que debería corresponder a la Alternativa ' + parseInt(d34,10) + ' de la lista. Revisar en SAP con qué Alternativa se creó realmente esta versión.';
+    }
+    return null;
+  }
+
   function completarArbol(nodos){
     var allCompsIdx = buildAllCompsIndex();
 
@@ -5632,16 +5798,22 @@ function formatFechaHoraCorta(d){
         if(window.BOM_VFAB_ROWS && window.BOM_VFAB_ROWS.length > 0){
           n.advertencias.push('No se encontró una Versión de Fabricación registrada para este Material+Alternativa en el archivo cargado — se muestra un valor ESTIMADO con la fórmula (' + n.version + '), a confirmar en SAP.');
         }
-      } else if(!n.esFabricacion){
-        // Validación de coherencia: la Versión de Fabricación REAL de esta etapa debería
-        // empezar con el mismo dígito 1 que la etapa Fabricación de la cadena — si no
-        // coincide, es una señal de que esta combinación de VFabs registradas en SAP no es
-        // realmente consistente entre sí (aunque cada una exista por separado), y se
-        // advierte para que se revise manualmente.
-        var digito1Propio = String(n.version||'').charAt(0);
-        if(digito1Propio && digito1Propio !== digito1Raiz){
-          n.advertencias.push('INCOHERENCIA: la Versión de Fabricación de esta etapa (' + n.version + ') empieza con "' + digito1Propio + '", pero la etapa de Fabricación de esta cadena usa alternativa/dígito "' + digito1Raiz + '" — todas las etapas de una misma cadena deberían compartir el mismo primer dígito. Revisar en SAP si esta combinación de versiones es realmente correcta.');
+      } else {
+        if(!n.esFabricacion){
+          // Validación de coherencia: la Versión de Fabricación REAL de esta etapa debería
+          // empezar con el mismo dígito 1 que la etapa Fabricación de la cadena — si no
+          // coincide, es una señal de que esta combinación de VFabs registradas en SAP no es
+          // realmente consistente entre sí (aunque cada una exista por separado), y se
+          // advierte para que se revise manualmente.
+          var digito1Propio = String(n.version||'').charAt(0);
+          if(digito1Propio && digito1Propio !== digito1Raiz){
+            n.advertencias.push('INCOHERENCIA: la Versión de Fabricación de esta etapa (' + n.version + ') empieza con "' + digito1Propio + '", pero la etapa de Fabricación de esta cadena usa alternativa/dígito "' + digito1Raiz + '" — todas las etapas de una misma cadena deberían compartir el mismo primer dígito. Revisar en SAP si esta combinación de versiones es realmente correcta.');
+          }
         }
+        // Validación de coherencia dígitos 3-4 vs Alternativa propia — independiente de la
+        // cadena, aplica a CUALQUIER etapa con VFab real (incluida Fabricación).
+        var avisoD34 = verificarCoherenciaDigitos34(n.version, n.alt);
+        if(avisoD34) n.advertencias.push(avisoD34);
       }
       var key = n.material + '||' + n.alt;
       n.componentes = allCompsIdx.byKey[key] || [];
@@ -6327,6 +6499,27 @@ function formatFechaHoraCorta(d){
     __productosTerminadosCache = { rowsRef: null, lista: null };
   };
 
+  /* Expone las funciones internas del árbol que "Explosión masiva" necesita reutilizar
+     (construcción de árboles, índices de BOM/VFab, normalización de claves) bajo un único
+     objeto, en vez de esparcir más variables sueltas en window.*. Así ambos módulos usan
+     EXACTAMENTE la misma lógica de construcción de árbol — nunca una copia aparte que
+     pudiera desincronizarse. */
+  window.__arbolAPI = {
+    construirTodosLosArboles: construirTodosLosArboles,
+    buildBomIndex: buildBomIndex,
+    buildVfabIndex: buildVfabIndex,
+    buildCompFirstPosIndex: buildCompFirstPosIndex,
+    esEtapaAcondicionado: esEtapaAcondicionado,
+    esEtapaFabricacion: esEtapaFabricacion,
+    normMat: normMat,
+    normAlt: normAlt,
+    keyOf: keyOf,
+    esc: esc,
+    isSuspendedCode: isSuspendedCode,
+    isZ3Code: isZ3Code,
+    MAX_ARBOLES_COMBINACIONES: MAX_ARBOLES_COMBINACIONES
+  };
+
   /* Punto de entrada usado por el botón "Ver en Árbol del producto" del drawer de Listas
      de Materiales: recibe un Material+Alt de CUALQUIER etapa, cambia a esta pestaña,
      encuentra a qué producto(s) terminado(s) llega avanzando desde ahí, construye ese
@@ -6420,5 +6613,499 @@ function formatFechaHoraCorta(d){
 
 })();
 </script>
+
+<script>
+/* ============================================================
+   APP 4 — EXPLOSIÓN MASIVA (ids con prefijo "expl")
+
+   Genera en lote los árboles de varios productos a la vez, a partir de una
+   tabla editable (Material + Versión de Fabricación opcional) que el
+   usuario puede llenar a mano o pegar directamente desde Excel. Reutiliza
+   EXACTAMENTE la misma lógica de construcción de árbol que "Árbol del
+   producto" (vía window.__arbolAPI), nunca una copia aparte — así ambos
+   módulos están siempre sincronizados en su comportamiento.
+
+   Las Versiones de Fabricación mostradas para elegir son SIEMPRE las
+   reales, leídas de window.BOM_VFAB_ROWS — nunca se inventa ni calcula un
+   valor para ofrecer como opción; si no hay ninguna real, se avisa.
+   ============================================================ */
+(function(){
+
+  var inputBody = document.getElementById('explInputBody');
+  var inputCount = document.getElementById('explInputCount');
+  var addRowBtn = document.getElementById('explAddRowBtn');
+  var clearBtn = document.getElementById('explClearBtn');
+  var runBtn = document.getElementById('explRunBtn');
+  var resolverCard = document.getElementById('explResolverCard');
+  var resolverBody = document.getElementById('explResolverBody');
+  var confirmarBtn = document.getElementById('explConfirmarBtn');
+  var resultCard = document.getElementById('explResultCard');
+  var resultBody = document.getElementById('explResultBody');
+  var resumenBadge = document.getElementById('explResumenBadge');
+  var exportBtn = document.getElementById('explExportBtn');
+  var emptyState = document.getElementById('explEmptyState');
+
+  var api = null; // se resuelve de forma perezosa, window.__arbolAPI se define en otro <script>
+  function getApi(){
+    if(!api) api = window.__arbolAPI;
+    return api;
+  }
+
+  /* ---------- Tabla de entrada editable ---------- */
+  function crearFilaInput(material, vfab){
+    var tr = document.createElement('tr');
+    tr.innerHTML =
+      '<td class="expl-row-num"></td>'+
+      '<td><input type="text" class="expl-input-material" placeholder="Código de Material…" autocomplete="off"></td>'+
+      '<td><input type="text" class="expl-input-vfab" placeholder="Versión de Fabricación (opcional)…" autocomplete="off"></td>'+
+      '<td><button type="button" class="expl-row-remove" title="Quitar fila"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6L6 18"/></svg></button></td>';
+    tr.querySelector('.expl-input-material').value = material || '';
+    tr.querySelector('.expl-input-vfab').value = vfab || '';
+    tr.querySelector('.expl-row-remove').addEventListener('click', function(){
+      tr.remove();
+      renumerarFilas();
+      actualizarContador();
+    });
+    return tr;
+  }
+
+  function renumerarFilas(){
+    Array.prototype.forEach.call(inputBody.querySelectorAll('tr'), function(tr, i){
+      tr.querySelector('.expl-row-num').textContent = (i+1);
+    });
+  }
+
+  function actualizarContador(){
+    var filas = obtenerFilasConDatos();
+    inputCount.textContent = filas.length + ' fila(s) con Material';
+  }
+
+  function obtenerFilasConDatos(){
+    var out = [];
+    Array.prototype.forEach.call(inputBody.querySelectorAll('tr'), function(tr){
+      var mat = tr.querySelector('.expl-input-material').value.trim();
+      var vfab = tr.querySelector('.expl-input-vfab').value.trim();
+      if(mat) out.push({ material: mat, vfab: vfab, tr: tr });
+    });
+    return out;
+  }
+
+  function agregarFilaVacia(focus){
+    var tr = crearFilaInput('', '');
+    inputBody.appendChild(tr);
+    renumerarFilas();
+    if(focus) tr.querySelector('.expl-input-material').focus();
+    return tr;
+  }
+
+  // Arranca con 6 filas vacías, suficientes para empezar a escribir/pegar sin fricción.
+  for(var i0=0; i0<6; i0++) agregarFilaVacia(false);
+  renumerarFilas();
+  actualizarContador();
+
+  addRowBtn.addEventListener('click', function(){ agregarFilaVacia(true); });
+  clearBtn.addEventListener('click', function(){
+    if(inputBody.children.length===0 || confirm('¿Vaciar toda la tabla de entrada?')){
+      inputBody.innerHTML = '';
+      for(var i=0;i<6;i++) agregarFilaVacia(false);
+      renumerarFilas();
+      actualizarContador();
+    }
+  });
+
+  // Al escribir/perder foco en cualquier celda, se refresca el contador; si el usuario
+  // llena la ÚLTIMA fila visible, se agrega una fila vacía nueva automáticamente (mismo
+  // patrón que una hoja de cálculo, para no obligar a hacer clic en "Agregar fila" todo
+  // el tiempo al escribir varias filas seguidas a mano).
+  inputBody.addEventListener('input', function(e){
+    if(!e.target.matches('.expl-input-material, .expl-input-vfab')) return;
+    e.target.classList.remove('expl-invalid');
+    actualizarContador();
+    var filas = inputBody.querySelectorAll('tr');
+    var ultima = filas[filas.length-1];
+    if(ultima && ultima.querySelector('.expl-input-material').value.trim()){
+      agregarFilaVacia(false);
+    }
+  });
+
+  /* Pegado desde Excel: al pegar dentro de una celda de Material o VFab, si el contenido
+     del portapapeles tiene varias filas/columnas (tab-separated, típico de copiar un
+     rango de Excel), se distribuye automáticamente en las filas de la tabla a partir de
+     la celda actual, en vez de pegarse todo como texto plano en una sola celda. */
+  inputBody.addEventListener('paste', function(e){
+    var texto = (e.clipboardData || window.clipboardData).getData('text');
+    if(!texto || texto.indexOf('\n')===-1 && texto.indexOf('\t')===-1) return; // pegado simple de una celda, se deja el comportamiento nativo
+    e.preventDefault();
+
+    var esColumnaMaterial = e.target.classList.contains('expl-input-material');
+    var filaActual = e.target.closest('tr');
+    var filasExistentes = Array.prototype.slice.call(inputBody.querySelectorAll('tr'));
+    var indiceInicio = filasExistentes.indexOf(filaActual);
+
+    var lineas = texto.replace(/\r/g,'').split('\n').filter(function(l){ return l.trim()!==''; });
+    lineas.forEach(function(linea, i){
+      var celdas = linea.split('\t');
+      var filaDestino = filasExistentes[indiceInicio + i];
+      if(!filaDestino){
+        filaDestino = agregarFilaVacia(false);
+        filasExistentes.push(filaDestino);
+      }
+      if(esColumnaMaterial){
+        // Pegando desde la columna Material: celda[0]=Material, celda[1]=VFab (si vino).
+        filaDestino.querySelector('.expl-input-material').value = (celdas[0]||'').trim();
+        if(celdas[1]!==undefined) filaDestino.querySelector('.expl-input-vfab').value = celdas[1].trim();
+      } else {
+        // Pegando desde la columna VFab: solo se llena esa columna.
+        filaDestino.querySelector('.expl-input-vfab').value = (celdas[0]||'').trim();
+      }
+    });
+    renumerarFilas();
+    actualizarContador();
+  });
+
+  /* ---------- Resolución de Versión de Fabricación por fila ---------- */
+  /* Para cada fila con Material, se determina si su VFab escrita es válida (existe tal
+     cual, real, en window.BOM_VFAB_ROWS para ALGUNA alternativa de ese material). Si no
+     escribió ninguna, o la escrita no coincide con ninguna real, o el material tiene más
+     de una VFab real y no se puede saber cuál sin preguntar, la fila pasa al paso de
+     confirmación manual — mostrando SOLO las opciones reales disponibles. */
+  var filasResueltas = []; // { material, alt, vfabIndex, version, centro } listas para ejecutar
+  var filasPendientes = []; // filas que necesitan que el usuario elija en el paso 2
+
+  function resolverFilasIniciales(filas){
+    var a = getApi();
+    filasResueltas = [];
+    filasPendientes = [];
+    var sinDatos = [];
+
+    filas.forEach(function(f){
+      var mat = a.normMat(f.material);
+      if(!mat){ return; }
+      var bomIdx = a.buildBomIndex();
+      var vfabIdx = a.buildVfabIndex();
+      var candidatasAlt = bomIdx.altsByMaterial[mat] || [];
+      if(candidatasAlt.length === 0){
+        sinDatos.push({ material: mat, motivo: 'Material no encontrado en las Listas de Materiales cargadas.' });
+        return;
+      }
+
+      // Reunir TODAS las VFab reales de cualquier alternativa de este material.
+      var todasVfab = [];
+      candidatasAlt.forEach(function(c){
+        var key = a.keyOf(mat, c.alt);
+        var vs = vfabIdx.byKey[key] || [];
+        vs.forEach(function(v, vi){ todasVfab.push({ alt: c.alt, idx: vi, version: v.version, centro: v.centro, bloqueada: v.bloqueada }); });
+      });
+
+      if(todasVfab.length === 0){
+        sinDatos.push({ material: mat, motivo: 'No tiene ninguna Versión de Fabricación real registrada en el archivo cargado.' });
+        return;
+      }
+
+      var vfabEscrita = (f.vfab||'').trim().toUpperCase();
+      var coincidencia = vfabEscrita ? todasVfab.filter(function(v){ return String(v.version).trim().toUpperCase() === vfabEscrita; }) : [];
+
+      if(coincidencia.length === 1){
+        filasResueltas.push({ material: mat, alt: coincidencia[0].alt, vfabIndex: coincidencia[0].idx, version: coincidencia[0].version, centro: coincidencia[0].centro });
+      } else if(todasVfab.length === 1 && !vfabEscrita){
+        // Sin VFab escrita, pero el material solo tiene una real disponible: se usa esa
+        // directamente, sin necesidad de preguntar.
+        filasResueltas.push({ material: mat, alt: todasVfab[0].alt, vfabIndex: todasVfab[0].idx, version: todasVfab[0].version, centro: todasVfab[0].centro });
+      } else {
+        // Ambigua (varias VFab reales) o la escrita no coincide con ninguna real: pasa a
+        // confirmación manual, mostrando únicamente las opciones reales.
+        filasPendientes.push({ material: mat, vfabEscrita: vfabEscrita, opciones: todasVfab });
+      }
+    });
+
+    return sinDatos;
+  }
+
+  runBtn.addEventListener('click', function(){
+    if(!window.BOM_ROWS || window.BOM_ROWS.length===0 || !window.BOM_COMP_ROWS || window.BOM_COMP_ROWS.length===0){
+      alert('Carga Listas de Materiales y Componentes en la pestaña "Listas de Materiales" primero.');
+      return;
+    }
+    if(!window.BOM_VFAB_ROWS || window.BOM_VFAB_ROWS.length===0){
+      alert('Carga el archivo de Versiones de Fabricación en la pestaña "Listas de Materiales" primero — la Explosión masiva necesita Versiones de Fabricación reales para trabajar.');
+      return;
+    }
+    var filas = obtenerFilasConDatos();
+    if(filas.length === 0){
+      alert('Ingresa al menos un Material en la tabla.');
+      return;
+    }
+
+    var sinDatos = resolverFilasIniciales(filas);
+    if(sinDatos.length > 0){
+      alert('No se pudo resolver ' + sinDatos.length + ' fila(s):\n' + sinDatos.map(function(s){ return '• ' + s.material + ': ' + s.motivo; }).join('\n'));
+    }
+
+    if(filasPendientes.length > 0){
+      renderResolverPendientes();
+      resolverCard.style.display = 'block';
+      resolverCard.scrollIntoView({behavior:'smooth', block:'start'});
+    } else {
+      ejecutarExplosion();
+    }
+  });
+
+  function renderResolverPendientes(){
+    resolverBody.innerHTML = filasPendientes.map(function(p, i){
+      var opcionesHtml = p.opciones.map(function(o, oi){
+        var label = 'VFab ' + o.version + ' (Alt. ' + o.alt + ')' + (o.centro?(' — Centro '+o.centro):'') + (o.bloqueada?' — BLOQUEADA':'');
+        return '<option value="'+oi+'">'+getApi().esc(label)+'</option>';
+      }).join('');
+      var avisoEscrita = p.vfabEscrita ? '<div style="font-size:11.5px; color:var(--brick); margin-top:2px;">No se encontró "'+getApi().esc(p.vfabEscrita)+'" registrada — elige una de las reales.</div>' : '';
+      return '<div class="expl-resolver-row" data-idx="'+i+'">'+
+        '<span class="mat-code">'+getApi().esc(p.material)+'</span>'+
+        '<select data-idx="'+i+'">'+opcionesHtml+'</select>'+
+        avisoEscrita+
+      '</div>';
+    }).join('');
+  }
+
+  confirmarBtn.addEventListener('click', function(){
+    var a = getApi();
+    Array.prototype.forEach.call(resolverBody.querySelectorAll('select'), function(sel){
+      var idx = parseInt(sel.getAttribute('data-idx'), 10);
+      var p = filasPendientes[idx];
+      var elegida = p.opciones[parseInt(sel.value, 10)];
+      filasResueltas.push({ material: p.material, alt: elegida.alt, vfabIndex: elegida.idx, version: elegida.version, centro: elegida.centro });
+    });
+    resolverCard.style.display = 'none';
+    ejecutarExplosion();
+  });
+
+  /* ---------- Ejecución masiva ---------- */
+  var resultadosExplosion = []; // { material, alt, version, arbol:[nodos], motivoDetencion, detalleMotivo }
+
+  /* Determina POR QUÉ se detuvo un árbol, mirando el ÚLTIMO nodo construido y también si
+     hay algún bloqueo Z en cualquier etapa/componente intermedio (no solo en el final),
+     ya que un bloqueo a mitad de camino es tan relevante como el que frena el retroceso.
+     Categorías (una sola por árbol, la más relevante primero): Z en lista o componente >
+     Vfab bloqueada > Lista inactiva > Incoherencia de datos > Completo hasta Fabricación. */
+  function determinarMotivo(arbol){
+    var a = getApi();
+    var ultimo = arbol[arbol.length-1];
+
+    // 1) ¿Algún nodo de la cadena tiene bloqueo Z en el material, o algún componente
+    //    propio con estado Z? (los componentes ya vienen resueltos con su estado en
+    //    n.componentes solo si se desplegaron — aquí se revisa el propio material del nodo,
+    //    que es lo que representa "esta etapa está bloqueada").
+    for(var i=0;i<arbol.length;i++){
+      if(arbol[i].bloqueoZ){
+        return { tipo:'z', texto:'Bloqueado por código ' + arbol[i].bloqueoZ + ' en ' + arbol[i].etapa + ' (' + arbol[i].material + ')' };
+      }
+    }
+    // 2) ¿Alguna VFab bloqueada en la cadena?
+    for(var j=0;j<arbol.length;j++){
+      if(arbol[j].vfabBloqueada){
+        return { tipo:'vfab', texto:'Versión de Fabricación bloqueada en ' + arbol[j].etapa + ' (' + arbol[j].material + ', VFab ' + arbol[j].version + ')' };
+      }
+    }
+    // 3) ¿Alguna lista inactiva en la cadena?
+    for(var k=0;k<arbol.length;k++){
+      if(arbol[k].estado && String(arbol[k].estado).trim().toLowerCase()==='inactivo'){
+        return { tipo:'inactiva', texto:'Lista inactiva en ' + arbol[k].etapa + ' (' + arbol[k].material + ')' };
+      }
+    }
+    // 4) ¿Alguna incoherencia de datos (dígito 1, dígitos 3-4, o inconsistencia de
+    //    alternativa) detectada en el camino?
+    for(var m=0;m<arbol.length;m++){
+      var incoherente = arbol[m].advertencias.some(function(w){ return w.indexOf('INCOHERENCIA')!==-1 || w.indexOf('INCONSISTENCIA')!==-1; });
+      if(incoherente){
+        return { tipo:'incoherencia', texto:'Datos incoherentes detectados en ' + arbol[m].etapa + ' (' + arbol[m].material + ') — revisar advertencias del árbol.' };
+      }
+    }
+    // 5) Si llegó hasta Fabricación sin ninguno de los anteriores, está completo/sano.
+    if(ultimo && a.esEtapaFabricacion(ultimo.etapa)){
+      return { tipo:'ok', texto:'Árbol completo hasta Fabricación, sin bloqueos detectados.' };
+    }
+    if(ultimo && ultimo.finNatural){
+      return { tipo:'ok', texto:'Árbol completo — termina en materia prima sin lista propia (fin natural).' };
+    }
+    return { tipo:'incoherencia', texto:'El retroceso se detuvo antes de llegar a Fabricación (sin un bloqueo Z, VFab o inactividad identificable) — revisar advertencias del árbol.' };
+  }
+
+  function ejecutarExplosion(){
+    var a = getApi();
+    resultadosExplosion = [];
+    filasResueltas.forEach(function(f){
+      var elecciones = {};
+      elecciones[a.keyOf(f.material, f.alt)] = f.vfabIndex;
+      var res = a.construirTodosLosArboles(f.material, f.alt, elecciones);
+      var arbol = res.arboles[0] || [];
+      var motivo = determinarMotivo(arbol);
+      resultadosExplosion.push({
+        material: f.material, alt: f.alt, version: f.version, centro: f.centro,
+        arbol: arbol, motivo: motivo
+      });
+    });
+    renderResultados();
+  }
+
+  /* ---------- Renderizado de resultados ---------- */
+  var MOTIVO_LABELS = {
+    ok: 'OK — completo', z: 'Bloqueo Z', vfab: 'VFab bloqueada', inactiva: 'Lista inactiva', incoherencia: 'Incoherencia de datos'
+  };
+
+  function renderResultados(){
+    emptyState.style.display = 'none';
+    resultCard.style.display = 'block';
+    var a = getApi();
+
+    var conteoPorMotivo = {};
+    resultadosExplosion.forEach(function(r){ conteoPorMotivo[r.motivo.tipo] = (conteoPorMotivo[r.motivo.tipo]||0)+1; });
+    var resumenTxt = resultadosExplosion.length + ' árbol(es) generado(s)';
+    resumenBadge.textContent = resumenTxt;
+    resumenBadge.className = 'badge ' + (conteoPorMotivo.z || conteoPorMotivo.incoherencia ? 'badge-suspendido' : 'badge-activo');
+
+    var filasHtml = resultadosExplosion.map(function(r, i){
+      var ultimaEtapa = r.arbol.length ? r.arbol[r.arbol.length-1].etapa : '—';
+      var totalEtapas = r.arbol.length;
+      return '<tr class="expl-result-row" data-idx="'+i+'">'+
+        '<td><span class="chev">▶</span></td>'+
+        '<td><span class="mat-code" style="font-family:var(--mono); font-weight:700; color:var(--navy-deep);">'+a.esc(r.material)+'</span></td>'+
+        '<td>'+a.esc(r.alt)+'</td>'+
+        '<td style="font-family:var(--mono);">'+a.esc(r.version)+'</td>'+
+        '<td>'+totalEtapas+' etapa(s), hasta '+a.esc(ultimaEtapa)+'</td>'+
+        '<td><span class="expl-motivo '+r.motivo.tipo+'">'+MOTIVO_LABELS[r.motivo.tipo]+'</span></td>'+
+      '</tr>'+
+      '<tr class="expl-detalle-row" id="explDetalle'+i+'" style="display:none;"><td colspan="6"><div class="expl-detalle-inner" id="explDetalleInner'+i+'"></div></td></tr>';
+    }).join('');
+
+    resultBody.innerHTML = '<table class="expl-result-table">'+
+      '<thead><tr><th></th><th>Material</th><th>Alt.</th><th>VFab</th><th>Alcance</th><th>Motivo de detención</th></tr></thead>'+
+      '<tbody>'+filasHtml+'</tbody>'+
+    '</table>';
+
+    Array.prototype.forEach.call(resultBody.querySelectorAll('.expl-result-row'), function(tr){
+      tr.addEventListener('click', function(){
+        var idx = parseInt(tr.getAttribute('data-idx'), 10);
+        var detalleRow = document.getElementById('explDetalle'+idx);
+        var detalleInner = document.getElementById('explDetalleInner'+idx);
+        var abierto = detalleRow.style.display !== 'none';
+        if(!abierto && !detalleInner.getAttribute('data-loaded')){
+          detalleInner.innerHTML = renderArbolResumenTexto(resultadosExplosion[idx]);
+          detalleInner.setAttribute('data-loaded', '1');
+        }
+        detalleRow.style.display = abierto ? 'none' : 'table-row';
+        tr.classList.toggle('expandido', !abierto);
+      });
+    });
+  }
+
+  /* ---------- Exportación a Excel ---------- */
+  exportBtn.addEventListener('click', function(){
+    if(resultadosExplosion.length === 0){
+      alert('No hay resultados para exportar.');
+      return;
+    }
+    var a = getApi();
+    var headers = ['Material inicial','Alt.','VFab inicial','Centro','Etapa','Material etapa','Alt. etapa','VFab etapa','¿VFab real?','Estado lista','Código Z','VFab bloqueada','Motivo de detención del árbol','Advertencias de esta etapa'];
+    var aoa = [headers];
+    var filasMotivo = []; // fila (índice en aoa) -> tipo de motivo, para colorear luego
+
+    resultadosExplosion.forEach(function(r){
+      if(r.arbol.length === 0){
+        aoa.push([r.material, r.alt, r.version, r.centro||'—', '(sin etapas)', '', '', '', '', '', '', '', MOTIVO_LABELS[r.motivo.tipo], r.motivo.texto]);
+        filasMotivo.push(r.motivo.tipo);
+        return;
+      }
+      r.arbol.forEach(function(n, i){
+        aoa.push([
+          r.material, r.alt, r.version, r.centro||'—',
+          n.etapa||'—', n.material, n.alt, n.version, n.versionEsReal?'Sí':'No (estimada)',
+          n.estado||'—', n.bloqueoZ||'—', n.vfabBloqueada?'Sí':'No',
+          i===r.arbol.length-1 ? MOTIVO_LABELS[r.motivo.tipo] : '',
+          n.advertencias.join(' | ')
+        ]);
+        filasMotivo.push(i===r.arbol.length-1 ? r.motivo.tipo : null);
+      });
+    });
+
+    var ws = XLSX.utils.aoa_to_sheet(aoa);
+    ws['!cols'] = [
+      {wch:14},{wch:7},{wch:11},{wch:8},
+      {wch:20},{wch:14},{wch:7},{wch:11},{wch:11},
+      {wch:11},{wch:9},{wch:12},
+      {wch:24},{wch:60}
+    ];
+    var lastCol = XLSX.utils.encode_col(headers.length-1);
+    var lastRow = aoa.length;
+    ws['!autofilter'] = { ref: 'A1:'+lastCol+lastRow };
+    ws['!freeze'] = { xSplit:0, ySplit:1 };
+
+    var HEADER_FILL = { patternType:'solid', fgColor:{ rgb:'1F3B57' } };
+    var HEADER_FONT = { bold:true, color:{ rgb:'FFFFFF' }, sz:11, name:'Calibri' };
+    var THIN_BORDER = { style:'thin', color:{ rgb:'D8DEE1' } };
+    var CELL_BORDER = { top:THIN_BORDER, bottom:THIN_BORDER, left:THIN_BORDER, right:THIN_BORDER };
+    var FILL_Z = { patternType:'solid', fgColor:{ rgb:'F5D0CC' } };
+    var FILL_VFAB = { patternType:'solid', fgColor:{ rgb:'E3D3F0' } };
+    var FILL_INACTIVA = { patternType:'solid', fgColor:{ rgb:'FFF3D6' } };
+    var FILL_INCOHERENCIA = { patternType:'solid', fgColor:{ rgb:'EAE6F5' } };
+    var FILL_OK = { patternType:'solid', fgColor:{ rgb:'DEF0EF' } };
+    var FONT_NORMAL = { sz:10, name:'Calibri' };
+    var FONT_BOLD_BRICK = { sz:10, name:'Calibri', bold:true, color:{ rgb:'963B32' } };
+
+    for(var c=0; c<headers.length; c++){
+      var addr = XLSX.utils.encode_cell({r:0, c});
+      ws[addr].s = { fill: HEADER_FILL, font: HEADER_FONT, alignment:{ vertical:'center', horizontal:'center', wrapText:true }, border: CELL_BORDER };
+    }
+    filasMotivo.forEach(function(tipo, i){
+      var rIdx = i+1;
+      var fill = null, font = FONT_NORMAL;
+      if(tipo === 'z'){ fill = FILL_Z; font = FONT_BOLD_BRICK; }
+      else if(tipo === 'vfab'){ fill = FILL_VFAB; }
+      else if(tipo === 'inactiva'){ fill = FILL_INACTIVA; }
+      else if(tipo === 'incoherencia'){ fill = FILL_INCOHERENCIA; }
+      else if(tipo === 'ok'){ fill = FILL_OK; }
+      for(var cc=0; cc<headers.length; cc++){
+        var addr2 = XLSX.utils.encode_cell({r:rIdx, c:cc});
+        if(!ws[addr2]) ws[addr2] = { t:'s', v:'' };
+        ws[addr2].s = { fill: fill||undefined, font, border: CELL_BORDER, alignment:{ vertical:'center', wrapText:true } };
+      }
+    });
+    ws['!ref'] = 'A1:'+lastCol+lastRow;
+
+    var wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Explosión masiva');
+
+    var legendAoa = [
+      ['Leyenda de colores — Motivo de detención del árbol'],
+      ['Rojo — Bloqueo Z (Z1/Z2/Z3) en algún material de la cadena.'],
+      ['Violeta — Versión de Fabricación bloqueada en alguna etapa.'],
+      ['Ámbar — Lista de materiales inactiva en alguna etapa.'],
+      ['Violeta claro — Incoherencia de datos detectada (dígito 1, dígitos 3-4, o alternativa inconsistente) — revisar la columna "Advertencias".'],
+      ['Verde — Árbol completo hasta Fabricación (o fin natural en materia prima), sin bloqueos detectados.'],
+      [''],
+      ['Nota: cada fila representa UNA ETAPA de la cadena reconstruida para el Material inicial de esa fila — varias filas seguidas con el mismo "Material inicial" son las distintas etapas de un mismo árbol (Acondicionado, Envase, Fabricación…). La columna "Motivo de detención del árbol" solo se completa en la ÚLTIMA etapa de cada árbol.'],
+      ['Nota: "¿VFab real?" indica si la Versión de Fabricación de esa etapa específica está registrada tal cual en el archivo de Versiones de Fabricación cargado, o si se estimó con la fórmula por no encontrarse un registro real — esta app nunca inventa Versiones de Fabricación para construir el árbol, solo para completar una etapa cuando de verdad no hay dato real disponible.'],
+    ];
+    var wsLegend = XLSX.utils.aoa_to_sheet(legendAoa);
+    wsLegend['!cols'] = [{wch:110}];
+    wsLegend['A1'].s = { font:{ bold:true, sz:12, name:'Calibri' } };
+    wsLegend['A2'].s = { fill:FILL_Z, font:FONT_BOLD_BRICK };
+    wsLegend['A3'].s = { fill:FILL_VFAB, font:FONT_NORMAL };
+    wsLegend['A4'].s = { fill:FILL_INACTIVA, font:FONT_NORMAL };
+    wsLegend['A5'].s = { fill:FILL_INCOHERENCIA, font:FONT_NORMAL };
+    wsLegend['A6'].s = { fill:FILL_OK, font:FONT_NORMAL };
+    wsLegend['A8'].s = { font:{ italic:true, sz:10, name:'Calibri', color:{ rgb:'5C6B77' } } };
+    wsLegend['A9'].s = { font:{ italic:true, sz:10, name:'Calibri', color:{ rgb:'5C6B77' } } };
+    XLSX.utils.book_append_sheet(wb, wsLegend, 'Leyenda');
+
+    XLSX.writeFile(wb, 'explosion_masiva_'+new Date().toISOString().slice(0,10)+'.xlsx');
+  });
+
+  var explHeader = document.getElementById('explosionHeaderTop');
+  var explToggle = document.getElementById('explosionHeaderToggle');
+  if(explHeader && explToggle){
+    explToggle.addEventListener('click', function(){ explHeader.classList.toggle('top-collapsed'); });
+  }
+
+})();
+</script>
 </body>
+</html>
 </html>

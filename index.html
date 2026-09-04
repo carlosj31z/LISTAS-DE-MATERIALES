@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -194,9 +193,13 @@
   .filter-group:has(.filter-panel.open) svg.chev{transform:rotate(180deg);}
 
   .filter-panel{
-    position:absolute; top:calc(100% + 6px); left:0; background:#fff; border:1px solid var(--border);
+    /* position:fixed (no absolute): así el panel no queda recortado por el overflow:auto
+       del contenedor de la tabla cuando esta tiene pocas filas y es más baja que el panel
+       — su posición real (top/left) se calcula en JS al abrirlo, según dónde esté el botón
+       de embudo en ese momento. */
+    position:fixed; background:#fff; border:1px solid var(--border);
     border-radius:var(--radius); box-shadow:var(--shadow-md); width:260px; max-height:340px; display:flex;
-    flex-direction:column; z-index:40; overflow:hidden; opacity:0; transform:translateY(-6px) scale(.98);
+    flex-direction:column; z-index:200; overflow:hidden; opacity:0; transform:translateY(-6px) scale(.98);
     visibility:hidden; pointer-events:none; transition:opacity .16s var(--ease), transform .16s var(--ease), visibility .16s;
     transform-origin:top left;
     font-family:var(--body); text-transform:none; letter-spacing:normal; color:var(--ink); cursor:default; font-weight:400; font-size:13px;
@@ -384,6 +387,18 @@
     font-weight:700; letter-spacing:.06em; text-transform:uppercase; padding:5px 10px; border-radius:2px;
     box-shadow:0 4px 10px rgba(0,0,0,0.15); max-width:230px; text-align:center; line-height:1.3;
   }
+  /* Botón para saltar al Árbol del producto desde el detalle de una lista de materiales.
+     Se ubica como su propia fila, debajo de la descripción, en el flujo normal del
+     encabezado — no en la esquina absoluta donde ya vive el sello de bloqueo Z/Vfab, para
+     que ambos indicadores queden claramente separados y no se amontonen. */
+  .drawer-tree-btn{
+    margin-top:12px; display:inline-flex; align-items:center; gap:7px; padding:7px 13px;
+    border-radius:20px; border:1px solid rgba(255,255,255,0.35); background:rgba(255,255,255,0.08);
+    color:#fff; font-size:12.5px; cursor:pointer; transition:background .15s, border-color .15s, transform .1s;
+  }
+  .drawer-tree-btn:hover{ background:rgba(255,255,255,0.18); border-color:rgba(255,255,255,0.6); }
+  .drawer-tree-btn:active{ transform:scale(0.97); }
+  .drawer-tree-btn svg{ width:15px; height:15px; flex:none; }
   .drawer-close{
     position:absolute; top:16px; right:16px; background:rgba(255,255,255,0.1); border:none; color:#fff;
     width:30px; height:30px; border-radius:7px; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:background .15s;
@@ -525,6 +540,20 @@
     .drawer-header h2{ font-size:17px; }
     .comp-item{ display:flex; flex-direction:column; gap:3px; }
     .comp-item .c-qty{ text-align:left; }
+
+    /* Árbol del producto: se reduce el gap y el ancho de la columna de flags para que
+       quepan mejor las tarjetas en pantallas angostas de celular, sin perder ningún
+       elemento (candados, selector de VFab, botón de componentes). */
+    .arbol-card{ padding:16px 12px; }
+    .arbol-nodo{ gap:8px; }
+    .arbol-flags{ width:38px; }
+    .arbol-flag{ min-width:34px; padding:0 4px; font-size:8.5px; }
+    .arbol-flag svg{ width:9px; height:9px; }
+    .arbol-nodo-marker{ width:32px; height:32px; font-size:10px; }
+    .arbol-nodo-card{ padding:11px 12px 10px; }
+    .arbol-conector{ margin-left:62px; }
+    .arbol-vfab-select{ max-width:150px; font-size:11px; }
+    .arbol-nav-label{ font-size:11.5px; }
   }
 
   /* ================= ÁRBOL DEL PRODUCTO ================= */
@@ -539,33 +568,122 @@
   }
   .arbol-resumen h2{ font-family:var(--display); font-size:19px; margin:0; color:var(--ink); }
   .arbol-resumen .badge{ font-size:11px; }
+  /* Selector navegable "Árbol X de N" con flechas, cuando hay más de una combinación
+     posible de Versiones de Fabricación en la cadena reconstruida. */
+  .arbol-nav{
+    display:flex; align-items:center; justify-content:center; gap:12px; margin-bottom:16px;
+  }
+  .arbol-nav-btn{
+    width:32px; height:32px; border-radius:50%; border:1px solid var(--border); background:var(--surface-alt);
+    display:flex; align-items:center; justify-content:center; cursor:pointer; color:var(--ink-soft);
+    transition:background .15s, border-color .15s, color .15s, transform .1s;
+  }
+  .arbol-nav-btn:hover:not(:disabled){ background:var(--teal-soft); border-color:var(--teal); color:#0A5352; }
+  .arbol-nav-btn:active:not(:disabled){ transform:scale(0.94); }
+  .arbol-nav-btn:disabled{ opacity:.35; cursor:default; }
+  .arbol-nav-btn svg{ width:16px; height:16px; }
+  .arbol-nav-label{ font-family:var(--mono); font-size:12.5px; color:var(--ink-soft); }
+  .arbol-nav-label strong{ color:var(--ink); }
+  .arbol-nav-note{
+    text-align:center; font-size:11.5px; color:var(--ink-faint); margin:-8px 0 16px;
+  }
+  /* Selector de Versión de Fabricación cuando la etapa tiene varias registradas — mismo
+     look que el badge fijo, pero interactivo. */
+  .arbol-vfab-select{
+    padding:3px 8px; border-radius:8px; background:var(--violet-soft); color:var(--violet);
+    font-family:var(--mono); font-weight:700; font-size:12px; border:1.5px solid var(--violet);
+    cursor:pointer; max-width:220px;
+  }
+  /* Realce temporal del nodo al saltar desde Listas de Materiales con el ícono de árbol. */
+  .arbol-nodo.resaltado .arbol-nodo-marker{
+    animation:arbolPulso 1.6s ease-in-out 2;
+  }
+  .arbol-nodo.resaltado .arbol-nodo-card{
+    background:var(--amber-soft); box-shadow:0 0 0 2px var(--amber), var(--shadow-md);
+  }
+  @keyframes arbolPulso{
+    0%, 100%{ box-shadow:0 0 0 1px var(--border); }
+    50%{ box-shadow:0 0 0 6px rgba(245,166,35,0.35); }
+  }
   .arbol-timeline{ display:flex; flex-direction:column; gap:0; max-width:640px; margin:0 auto; }
+
+  /* ---- Diagrama de flujo: tarjeta por etapa + conector animado entre ellas ---- */
   .arbol-nodo{
-    position:relative; display:flex; gap:14px; padding:16px 4px 16px 4px;
+    position:relative; display:flex; gap:14px; padding:10px 4px;
   }
-  .arbol-nodo:not(:last-child)::before{
-    content:''; position:absolute; left:19px; top:44px; bottom:-16px; width:2px;
-    background:var(--border);
+  /* Conector entre tarjetas: una línea vertical con patrón de guiones que "fluye" hacia
+     arriba (Fabricación -> Acondicionado, sentido de producción) usando una animación de
+     desplazamiento del patrón, más una punta de flecha fija en la unión con la tarjeta de
+     arriba, para reforzar el sentido sin que el movimiento resulte mareante. */
+  .arbol-conector{
+    display:flex; justify-content:center; padding:2px 0; margin-left:78px;
   }
-  /* Indicador de bloqueo, a la izquierda de todo el nodo (a la izquierda del propio
-     círculo numerado): un pequeño candado sutil, visible solo si hay algún bloqueo
-     (material, lista o versión de fabricación) en esta etapa. */
-  .arbol-lock{
-    flex:none; width:18px; display:flex; align-items:center; justify-content:center; padding-top:9px;
+  .arbol-conector svg{ display:block; overflow:visible; }
+  .arbol-conector .flow-line{
+    stroke:var(--teal); stroke-width:2.5; stroke-dasharray:5 6; fill:none;
+    animation:arbolFlow 1.1s linear infinite;
   }
-  .arbol-lock svg{ width:15px; height:15px; color:var(--brick); }
+  .arbol-conector.warnline .flow-line{ stroke:var(--brick); }
+  .arbol-conector .flow-arrow{ fill:var(--teal); }
+  .arbol-conector.warnline .flow-arrow{ fill:var(--brick); }
+  @keyframes arbolFlow{
+    from{ stroke-dashoffset:22; }
+    to{ stroke-dashoffset:0; }
+  }
+  @media (prefers-reduced-motion: reduce){
+    .arbol-conector .flow-line{ animation:none; }
+  }
+  .arbol-nodo-card{
+    flex:1; min-width:0; border-radius:14px; border:1px solid var(--border);
+    background:var(--surface); box-shadow:var(--shadow-sm); padding:14px 16px 12px;
+    position:relative; overflow:hidden;
+    transition:box-shadow .2s var(--ease), transform .2s var(--ease);
+  }
+  .arbol-nodo-card::before{
+    /* Franja de color a la izquierda de la tarjeta, indicando el tipo de etapa de un
+       vistazo (mismo color que el marcador circular). */
+    content:''; position:absolute; left:0; top:0; bottom:0; width:4px; background:var(--etapa-color, var(--navy));
+  }
+  .arbol-nodo:hover .arbol-nodo-card{ box-shadow:var(--shadow-md); transform:translateY(-1px); }
+  .arbol-nodo.warn .arbol-nodo-card{ --etapa-color: var(--brick); }
+  .arbol-nodo.ok .arbol-nodo-card{ --etapa-color: var(--teal); }
+  /* Colores de acento por tipo de etapa (cuando el nodo no está en warn/ok, para que se
+     distinga Fabricación de Envase de Acondicionado de un vistazo, como en un diagrama de
+     proceso real). */
+  .arbol-nodo[data-etapa-tipo="acondicionado"] .arbol-nodo-card{ --etapa-color: var(--navy); }
+  .arbol-nodo[data-etapa-tipo="envase"] .arbol-nodo-card{ --etapa-color: #3D7A8C; }
+  .arbol-nodo[data-etapa-tipo="recubrimiento"] .arbol-nodo-card,
+  .arbol-nodo[data-etapa-tipo="inspeccion"] .arbol-nodo-card{ --etapa-color: var(--violet); }
+  .arbol-nodo[data-etapa-tipo="fabricacion"] .arbol-nodo-card{ --etapa-color: var(--teal); }
   .arbol-nodo-marker{
     flex:none; width:40px; height:40px; border-radius:50%; display:flex; align-items:center;
     justify-content:center; font-family:var(--mono); font-weight:700; font-size:11px;
-    background:var(--navy); color:#fff; z-index:1; border:3px solid var(--surface);
-    box-shadow:0 0 0 1px var(--border);
+    background:var(--etapa-color, var(--navy)); color:#fff; z-index:1; border:3px solid var(--surface);
+    box-shadow:0 0 0 1px var(--border), var(--shadow-sm);
+    align-self:flex-start; margin-top:2px;
+    transition:transform .2s var(--ease);
   }
+  .arbol-nodo:hover .arbol-nodo-marker{ transform:scale(1.06); }
   .arbol-nodo.warn .arbol-nodo-marker{ background:var(--brick); }
   .arbol-nodo.ok .arbol-nodo-marker{ background:var(--teal); }
-  .arbol-nodo-body{ flex:1; min-width:0; padding-top:2px; }
+  /* Columna de indicadores breves a la izquierda de cada etapa: uno por tipo de
+     observación presente (VFab inactiva/bloqueada, Lista inactiva, Código con Z1/Z2/Z3).
+     Reemplaza los bloques de advertencia largos que antes iban debajo del nodo. */
+  .arbol-flags{
+    flex:none; width:44px; display:flex; flex-direction:column; align-items:flex-start; gap:4px; padding-top:8px;
+  }
+  .arbol-flag{
+    display:inline-flex; align-items:center; justify-content:center; gap:3px; width:auto; min-width:38px;
+    height:20px; padding:0 5px; white-space:nowrap;
+    border-radius:6px; font-family:var(--mono); font-size:9.5px; font-weight:700;
+    background:var(--brick-soft); color:var(--brick); border:1px solid var(--brick);
+    cursor:default;
+  }
+  .arbol-flag svg{ width:10px; height:10px; flex:none; }
+  .arbol-nodo-body{ flex:1; min-width:0; }
   .arbol-nodo-etapa{
     font-family:var(--mono); font-size:10.5px; text-transform:uppercase; letter-spacing:.06em;
-    color:var(--ink-faint); margin-bottom:4px; display:flex; align-items:center; gap:8px;
+    color:var(--etapa-color, var(--ink-faint)); margin-bottom:4px; display:flex; align-items:center; gap:8px; font-weight:700;
   }
   .arbol-nodo-titulo{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:4px; }
   .arbol-nodo-titulo .mat-code{ font-family:var(--mono); font-weight:700; color:var(--navy-deep); font-size:14.5px; }
@@ -653,6 +771,28 @@
   .arbol-suggest-item .s-desc{ font-size:13px; color:var(--ink); font-weight:500; }
   .arbol-suggest-item .s-meta{ font-family:var(--mono); font-size:11px; color:var(--ink-faint); margin-top:2px; }
   .arbol-suggest-empty{ padding:14px 12px; font-size:12.5px; color:var(--ink-faint); text-align:center; }
+
+  /* Switch para alternar el modo de selección: por Versión de Fabricación (por defecto,
+     recomendado — identifica sin ambigüedad toda la cadena) o por Alternativa (modo
+     anterior, puede ser ambiguo si una alternativa tiene varias VFab registradas). */
+  .arbol-modo-switch{
+    display:inline-flex; border:1px solid var(--border); border-radius:20px; padding:2px;
+    background:var(--surface-alt); cursor:pointer; flex:none;
+  }
+  .arbol-modo-switch .modo-opcion{
+    padding:7px 12px; border-radius:18px; font-size:12px; font-weight:600; color:var(--ink-soft);
+    transition:background .18s var(--ease), color .18s var(--ease);
+  }
+  .arbol-modo-switch .modo-opcion.active{ background:var(--teal); color:#fff; }
+
+  /* Botón de cada producto terminado posible, cuando un material intermedio aparece en más
+     de un árbol (renderSelectorDestinos). */
+  .arbol-destino-btn{
+    text-align:left; padding:12px 14px; border-radius:10px; border:1px solid var(--border);
+    background:var(--surface-alt); cursor:pointer; transition:background .15s, border-color .15s;
+  }
+  .arbol-destino-btn:hover{ background:var(--teal-soft); border-color:var(--teal); }
+  .arbol-destino-btn .mat-code{ font-family:var(--mono); font-weight:700; color:var(--navy-deep); font-size:13.5px; }
 </style>
 </head>
 <body>
@@ -921,7 +1061,12 @@
         <input type="text" id="arbolMaterialInput" placeholder="Busca el producto terminado por su descripción…" autocomplete="off">
         <div class="arbol-suggest-panel" id="arbolSuggestPanel"></div>
       </div>
-      <select id="arbolAltSelect" style="min-width:170px;"><option value="">Alternativa: —</option></select>
+      <button type="button" class="arbol-modo-switch" id="arbolModoSwitch" title="Cambiar entre elegir por Versión de Fabricación o por Alternativa">
+        <span class="modo-opcion" data-modo="vfab">Por Versión de Fabricación</span>
+        <span class="modo-opcion" data-modo="alt">Por Alternativa</span>
+      </button>
+      <select id="arbolVfabInicialSelect" style="min-width:210px;"><option value="">Versión de Fabricación: —</option></select>
+      <select id="arbolAltSelect" style="min-width:170px; display:none;"><option value="">Alternativa: —</option></select>
       <button class="btn btn-primary" id="arbolBuildBtn" type="button">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v18M5 10l7-7 7 7"/></svg>
         Construir árbol
@@ -952,9 +1097,14 @@
     <h2 id="bomDrawerMaterial">—</h2>
     <p id="bomDrawerDesc">—</p>
     <div class="drawer-stamp" id="bomDStamp" style="display:none;"></div>
+    <button type="button" class="drawer-tree-btn" id="bomDrawerTreeBtn" title="Ver este material en el Árbol del producto" style="display:none;">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="4" r="2"/><circle cx="6" cy="14" r="2"/><circle cx="18" cy="14" r="2"/><circle cx="12" cy="21" r="2"/><path d="M12 6v3M12 9L6 12M12 9l6 3M8 15.5L11 19M16 15.5L13 19"/></svg>
+      <span>Ver en Árbol del producto</span>
+    </button>
   </div>
   <div class="drawer-body" id="bomDrawerBody"></div>
 </div>
+
 
 <div class="comp-modal-overlay" id="bomComponentsDrawer">
   <div class="comp-modal-card">
@@ -968,6 +1118,32 @@
 </div>
 
 <script>
+/* ============================================================
+   UTILIDAD HOMOLOGADA: posicionamiento de paneles de filtro (.filter-panel)
+
+   Los paneles de filtro usan position:fixed (no absolute) para no quedar
+   recortados por el overflow:auto del contenedor de la tabla cuando esta
+   tiene pocas filas y es más baja que el propio panel. Esta función calcula
+   top/left en base a la posición real del botón de embudo que lo abrió, y
+   ajusta si el panel se saldría por abajo o por la derecha de la ventana.
+   ============================================================ */
+function posicionarFilterPanel(panel, anchorBtn){
+  var r = anchorBtn.getBoundingClientRect();
+  var panelWidth = panel.offsetWidth || 260;
+  var panelMaxHeight = 340;
+  var left = r.left;
+  if(left + panelWidth > window.innerWidth - 8){
+    left = Math.max(8, window.innerWidth - panelWidth - 8);
+  }
+  var top = r.bottom + 6;
+  if(top + panelMaxHeight > window.innerHeight - 8){
+    // No cabe debajo del botón: se abre hacia arriba en su lugar.
+    top = Math.max(8, r.top - panelMaxHeight - 6);
+  }
+  panel.style.left = left + 'px';
+  panel.style.top = top + 'px';
+}
+
 /* ============================================================
    UTILIDAD HOMOLOGADA: detección de códigos suspendidos (Z1/Z2/Z3…)
    Se usa igual en el Fichero de Materiales y en el Explorador BOM.
@@ -2148,8 +2324,16 @@ function formatFechaHoraCorta(d){
     if(!panel) return;
     var isOpen = panel.classList.contains('open');
     document.querySelectorAll('#view-mm .filter-panel.open').forEach(function(p){ p.classList.remove('open'); });
-    if(!isOpen) panel.classList.add('open');
+    if(!isOpen){ posicionarFilterPanel(panel, filterBtn); panel.classList.add('open'); }
   });
+  // Al hacer scroll dentro de la tabla con un panel de filtro (fixed) ya abierto, se
+  // cierra en vez de dejarlo "flotando" en la posición vieja, ya que no sigue al botón.
+  var mmTableWrapForScroll = document.getElementById('mmTableWrap');
+  if(mmTableWrapForScroll){
+    mmTableWrapForScroll.addEventListener('scroll', function(){
+      document.querySelectorAll('#view-mm .filter-panel.open').forEach(function(p){ p.classList.remove('open'); });
+    });
+  }
   document.addEventListener('click', function(e){
     if(e.target.closest('#view-mm .filter-panel') || e.target.closest('#view-mm .th-filter-btn')) return;
     document.querySelectorAll('#view-mm .filter-panel.open').forEach(function(p){ p.classList.remove('open'); });
@@ -4127,6 +4311,32 @@ function formatFechaHoraCorta(d){
     else { bomDrawerMaterialEl.removeAttribute('data-copy-code'); bomDrawerMaterialEl.title = ''; }
     document.getElementById('bomDrawerDesc').textContent = iDesc !== -1 ? row[iDesc] : '—';
 
+    // Botón "Ver en Árbol del producto": solo visible si hay Componentes cargados (la
+    // función de avance los necesita para saber qué etapas posteriores usan este
+    // material). El clic se resuelve de forma perezosa (al hacer clic, no aquí), ya que
+    // recorrer hacia adelante puede tomar un instante y no conviene hacerlo por cada fila
+    // que el usuario abre, solo cuando realmente lo pide.
+    const treeBtn = document.getElementById('bomDrawerTreeBtn');
+    if(treeBtn){
+      const matParaArbol = iMaterial !== -1 ? row[iMaterial] : '';
+      const altParaArbol = iAlt !== -1 ? row[iAlt] : '';
+      if(matParaArbol && window.BOM_COMP_ROWS && window.BOM_COMP_ROWS.length > 0){
+        treeBtn.style.display = 'inline-flex';
+        treeBtn.onclick = function(){
+          // Se cierra el drawer (y con él, cualquier panel de componentes abierto dentro)
+          // ANTES de saltar a la pestaña Árbol del producto, para que el usuario vea el
+          // árbol de inmediato sin tener que cerrar nada manualmente primero.
+          closeDrawer();
+          if(window.__irAlArbolDelProducto){
+            window.__irAlArbolDelProducto(matParaArbol, altParaArbol);
+          }
+        };
+      } else {
+        treeBtn.style.display = 'none';
+        treeBtn.onclick = null;
+      }
+    }
+
     const pendingHv1 = hasHv1Pending(row);
     const pendingConc = hasConciliacionPending(row);
     const materialCode = iMaterial !== -1 ? row[iMaterial] : '';
@@ -4275,6 +4485,9 @@ function formatFechaHoraCorta(d){
     overlay.classList.remove('open');
     tableBody.querySelectorAll('tr.selected').forEach(r=>r.classList.remove('selected'));
   }
+  // Expuesta globalmente para que otras vistas (el propio botón "Ver en Árbol del
+  // producto" dentro de este mismo drawer) puedan cerrarlo antes de cambiar de pestaña.
+  window.__closeBomDrawer = closeDrawer;
 
   document.getElementById('bomDrawerClose').addEventListener('click', closeDrawer);
   const bomComponentsDrawerClose = document.getElementById('bomComponentsDrawerClose');
@@ -4711,11 +4924,19 @@ function formatFechaHoraCorta(d){
       if(panel){
         const isOpen = panel.classList.contains('open');
         document.querySelectorAll('#view-bom .filter-panel.open').forEach(p=>p.classList.remove('open'));
-        if(!isOpen) panel.classList.add('open');
+        if(!isOpen){ posicionarFilterPanel(panel, filterBtn); panel.classList.add('open'); }
       }
       return;
     }
   });
+  // Al hacer scroll dentro de la tabla con un panel de filtro (fixed) ya abierto, se
+  // cierra en vez de dejarlo "flotando" en la posición vieja, ya que no sigue al botón.
+  var bomTableWrapForScroll = document.getElementById('bomTableWrap');
+  if(bomTableWrapForScroll){
+    bomTableWrapForScroll.addEventListener('scroll', function(){
+      document.querySelectorAll('#view-bom .filter-panel.open').forEach(p=>p.classList.remove('open'));
+    });
+  }
   document.addEventListener('click', (e)=>{
     if(e.target.closest('#view-bom .filter-panel') || e.target.closest('#view-bom .th-filter-btn')) return;
     document.querySelectorAll('#view-bom .filter-panel.open').forEach(p=>p.classList.remove('open'));
@@ -4956,6 +5177,19 @@ function formatFechaHoraCorta(d){
     return normEtapa(etapaTexto).indexOf(ETAPA_ACONDICIONADO) !== -1;
   }
 
+  /* Clasifica el nombre de una etapa en un tipo corto, usado solo para el color de acento
+     de la tarjeta en el diagrama (data-etapa-tipo) — es puramente visual, no afecta
+     ninguna lógica de cálculo del árbol. */
+  function tipoDeEtapa(etapaTexto){
+    var e = normEtapa(etapaTexto);
+    if(e.indexOf('ACONDICIONADO') !== -1) return 'acondicionado';
+    if(e.indexOf('ENVASE') !== -1) return 'envase';
+    if(e.indexOf('RECUBRIMIENTO') !== -1) return 'recubrimiento';
+    if(e.indexOf('INSPECCION') !== -1) return 'inspeccion';
+    if(e.indexOf('FABRICACION') !== -1) return 'fabricacion';
+    return 'otro';
+  }
+
   /* Alternativas de conciliación (60-69) y reacondicionado (95-99), mismo criterio que ya
      usa el resto de la app (ver isConciliacionAltList / isReacondicionadoAltList en BOM). */
   function esConciliacion(altStr){
@@ -4983,15 +5217,39 @@ function formatFechaHoraCorta(d){
     return '?';
   }
 
+  /* Inversa de letraParaAltPrevia: dado el dígito 2 de una Versión de Fabricación REAL ya
+     registrada en SAP, devuelve la alternativa numérica de la ETAPA PREVIA que ese dígito
+     representa. '0' -> sin etapa previa (es la propia Fabricación). '1'-'9' -> esa misma
+     alternativa. 'C'-'Z' -> alternativa de conciliación 66-90 (C=66, D=67…). Devuelve null
+     si el carácter no es reconocible (dato inesperado, no se debe adivinar). */
+  function altPreviaDesdeDigito2(digito2){
+    if(digito2===null || digito2===undefined || digito2==='') return null;
+    var c = String(digito2).trim().toUpperCase();
+    if(c === '0') return null; // sin etapa previa
+    if(/^[1-9]$/.test(c)) return c;
+    if(/^[A-Z]$/.test(c)){
+      var n = c.charCodeAt(0) - 'C'.charCodeAt(0) + 66;
+      if(n>=66 && n<=90) return String(n);
+    }
+    return null;
+  }
+
   /* Calcula la Versión de Fabricación (4 dígitos) de una etapa, dada su propia alternativa
      y la alternativa de la etapa previa (null si no hay etapa previa, es decir, es la
      propia Fabricación). */
-  function calcularVersionFabricacion(altPropiaStr, altPreviaStr, esFabricacion){
+  /* Calcula la Versión de Fabricación (4 dígitos) de una etapa, dada su propia alternativa
+     y la alternativa de la etapa previa. digito1Raiz es el dígito 1 real de toda la
+     cadena — la alternativa de la etapa FABRICACIÓN de la que desciende este árbol (o
+     '1' si aún no se conoce, ej. al calcular Fabricación misma antes de saber su propia
+     versión real). Confirmado por el usuario: el dígito 1 identifica qué alternativa de
+     Fabricación se está usando, y por eso debe ser el MISMO en todas las etapas de una
+     misma cadena — nunca se fija en '1' a ciegas. */
+  function calcularVersionFabricacion(altPropiaStr, altPreviaStr, esFabricacion, digito1Raiz){
     // Caso reacondicionado: solo aplica a Acondicionado, formato fijo '00' + alternativa.
     if(esReacondicionado(altPropiaStr)){
       return '00' + altPropiaStr;
     }
-    var digito1 = '1';
+    var digito1 = digito1Raiz || '1';
     var digito2;
     if(esFabricacion || altPreviaStr===null || altPreviaStr===undefined){
       digito2 = '0';
@@ -5091,12 +5349,25 @@ function formatFechaHoraCorta(d){
       if(!current || (pos && pos < current.pos)){
         firstByKey[key] = {
           pos: pos,
+          material: mat,
+          alt: alt,
           componente: iComponente!==undefined ? normMat(row[iComponente]) : '',
           denominacion: iDenom!==undefined ? row[iDenom] : ''
         };
       }
     });
-    var result2 = { firstByKey: firstByKey };
+    // Índice INVERSO: código de componente -> lista de {material, alt} de las listas que
+    // lo usan como su posición 0010 (es decir, las etapas POSTERIORES que parten de este
+    // material). Se construye a partir de firstByKey ya resuelto, así solo se consideran
+    // relaciones de "etapa previa" reales (posición 0010), no cualquier componente.
+    var byComponentAsFirstPos = {};
+    Object.keys(firstByKey).forEach(function(k){
+      var entry = firstByKey[k];
+      if(!entry.componente) return;
+      if(!byComponentAsFirstPos[entry.componente]) byComponentAsFirstPos[entry.componente] = [];
+      byComponentAsFirstPos[entry.componente].push({ material: entry.material, alt: entry.alt });
+    });
+    var result2 = { firstByKey: firstByKey, byComponentAsFirstPos: byComponentAsFirstPos };
     __compIndexCache = { rowsRef: rows, index: result2 };
     return result2;
   }
@@ -5197,175 +5468,367 @@ function formatFechaHoraCorta(d){
      uno con su Versión de Fabricación calculada y advertencias si las hay.
      No lanza excepción: cualquier problema se refleja como advertencia en el nodo
      correspondiente y el retroceso se detiene ahí. */
-  function construirArbol(materialInicial, altInicial){
+  /* Construye UN paso de la cadena (un nodo) a partir de (material, alt), sin decidir
+     todavía por cuál VFab candidata continuar si hay más de una — eso lo decide quien
+     llama, pasando "vfabIndexElegido" (0 = primera, por defecto). Devuelve el nodo más la
+     información necesaria para que el llamador siga retrocediendo. */
+  function construirNodoIndividual(matActual, altActual, visitados, vfabIndexElegido){
     var bomIdx = buildBomIndex();
     var compIdx = buildCompFirstPosIndex();
+    var vfabIdx = buildVfabIndex();
 
-    var nodos = [];
-    var matActual = normMat(materialInicial);
-    var altActual = normAlt(altInicial);
-    var visitados = {}; // salvaguarda anti-ciclos infinitos por datos inconsistentes
+    var key = keyOf(matActual, altActual);
+    var bomEntry = bomIdx.byKey[key];
+    var advertencias = [];
+    if(!bomEntry){
+      advertencias.push('No se encontró la combinación Material ' + matActual + ' + Alternativa ' + altActual + ' en las Listas de Materiales cargadas. No se puede confirmar esta etapa ni seguir retrocediendo desde aquí.');
+    }
+    var esFab = bomEntry ? esEtapaFabricacion(bomEntry.etapa) : false;
 
-    while(true){
-      var key = keyOf(matActual, altActual);
-      if(visitados[key]){
-        nodos[nodos.length-1].advertencias.push('Se detectó un ciclo (esta combinación Material+Alternativa ya apareció antes en la cadena) — se detiene el retroceso aquí para evitar un bucle infinito.');
-        break;
+    var nodo = {
+      material: matActual,
+      alt: altActual,
+      descripcion: bomEntry ? bomEntry.descripcion : '',
+      etapa: bomEntry ? bomEntry.etapa : '(no encontrada)',
+      estado: bomEntry ? bomEntry.estado : '',
+      centro: bomEntry ? bomEntry.centro : '',
+      esFabricacion: esFab || !bomEntry,
+      version: null,
+      versionEsReal: false,
+      vfabBloqueada: false,
+      advertencias: advertencias
+    };
+
+    var vfabReales = vfabIdx.byKey[key];
+    var digito2Real = null;
+    var totalVfabCandidatas = vfabReales ? vfabReales.length : 0;
+    if(vfabReales && vfabReales.length > 0){
+      var elegido = vfabReales[Math.min(vfabIndexElegido||0, vfabReales.length-1)];
+      nodo.version = elegido.version;
+      nodo.versionEsReal = true;
+      nodo.vfabBloqueada = elegido.bloqueada;
+      nodo.vfabOpciones = vfabReales; // todas las candidatas, para el selector de UI
+      nodo.vfabIndexElegido = Math.min(vfabIndexElegido||0, vfabReales.length-1);
+      if(nodo.vfabBloqueada){
+        nodo.advertencias.push('Esta Versión de Fabricación figura BLOQUEADA en el archivo de Versiones de Fabricación cargado.');
       }
-      visitados[key] = true;
-
-      var bomEntry = bomIdx.byKey[key];
-      var advertencias = [];
-      if(!bomEntry){
-        advertencias.push('No se encontró la combinación Material ' + matActual + ' + Alternativa ' + altActual + ' en las Listas de Materiales cargadas. No se puede confirmar esta etapa ni seguir retrocediendo desde aquí.');
+      if(String(nodo.version).length >= 2){
+        digito2Real = String(nodo.version).charAt(1);
       }
+    }
 
-      var esFab = bomEntry ? esEtapaFabricacion(bomEntry.etapa) : false;
+    nodo.bloqueoZ = estadoZDelMaterial(nodo.material);
+    if(nodo.bloqueoZ){
+      nodo.advertencias.push('El material ' + nodo.material + ' figura con estado ' + nodo.bloqueoZ + ' en el Maestro de Materiales' + (isZ3Code(nodo.bloqueoZ) ? ' (bloqueo definitivo).' : '.'));
+    }
+    if(nodo.estado && String(nodo.estado).trim().toLowerCase()==='inactivo'){
+      nodo.advertencias.push('Esta lista de materiales figura como INACTIVA en SAP. Se incluye igual en el árbol, tal como se indicó, marcado aquí como advertencia.');
+    }
 
-      // La Versión de Fabricación de este nodo depende de la alternativa de la ETAPA
-      // PREVIA (dígito 2) — que todavía no se conoce en este punto, porque el algoritmo
-      // avanza hacia atrás (de Acondicionado hacia Fabricación). Se calcula en una segunda
-      // pasada al final, una vez reconstruida toda la cadena real.
-      var nodo = {
-        material: matActual,
-        alt: altActual,
-        descripcion: bomEntry ? bomEntry.descripcion : '',
-        etapa: bomEntry ? bomEntry.etapa : '(no encontrada)',
-        estado: bomEntry ? bomEntry.estado : '',
-        centro: bomEntry ? bomEntry.centro : '',
-        esFabricacion: esFab || !bomEntry,
-        version: null,
-        advertencias: advertencias
-      };
-      nodos.push(nodo);
+    var puedeRetroceder = !!bomEntry && !esFab;
+    var infoRetroceso = null; // { codigoPrevio, altEsperada, altConfirmada, compEntry }
 
-      if(!bomEntry){
-        break; // no se puede seguir sin confirmar esta etapa
-      }
-      if(esFab){
-        break; // llegamos al origen del árbol
-      }
-
-      // Las alternativas de reacondicionado (95-99) no tienen una etapa previa real en el
-      // sentido de este árbol: solo existen como Acondicionado, y su componente de
-      // posición 0010 suele apuntar de vuelta a otro material de Acondicionado (el
-      // producto que se está reacondicionando), no a una cadena Fabricación->Envase — así
-      // que no tiene sentido intentar retroceder desde aquí (confirmado por el usuario).
+    if(puedeRetroceder){
       if(esReacondicionado(altActual)){
         nodo.finNatural = true;
         nodo.finNaturalInfo = 'Esta es una alternativa de reacondicionado (' + altActual + ') — no tiene una etapa previa de Fabricación/Envase asociada en este árbol, así que el retroceso se detiene aquí.';
-        break;
+        puedeRetroceder = false;
+      } else {
+        var compEntry = compIdx.firstByKey[key];
+        if(!compEntry){
+          nodo.advertencias.push('Esta lista no tiene componentes cargados (o ninguno en posición 0010), así que no se puede identificar la etapa previa. Verifica que el archivo de Componentes esté cargado y actualizado.');
+          puedeRetroceder = false;
+        } else if(!compEntry.componente){
+          nodo.advertencias.push('El componente de la posición ' + (compEntry.pos||'0010') + ' no tiene código de Material válido.');
+          puedeRetroceder = false;
+        } else {
+          var altEsperadaSiguiente, altEsperadaConfirmada;
+          if(digito2Real !== null){
+            var altDesdeDigito = altPreviaDesdeDigito2(digito2Real);
+            if(altDesdeDigito === null){
+              nodo.advertencias.push('La Versión de Fabricación real de esta etapa (' + nodo.version + ') indica que no debería tener etapa previa (dígito 2 = "0"), pero su componente de posición 0010 apunta a otro material (' + compEntry.componente + '). Se usa la misma alternativa (' + altActual + ') como respaldo, sin confirmar.');
+              altEsperadaSiguiente = altActual;
+              altEsperadaConfirmada = false;
+            } else {
+              altEsperadaSiguiente = altDesdeDigito;
+              altEsperadaConfirmada = true;
+            }
+          } else {
+            altEsperadaSiguiente = altActual;
+            altEsperadaConfirmada = false;
+          }
+          infoRetroceso = {
+            codigoPrevio: compEntry.componente,
+            denominacionPrevio: compEntry.denominacion,
+            altEsperada: altEsperadaSiguiente,
+            altConfirmada: altEsperadaConfirmada
+          };
+        }
       }
-
-      // Retroceder: buscar el componente de posición 0010 de esta lista para obtener el
-      // CÓDIGO de la etapa previa (no su alternativa).
-      var compEntry = compIdx.firstByKey[key];
-      if(!compEntry){
-        nodo.advertencias.push('Esta lista no tiene componentes cargados (o ninguno en posición 0010), así que no se puede identificar la etapa previa. Verifica que el archivo de Componentes esté cargado y actualizado.');
-        break;
-      }
-      var codigoPrevio = compEntry.componente;
-      if(!codigoPrevio){
-        nodo.advertencias.push('El componente de la posición ' + (compEntry.pos||'0010') + ' no tiene código de Material válido.');
-        break;
-      }
-
-      // Buscar, entre las alternativas registradas de ese material en el BOM, la que
-      // coincide numéricamente con la alternativa de la etapa ACTUAL (regla confirmada:
-      // etapa alt.N -> etapa previa alt.N, si existe).
-      var candidatas = bomIdx.altsByMaterial[codigoPrevio] || [];
-      var coincide = candidatas.filter(function(c){ return c.alt === altActual; });
-
-      if(candidatas.length === 0){
-        // El componente de la posición 0010 no tiene NINGUNA lista de materiales propia
-        // registrada — esto es esperable y correcto para materias primas que se usan
-        // directamente en esta etapa sin pasar por una Fabricación separada (ej. "Agua
-        // para Inyección" directo en Envase). No es un error de datos: es el fin natural
-        // de esta rama del árbol, así que se informa sin marcarlo como inconsistencia.
-        nodo.finNatural = true;
-        nodo.finNaturalInfo = 'La etapa previa (componente ' + codigoPrevio + (compEntry.denominacion ? ' — ' + compEntry.denominacion : '') + ') no tiene una lista de materiales propia en SAP — se usa directo como materia prima en esta etapa, sin una Fabricación separada. El árbol termina aquí.';
-        break;
-      }
-      if(coincide.length === 0){
-        var altsDisponibles = candidatas.map(function(c){ return c.alt; }).join(', ');
-        nodo.advertencias.push('INCONSISTENCIA: el componente de la etapa previa es el material ' + codigoPrevio + ', pero no tiene registrada la Alternativa ' + altActual + ' en las Listas de Materiales (alternativas disponibles para ese material: ' + altsDisponibles + '). Se detiene el retroceso — revisar manualmente.');
-        break;
-      }
-      if(coincide.length > 1){
-        nodo.advertencias.push('El material ' + codigoPrevio + ' tiene más de una fila registrada con Alternativa ' + altActual + ' (posiblemente distintos Centros). Se usó la primera encontrada.');
-      }
-
-      var siguiente = coincide[0];
-      matActual = siguiente.material;
-      altActual = siguiente.alt;
     }
 
-    // Segunda pasada (ahora que la cadena completa es conocida): se determina la Versión
-    // de Fabricación de cada nodo. PRIORIDAD: si existe una Versión de Fabricación REAL ya
-    // registrada en SAP (window.BOM_VFAB_ROWS, cargada en la pestaña Listas de Materiales)
-    // para ese Material+Alternativa, se usa esa — nunca se "inventa" un valor si el dato
-    // real ya está disponible. Solo se calcula con la fórmula de 4 dígitos como respaldo
-    // cuando no hay Vfab cargada o no hay ninguna fila para esa combinación. También se
-    // marca advertencia de "lista inactiva" y de "versión bloqueada" donde corresponda.
-    var vfabIdx = buildVfabIndex();
+    return { nodo: nodo, infoRetroceso: infoRetroceso, totalVfabCandidatas: totalVfabCandidatas };
+  }
+
+  /* Continúa el retroceso a partir de infoRetroceso (calculado por
+     construirNodoIndividual), resolviendo la alternativa esperada contra las listas
+     registradas del material previo. Devuelve { siguiente:{material,alt} } o marca el nodo
+     con finNatural / advertencia de inconsistencia y devuelve null si no se puede seguir. */
+  function resolverEtapaPrevia(nodo, infoRetroceso){
+    var bomIdx = buildBomIndex();
+    var candidatas = bomIdx.altsByMaterial[infoRetroceso.codigoPrevio] || [];
+    var coincide = candidatas.filter(function(c){ return c.alt === infoRetroceso.altEsperada; });
+
+    if(candidatas.length === 0){
+      nodo.finNatural = true;
+      nodo.finNaturalInfo = 'La etapa previa (componente ' + infoRetroceso.codigoPrevio + (infoRetroceso.denominacionPrevio ? ' — ' + infoRetroceso.denominacionPrevio : '') + ') no tiene una lista de materiales propia en SAP — se usa directo como materia prima en esta etapa, sin una Fabricación separada. El árbol termina aquí.';
+      return null;
+    }
+    if(coincide.length === 0){
+      var altsDisponibles = candidatas.map(function(c){ return c.alt; }).join(', ');
+      var origenAlt = infoRetroceso.altConfirmada ? ('según el dígito 2 de la Versión de Fabricación real ' + nodo.version) : ('supuesta, sin confirmar, igual a la de esta etapa');
+      nodo.advertencias.push('INCONSISTENCIA: el componente de la etapa previa es el material ' + infoRetroceso.codigoPrevio + ', pero no tiene registrada la Alternativa ' + infoRetroceso.altEsperada + ' (' + origenAlt + ') en las Listas de Materiales (alternativas disponibles para ese material: ' + altsDisponibles + '). Se detiene el retroceso — revisar manualmente.');
+      return null;
+    }
+    if(coincide.length > 1){
+      nodo.advertencias.push('El material ' + infoRetroceso.codigoPrevio + ' tiene más de una fila registrada con Alternativa ' + infoRetroceso.altEsperada + ' (posiblemente distintos Centros). Se usó la primera encontrada.');
+    }
+    return { siguiente: coincide[0] };
+  }
+
+  /* Completa cada nodo sin Versión de Fabricación real con la fórmula de 4 dígitos
+     (respaldo), y anota sus componentes reales (para el botón "ojo"). Se aplica sobre un
+     árbol YA completo (array de nodos, de Acondicionado hacia Fabricación). */
+  function completarArbol(nodos){
+    var allCompsIdx = buildAllCompsIndex();
+
+    // El dígito 1 identifica la alternativa de la etapa FABRICACIÓN de la que desciende
+    // toda la cadena — debe ser el MISMO en todas las etapas (confirmado por el usuario).
+    // Se toma del nodo de Fabricación (el último del array, el más antiguo): si tiene una
+    // Versión de Fabricación real, se lee su propio dígito 1 directamente de ahí; si no,
+    // se usa su alternativa propia (que es lo que ese dígito 1 debería representar).
+    var nodoFabricacion = nodos[nodos.length-1];
+    var digito1Raiz = '1';
+    if(nodoFabricacion){
+      if(nodoFabricacion.versionEsReal && String(nodoFabricacion.version||'').length>=1){
+        digito1Raiz = String(nodoFabricacion.version).charAt(0);
+      } else if(nodoFabricacion.alt){
+        var nFab = parseInt(nodoFabricacion.alt, 10);
+        digito1Raiz = isNaN(nFab) ? '1' : String(nFab);
+      }
+    }
+
     nodos.forEach(function(n, i){
-      var altPrevia = (i < nodos.length-1) ? nodos[i+1].alt : null;
-      var vfabKey = n.material + '||' + n.alt;
-      var vfabReales = vfabIdx.byKey[vfabKey];
-      if(vfabReales && vfabReales.length > 0){
-        n.version = vfabReales[0].version;
-        n.versionEsReal = true;
-        n.vfabBloqueada = vfabReales.some(function(v){ return v.bloqueada; });
-        if(vfabReales.length > 1){
-          n.advertencias.push('Hay ' + vfabReales.length + ' Versiones de Fabricación registradas para este Material+Alternativa (posiblemente distintos Centros). Se muestra la primera: ' + vfabReales.map(function(v){return v.version + (v.centro?(' (Centro '+v.centro+')'):'');}).join(', ') + '.');
-        }
-        if(n.vfabBloqueada){
-          n.advertencias.push('Esta Versión de Fabricación figura BLOQUEADA en el archivo de Versiones de Fabricación cargado.');
-        }
-      } else {
-        n.version = calcularVersionFabricacion(n.alt, altPrevia, n.esFabricacion);
-        n.versionEsReal = false;
-        n.vfabBloqueada = false;
+      if(!n.versionEsReal){
+        var altPrevia = (i < nodos.length-1) ? nodos[i+1].alt : null;
+        n.version = calcularVersionFabricacion(n.alt, altPrevia, n.esFabricacion, digito1Raiz);
         if(window.BOM_VFAB_ROWS && window.BOM_VFAB_ROWS.length > 0){
-          // Solo se avisa que es estimada si el usuario SÍ cargó Versiones de Fabricación
-          // (para que sepa que faltó ese registro puntual) — si no cargó el archivo en
-          // absoluto, no tiene sentido repetir el aviso en cada nodo.
           n.advertencias.push('No se encontró una Versión de Fabricación registrada para este Material+Alternativa en el archivo cargado — se muestra un valor ESTIMADO con la fórmula (' + n.version + '), a confirmar en SAP.');
         }
+      } else if(!n.esFabricacion){
+        // Validación de coherencia: la Versión de Fabricación REAL de esta etapa debería
+        // empezar con el mismo dígito 1 que la etapa Fabricación de la cadena — si no
+        // coincide, es una señal de que esta combinación de VFabs registradas en SAP no es
+        // realmente consistente entre sí (aunque cada una exista por separado), y se
+        // advierte para que se revise manualmente.
+        var digito1Propio = String(n.version||'').charAt(0);
+        if(digito1Propio && digito1Propio !== digito1Raiz){
+          n.advertencias.push('INCOHERENCIA: la Versión de Fabricación de esta etapa (' + n.version + ') empieza con "' + digito1Propio + '", pero la etapa de Fabricación de esta cadena usa alternativa/dígito "' + digito1Raiz + '" — todas las etapas de una misma cadena deberían compartir el mismo primer dígito. Revisar en SAP si esta combinación de versiones es realmente correcta.');
+        }
       }
-      // Estado de bloqueo Z del material (independiente de "Activo/Inactivo" de la lista):
-      // Z1, Z2, Z3… consultado en el Maestro de Materiales si está cargado. Se usa para el
-      // candado sutil a la izquierda del nodo.
-      n.bloqueoZ = estadoZDelMaterial(n.material);
-      if(n.bloqueoZ){
-        n.advertencias.push('El material ' + n.material + ' figura con estado ' + n.bloqueoZ + ' en el Maestro de Materiales' + (isZ3Code(n.bloqueoZ) ? ' (bloqueo definitivo).' : '.'));
-      }
-      if(n.estado && String(n.estado).trim().toLowerCase()==='inactivo'){
-        n.advertencias.push('Esta lista de materiales figura como INACTIVA en SAP. Se incluye igual en el árbol, tal como se indicó, marcado aquí como advertencia.');
-      }
-    });
-
-    // Tercera pasada: se cuentan los componentes reales de cada etapa (para saber si
-    // mostrar el botón de desplegar "ojo") — se hace aparte para no recorrer el índice de
-    // componentes completos si no hace falta (solo cuando ya se tiene la cadena final).
-    var allCompsIdx = buildAllCompsIndex();
-    nodos.forEach(function(n){
       var key = n.material + '||' + n.alt;
       n.componentes = allCompsIdx.byKey[key] || [];
     });
-
     return nodos;
+  }
+
+  /* Límite de seguridad al explorar combinaciones: evita que un caso con muchas etapas con
+     múltiples VFab genere una explosión combinatoria impráctica de mostrar (ej. 4 etapas
+     con 3 VFab cada una ya son 81 árboles). Por encima de este límite se avisa y se
+     recorta, priorizando siempre las primeras combinaciones (las que usan la VFab por
+     defecto en más etapas). */
+  var MAX_ARBOLES_COMBINACIONES = 24;
+
+  /* Construye TODAS las combinaciones de árbol posibles a partir de (materialInicial,
+     altInicial), ramificando cada vez que una etapa tiene más de una Versión de
+     Fabricación real candidata (el usuario confirmó que en ese caso debe poder elegir cuál
+     usar, y ver todas las combinaciones resultantes). eleccionesForzadas es un mapa
+     opcional {"material||alt": indiceVfabElegido} para fijar una elección específica en un
+     punto conocido de la cadena (usado por el selector de la UI al cambiar de versión en
+     una etapa ya construida). */
+  /* Encuentra todos los productos terminados (Acondicionado) posibles a los que se llega
+     AVANZANDO desde (material, alt) — es decir, el material puede ser de cualquier etapa
+     (Fabricación, Recubrimiento, Envase, Inspección) y esta función recorre hacia adelante
+     usando el índice inverso de componentes (byComponentAsFirstPos: qué listas usan este
+     material en su posición 0010) hasta llegar a una etapa Acondicionado. Como un mismo
+     material intermedio puede alimentar más de una lista distinta (raro, pero posible), se
+     devuelven TODOS los caminos encontrados, cada uno como {materialFinal, altFinal,
+     camino:[{material,alt,etapa}, ...]} yendo desde el material de entrada hasta el
+     Acondicionado. Tiene su propio límite de seguridad para no explotar combinatoriamente
+     ni entrar en bucles con datos inconsistentes. */
+  var MAX_CAMINOS_AVANCE = 40;
+  function encontrarProductosTerminados(material, alt){
+    var bomIdx = buildBomIndex();
+    var compIdx = buildCompFirstPosIndex();
+    var mat0 = normMat(material);
+    var alt0 = normAlt(alt);
+    var key0 = keyOf(mat0, alt0);
+    var bomEntry0 = bomIdx.byKey[key0];
+
+    // Si el punto de partida YA es Acondicionado, el único "camino" es él mismo.
+    if(bomEntry0 && esEtapaAcondicionado(bomEntry0.etapa)){
+      return [{ materialFinal: mat0, altFinal: alt0, camino: [{material:mat0, alt:alt0, etapa:bomEntry0.etapa}] }];
+    }
+
+    var resultados = [];
+    function avanzar(matActual, altActual, visitados, caminoAcumulado){
+      if(resultados.length >= MAX_CAMINOS_AVANCE) return;
+      var key = keyOf(matActual, altActual);
+      if(visitados[key]) return; // ciclo — se corta esta rama sin reportar (dato inconsistente)
+      var nuevosVisitados = Object.assign({}, visitados);
+      nuevosVisitados[key] = true;
+
+      var siguientes = compIdx.byComponentAsFirstPos[matActual] || [];
+      // Solo interesan las listas siguientes cuya ALTERNATIVA coincide con la actual —
+      // mismo criterio de "etapa alt.N -> etapa siguiente también resuelve a alt.N" que ya
+      // usa el retroceso, ya que es la relación real registrada entre etapas.
+      var candidatas = siguientes.filter(function(s){ return normAlt(s.alt) === altActual; });
+
+      if(candidatas.length === 0){
+        // No hay ninguna etapa posterior registrada que use este material -- puede que el
+        // material de partida ya sea el final de la cadena hacia adelante sin llegar a
+        // Acondicionado (dato incompleto), se ignora silenciosamente este camino.
+        return;
+      }
+
+      candidatas.forEach(function(sig){
+        var sigKey = keyOf(sig.material, sig.alt);
+        var bomEntry = bomIdx.byKey[sigKey];
+        var nuevoCamino = caminoAcumulado.concat([{ material: sig.material, alt: sig.alt, etapa: bomEntry?bomEntry.etapa:'(no encontrada)' }]);
+        if(bomEntry && esEtapaAcondicionado(bomEntry.etapa)){
+          resultados.push({ materialFinal: sig.material, altFinal: sig.alt, camino: nuevoCamino });
+        } else {
+          avanzar(sig.material, sig.alt, nuevosVisitados, nuevoCamino);
+        }
+      });
+    }
+
+    avanzar(mat0, alt0, {}, [{material:mat0, alt:alt0, etapa: bomEntry0?bomEntry0.etapa:'(no encontrada)'}]);
+    return resultados;
+  }
+
+  function construirTodosLosArboles(materialInicial, altInicial, eleccionesForzadas){
+    eleccionesForzadas = eleccionesForzadas || {};
+    var arbolesCompletos = [];
+    var seRecorto = false;
+    var vfabIdx = buildVfabIndex();
+
+    function explorar(matActual, altActual, visitados, nodosAcumulados){
+      if(arbolesCompletos.length >= MAX_ARBOLES_COMBINACIONES){ seRecorto = true; return; }
+      var key = keyOf(matActual, altActual);
+      if(visitados[key]){
+        var ultimoNodo = nodosAcumulados[nodosAcumulados.length-1];
+        ultimoNodo.advertencias.push('Se detectó un ciclo (esta combinación Material+Alternativa ya apareció antes en la cadena) — se detiene el retroceso aquí para evitar un bucle infinito.');
+        arbolesCompletos.push(nodosAcumulados.slice());
+        return;
+      }
+
+      // Punto de ramificación: si ESTA combinación (Material+Alt actual, la que se está a
+      // punto de convertir en nodo) tiene más de una Versión de Fabricación real
+      // candidata, se genera una rama completa del árbol por cada una — salvo que ya haya
+      // una elección forzada fijada para ella (entonces se respeta esa sola).
+      var vfabAqui = vfabIdx.byKey[key];
+      var totalCandidatas = vfabAqui ? vfabAqui.length : 1;
+      if(totalCandidatas > 1 && !eleccionesForzadas.hasOwnProperty(key)){
+        for(var i=0; i<totalCandidatas; i++){
+          if(arbolesCompletos.length >= MAX_ARBOLES_COMBINACIONES){ seRecorto = true; break; }
+          var eleccionesConEsta = Object.assign({}, eleccionesForzadas);
+          eleccionesConEsta[key] = i;
+          explorarConEleccion(matActual, altActual, visitados, nodosAcumulados, eleccionesConEsta);
+        }
+        return;
+      }
+
+      var nuevosVisitados = Object.assign({}, visitados);
+      nuevosVisitados[key] = true;
+
+      var forzado = eleccionesForzadas.hasOwnProperty(key) ? eleccionesForzadas[key] : 0;
+      var paso = construirNodoIndividual(matActual, altActual, nuevosVisitados, forzado);
+      var nodo = paso.nodo;
+      var nuevaCadena = nodosAcumulados.concat([nodo]);
+
+      if(!paso.infoRetroceso){
+        // Fin de esta rama (Fabricación, fin natural, o no se puede seguir).
+        arbolesCompletos.push(nuevaCadena);
+        return;
+      }
+
+      var resuelto = resolverEtapaPrevia(nodo, paso.infoRetroceso);
+      if(!resuelto){
+        arbolesCompletos.push(nuevaCadena);
+        return;
+      }
+
+      explorar(resuelto.siguiente.material, resuelto.siguiente.alt, nuevosVisitados, nuevaCadena);
+    }
+
+    // Variante de explorar() que respeta un mapa de elecciones ya fijadas para esta rama
+    // específica (usado dentro de la ramificación, para no reventar combinatoriamente).
+    function explorarConEleccion(matActual, altActual, visitados, nodosAcumulados, eleccionesRama){
+      var eleccionesOriginal = eleccionesForzadas;
+      eleccionesForzadas = eleccionesRama;
+      explorar(matActual, altActual, visitados, nodosAcumulados);
+      eleccionesForzadas = eleccionesOriginal;
+    }
+
+    explorar(normMat(materialInicial), normAlt(altInicial), {}, []);
+
+    var arboles = arbolesCompletos.map(function(nodos){ return completarArbol(nodos); });
+    return { arboles: arboles, seRecorto: seRecorto };
+  }
+
+  /* Mantiene compatibilidad con el resto del módulo: construye solo el PRIMER árbol
+     (combinación por defecto — primera VFab en cada punto de ambigüedad). */
+  function construirArbol(materialInicial, altInicial){
+    var resultado = construirTodosLosArboles(materialInicial, altInicial, {});
+    return resultado.arboles[0] || [];
   }
 
   /* ---------- UI ---------- */
   var materialInput = document.getElementById('arbolMaterialInput');
   var altSelect = document.getElementById('arbolAltSelect');
+  var vfabInicialSelect = document.getElementById('arbolVfabInicialSelect');
+  var modoSwitch = document.getElementById('arbolModoSwitch');
   var buildBtn = document.getElementById('arbolBuildBtn');
   var statusEl = document.getElementById('arbolStatus');
   var emptyState = document.getElementById('arbolEmptyState');
   var emptyMsg = document.getElementById('arbolEmptyMsg');
   var resultado = document.getElementById('arbolResultado');
   var suggestPanel = document.getElementById('arbolSuggestPanel');
+
+  /* Modo de selección del punto de partida: 'vfab' (por defecto, recomendado) elige
+     directamente una Versión de Fabricación real y completa — identifica sin ambigüedad
+     toda la cadena, ya que codifica en sus 4 dígitos la alternativa raíz de Fabricación.
+     'alt' (modo anterior) elige solo la Alternativa de la lista, que puede ser ambigua si
+     esa alternativa tiene más de una VFab real registrada (distintos Centros, etc.). */
+  var arbolModoSeleccion = 'vfab';
+
+  function actualizarModoSwitchUI(){
+    Array.prototype.forEach.call(modoSwitch.querySelectorAll('.modo-opcion'), function(el){
+      el.classList.toggle('active', el.getAttribute('data-modo') === arbolModoSeleccion);
+    });
+    vfabInicialSelect.style.display = arbolModoSeleccion === 'vfab' ? '' : 'none';
+    altSelect.style.display = arbolModoSeleccion === 'alt' ? '' : 'none';
+  }
+  actualizarModoSwitchUI();
+
+  modoSwitch.addEventListener('click', function(e){
+    var opcion = e.target.closest('.modo-opcion');
+    if(!opcion) return;
+    arbolModoSeleccion = opcion.getAttribute('data-modo');
+    actualizarModoSwitchUI();
+  });
+
 
   function esc(v){
     if(v===null||v===undefined) return '';
@@ -5376,6 +5839,20 @@ function formatFechaHoraCorta(d){
      el árbol necesita el código). Se guarda aparte y se limpia si el usuario vuelve a
      escribir texto libre sin elegir una sugerencia de la lista. */
   var materialSeleccionado = null;
+
+  /* Estado del árbol actualmente construido: TODAS las combinaciones posibles (una por
+     cada punto de ambigüedad de Versión de Fabricación), el índice de la que se está
+     mostrando, y las elecciones de VFab que el usuario haya fijado manualmente en algún
+     selector de etapa (para poder reconstruir manteniendo esa elección al navegar). */
+  var arbolesActuales = [];
+  var indiceArbolActual = 0;
+  var arbolSeRecorto = false;
+  var arbolMaterialBase = null;
+  var arbolAltBase = null;
+  var eleccionesVfabUsuario = {};
+  // Material/alternativa a resaltar en el árbol (usado al saltar desde Listas de
+  // Materiales con el ícono de árbol) — null cuando se construye un árbol normal.
+  var arbolResaltarKey = null;
 
   /* Lista de productos terminados (etapa Acondicionado) disponibles para buscar, agrupada
      por Material -> [descripción, alternativas], construida sobre window.BOM_ROWS. Solo se
@@ -5471,6 +5948,7 @@ function formatFechaHoraCorta(d){
     materialInput.value = producto.descripcion || mat;
     suggestPanel.classList.remove('open');
     llenarAlternativas(producto.alts);
+    llenarVfabInicial(mat, producto.alts);
   }
 
   function llenarAlternativas(candidatas){
@@ -5486,6 +5964,38 @@ function formatFechaHoraCorta(d){
       altSelect.appendChild(opt);
     });
     if(candidatas.length === 1){ altSelect.value = candidatas[0].alt; }
+  }
+
+  /* Llena el select de Versión de Fabricación (modo por defecto) con TODAS las VFab reales
+     registradas para cualquiera de las alternativas de este producto — cada opción guarda
+     la Alternativa y el índice de esa VFab dentro de su grupo (data-alt / data-idx), para
+     poder fijarla como elección exacta al construir el árbol, sin ambigüedad. Si el
+     producto no tiene ninguna VFab real cargada, el select queda vacío y se avisa. */
+  function llenarVfabInicial(mat, alts){
+    vfabInicialSelect.innerHTML = '<option value="">Versión de Fabricación: —</option>';
+    var vfabIdx = buildVfabIndex();
+    var opciones = [];
+    alts.slice().sort(function(a,b){ return a.alt.localeCompare(b.alt, undefined, {numeric:true}); }).forEach(function(a){
+      var key = keyOf(mat, a.alt);
+      var vfabs = vfabIdx.byKey[key] || [];
+      vfabs.forEach(function(v, vi){
+        opciones.push({ alt:a.alt, idx:vi, version:v.version, centro:v.centro, bloqueada:v.bloqueada, estado:a.estado });
+      });
+    });
+    if(opciones.length === 0){
+      vfabInicialSelect.innerHTML = '<option value="">Sin Versiones de Fabricación registradas — usa "Por Alternativa"</option>';
+      return;
+    }
+    opciones.forEach(function(o, i){
+      var opt = document.createElement('option');
+      opt.value = i;
+      opt.setAttribute('data-alt', o.alt);
+      opt.setAttribute('data-idx', o.idx);
+      var extra = (o.centro ? ' — Centro '+o.centro : '') + (o.bloqueada ? ' — BLOQUEADA' : '') + (o.estado && String(o.estado).toLowerCase()==='inactivo' ? ' — lista inactiva' : '');
+      opt.textContent = 'VFab ' + o.version + ' (Alt. ' + o.alt + ')' + extra;
+      vfabInicialSelect.appendChild(opt);
+    });
+    if(opciones.length === 1){ vfabInicialSelect.value = '0'; }
   }
 
   var EYE_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7Z"/><circle cx="12" cy="12" r="3"/></svg>';
@@ -5521,21 +6031,46 @@ function formatFechaHoraCorta(d){
     var esUltimo = index === total-1;
     var cls = nodo.advertencias.length>0 ? 'warn' : (esUltimo && ((nodo.etapa && esEtapaFabricacion(nodo.etapa)) || nodo.finNatural) ? 'ok' : '');
     var marker = (index+1);
-    var warningsHtml = nodo.advertencias.map(function(w){
+
+    // Los 3 tipos de observación que se muestran como chip BREVE a la izquierda (no como
+    // párrafo largo debajo del nodo): VFab bloqueada, Lista inactiva, Código con estado Z.
+    var esInactiva = nodo.estado && String(nodo.estado).trim().toLowerCase()==='inactivo';
+    var flags = [];
+    if(nodo.vfabBloqueada) flags.push({ text:'VFab', title:'Versión de Fabricación bloqueada' });
+    if(esInactiva) flags.push({ text:'LMat', title:'Lista de materiales inactiva' });
+    if(nodo.bloqueoZ) flags.push({ text:esc(nodo.bloqueoZ), title:'Código con estado ' + nodo.bloqueoZ });
+    var flagsHtml = flags.length ? '<div class="arbol-flags">'+flags.map(function(f){
+      return '<span class="arbol-flag" title="'+esc(f.title)+'">'+LOCK_SVG+f.text+'</span>';
+    }).join('')+'</div>' : '<div class="arbol-flags"></div>';
+
+    // El resto de advertencias (inconsistencias de datos, fin natural, suposición sin
+    // confirmar, múltiples versiones registradas…) siguen mostrándose como texto completo
+    // debajo, ya que son observaciones más complejas que no caben en un chip breve.
+    var warningsHtml = nodo.advertencias.filter(function(w){
+      return w.indexOf('figura BLOQUEADA') === -1
+        && w.indexOf('figura como INACTIVA') === -1
+        && w.indexOf('figura con estado Z') === -1;
+    }).map(function(w){
       return '<div class="arbol-warning"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 9v4M12 17h.01M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z"/></svg><span>'+esc(w)+'</span></div>';
     }).join('');
     var finNaturalHtml = nodo.finNatural ? '<div class="arbol-info"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 16v-4M12 8h.01"/><circle cx="12" cy="12" r="10"/></svg><span>'+esc(nodo.finNaturalInfo||'Fin del árbol: no hay una etapa de Fabricación previa registrada.')+'</span></div>' : '';
     var vfabTitle = nodo.versionEsReal ? 'Versión de Fabricación real, tal como está registrada en el archivo de Versiones de Fabricación cargado' : 'Versión ESTIMADA con la fórmula — no se encontró un registro real en Versiones de Fabricación para confirmarla';
     var vfabCls = nodo.versionEsReal ? 'arbol-vfab' : 'arbol-vfab estimada';
 
-    // Candado sutil a la izquierda: aparece si hay CUALQUIER tipo de bloqueo en esta etapa
-    // (material con estado Z, lista inactiva, o Versión de Fabricación bloqueada).
-    var hayBloqueo = !!nodo.bloqueoZ || nodo.vfabBloqueada || (nodo.estado && String(nodo.estado).trim().toLowerCase()==='inactivo');
-    var lockTitle = [];
-    if(nodo.bloqueoZ) lockTitle.push('Material con estado ' + nodo.bloqueoZ);
-    if(nodo.vfabBloqueada) lockTitle.push('Versión de Fabricación bloqueada');
-    if(nodo.estado && String(nodo.estado).trim().toLowerCase()==='inactivo') lockTitle.push('Lista inactiva');
-    var lockHtml = '<div class="arbol-lock">'+(hayBloqueo ? '<span title="'+esc(lockTitle.join(' · '))+'">'+LOCK_SVG+'</span>' : '')+'</div>';
+    // Si esta etapa tiene más de una Versión de Fabricación real registrada, se muestra un
+    // SELECTOR en vez de un badge fijo, para que el usuario elija cuál usar — por defecto
+    // queda seleccionada la primera. Cambiar la selección reconstruye el árbol completo.
+    var vfabHtml;
+    if(nodo.vfabOpciones && nodo.vfabOpciones.length > 1){
+      var selectId = 'arbolVfabSelect'+index;
+      var opcionesHtml = nodo.vfabOpciones.map(function(v, vi){
+        var label = v.version + (v.centro ? ' (Centro '+v.centro+')' : '') + (v.bloqueada ? ' — bloqueada' : '');
+        return '<option value="'+vi+'" '+(vi===nodo.vfabIndexElegido?'selected':'')+'>'+esc(label)+'</option>';
+      }).join('');
+      vfabHtml = '<select class="arbol-vfab-select" id="'+selectId+'" title="Esta etapa tiene '+nodo.vfabOpciones.length+' Versiones de Fabricación registradas — elige cuál usar">'+opcionesHtml+'</select>';
+    } else {
+      vfabHtml = '<span class="'+vfabCls+'" title="'+esc(vfabTitle)+'">VFab '+esc(nodo.version)+(nodo.versionEsReal?'':' (estimada)')+'</span>';
+    }
 
     var tieneComponentes = nodo.componentes && nodo.componentes.length > 0;
     var toggleId = 'arbolCompToggle'+index;
@@ -5547,24 +6082,41 @@ function formatFechaHoraCorta(d){
     var panelHtml = tieneComponentes ?
       '<div class="arbol-comp-panel" id="'+panelId+'" data-loaded="0"></div>' : '';
 
-    return '<div class="arbol-nodo '+cls+'">'+
-      lockHtml+
+    return '<div class="arbol-nodo '+cls+'" data-etapa-tipo="'+tipoDeEtapa(nodo.etapa)+'">'+
+      flagsHtml+
       '<div class="arbol-nodo-marker">'+marker+'</div>'+
-      '<div class="arbol-nodo-body">'+
-        '<div class="arbol-nodo-etapa">'+esc(nodo.etapa||'—')+'</div>'+
-        '<div class="arbol-nodo-titulo">'+
-          '<span class="mat-code" data-copy-code="'+esc(nodo.material)+'" title="Clic para copiar el código">'+esc(nodo.material)+'</span>'+
-          '<span class="badge badge-neutro">Alt. '+esc(nodo.alt)+'</span>'+
-          (nodo.estado ? '<span class="badge '+(String(nodo.estado).trim().toLowerCase()==='activo'?'badge-activo':'badge-inactivo')+'"><span class="dot"></span>'+esc(nodo.estado)+'</span>' : '')+
-          '<span class="'+vfabCls+'" title="'+esc(vfabTitle)+'">VFab '+esc(nodo.version)+(nodo.versionEsReal?'':' (estimada)')+'</span>'+
+      '<div class="arbol-nodo-card">'+
+        '<div class="arbol-nodo-body">'+
+          '<div class="arbol-nodo-etapa">'+esc(nodo.etapa||'—')+'</div>'+
+          '<div class="arbol-nodo-titulo">'+
+            '<span class="mat-code" data-copy-code="'+esc(nodo.material)+'" title="Clic para copiar el código">'+esc(nodo.material)+'</span>'+
+            '<span class="badge badge-neutro">Alt. '+esc(nodo.alt)+'</span>'+
+            (nodo.estado ? '<span class="badge '+(String(nodo.estado).trim().toLowerCase()==='activo'?'badge-activo':'badge-inactivo')+'"><span class="dot"></span>'+esc(nodo.estado)+'</span>' : '')+
+            vfabHtml+
+          '</div>'+
+          (nodo.descripcion ? '<div class="arbol-nodo-desc">'+esc(nodo.descripcion)+'</div>' : '')+
+          (nodo.centro ? '<div class="arbol-nodo-meta">Centro '+esc(nodo.centro)+'</div>' : '')+
+          warningsHtml+
+          finNaturalHtml+
+          toggleHtml+
+          panelHtml+
         '</div>'+
-        (nodo.descripcion ? '<div class="arbol-nodo-desc">'+esc(nodo.descripcion)+'</div>' : '')+
-        (nodo.centro ? '<div class="arbol-nodo-meta">Centro '+esc(nodo.centro)+'</div>' : '')+
-        warningsHtml+
-        finNaturalHtml+
-        toggleHtml+
-        panelHtml+
       '</div>'+
+    '</div>';
+  }
+
+  /* Conector animado entre dos tarjetas consecutivas del diagrama: una línea vertical de
+     guiones que fluye hacia arriba (sentido Fabricación -> Acondicionado) con una punta de
+     flecha fija apuntando a la tarjeta de arriba. warn=true si la etapa DESTINO (la de
+     arriba, ya construida) tiene advertencias, para pintar el conector en tono de alerta y
+     que el ojo siga el camino problemático de un vistazo. */
+  function renderConector(warn){
+    var cls = warn ? 'arbol-conector warnline' : 'arbol-conector';
+    return '<div class="'+cls+'">'+
+      '<svg width="24" height="30" viewBox="0 0 24 30">'+
+        '<line class="flow-line" x1="12" y1="28" x2="12" y2="6"/>'+
+        '<path class="flow-arrow" d="M12 2 L17 10 L7 10 Z"/>'+
+      '</svg>'+
     '</div>';
   }
 
@@ -5574,6 +6126,25 @@ function formatFechaHoraCorta(d){
       return;
     }
     var totalAdvertencias = nodos.reduce(function(sum,n){ return sum + n.advertencias.length; }, 0);
+    var totalArboles = arbolesActuales.length;
+
+    // Selector navegable "Árbol X de N" con flechas — solo se muestra si hay más de una
+    // combinación posible (cuando alguna etapa tuvo más de una Versión de Fabricación real
+    // registrada y el usuario no fijó una elección específica para todas ellas).
+    var navHtml = '';
+    if(totalArboles > 1){
+      navHtml = '<div class="arbol-nav">'+
+        '<button type="button" class="arbol-nav-btn" id="arbolNavPrev" '+(indiceArbolActual<=0?'disabled':'')+' title="Combinación anterior">'+
+          '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M15 18l-6-6 6-6"/></svg>'+
+        '</button>'+
+        '<span class="arbol-nav-label">Combinación <strong>'+(indiceArbolActual+1)+'</strong> de <strong>'+totalArboles+'</strong></span>'+
+        '<button type="button" class="arbol-nav-btn" id="arbolNavNext" '+(indiceArbolActual>=totalArboles-1?'disabled':'')+' title="Siguiente combinación">'+
+          '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M9 18l6-6-6-6"/></svg>'+
+        '</button>'+
+      '</div>'+
+      (arbolSeRecorto ? '<div class="arbol-nav-note">Hay más combinaciones posibles de las que caben aquí — se muestran las primeras '+MAX_ARBOLES_COMBINACIONES+'.</div>' : '');
+    }
+
     var resumenHtml = '<div class="arbol-card">'+
       '<div class="arbol-resumen">'+
         '<h2>Árbol de '+esc(materialInicial)+' (alt. '+esc(altInicial)+')</h2>'+
@@ -5582,11 +6153,29 @@ function formatFechaHoraCorta(d){
         '</span>'+
         '<span class="badge badge-neutro">'+nodos.length+' etapa'+(nodos.length!==1?'s':'')+' reconstruida'+(nodos.length!==1?'s':'')+'</span>'+
       '</div>'+
+      navHtml+
       '<div class="arbol-timeline">'+
-        nodos.map(function(n,i){ return renderNodo(n, i, nodos.length); }).join('')+
+        nodos.map(function(n,i){
+          var nodoHtml = renderNodo(n, i, nodos.length);
+          if(i === 0) return nodoHtml;
+          // El conector va ANTES de este nodo (entre él y el anterior); se pinta en rojo
+          // si este nodo (la etapa hacia la que apunta la flecha) tiene advertencias.
+          return renderConector(n.advertencias.length>0) + nodoHtml;
+        }).join('')+
       '</div>'+
     '</div>';
     resultado.innerHTML = resumenHtml;
+
+    if(totalArboles > 1){
+      var prevBtn = document.getElementById('arbolNavPrev');
+      var nextBtn = document.getElementById('arbolNavNext');
+      if(prevBtn) prevBtn.addEventListener('click', function(){
+        if(indiceArbolActual > 0){ indiceArbolActual--; renderArbol(arbolesActuales[indiceArbolActual], arbolMaterialBase, arbolAltBase); }
+      });
+      if(nextBtn) nextBtn.addEventListener('click', function(){
+        if(indiceArbolActual < arbolesActuales.length-1){ indiceArbolActual++; renderArbol(arbolesActuales[indiceArbolActual], arbolMaterialBase, arbolAltBase); }
+      });
+    }
 
     // Botón "ojo" de cada etapa: despliega/colapsa el panel de componentes con la
     // animación de "raíces" (cada fila ya trae su propio keyframe con retraso escalonado
@@ -5595,22 +6184,49 @@ function formatFechaHoraCorta(d){
     nodos.forEach(function(nodo, i){
       var toggleBtn = document.getElementById('arbolCompToggle'+i);
       var panel = document.getElementById('arbolCompPanel'+i);
-      if(!toggleBtn || !panel) return;
-      toggleBtn.addEventListener('click', function(){
-        var isOpen = panel.classList.contains('open');
-        if(!isOpen && panel.getAttribute('data-loaded') !== '1'){
-          panel.innerHTML = renderComponentesPanel(nodo, i);
-          panel.setAttribute('data-loaded', '1');
-        }
-        panel.classList.toggle('open', !isOpen);
-        toggleBtn.classList.toggle('open', !isOpen);
-      });
+      if(toggleBtn && panel){
+        toggleBtn.addEventListener('click', function(){
+          var isOpen = panel.classList.contains('open');
+          if(!isOpen && panel.getAttribute('data-loaded') !== '1'){
+            panel.innerHTML = renderComponentesPanel(nodo, i);
+            panel.setAttribute('data-loaded', '1');
+          }
+          panel.classList.toggle('open', !isOpen);
+          toggleBtn.classList.toggle('open', !isOpen);
+        });
+      }
+
+      // Selector de Versión de Fabricación de esta etapa (solo si hay más de una real
+      // registrada): al cambiar, se fija esa elección y se reconstruye el árbol completo
+      // desde el punto de partida, para que el retroceso respete la nueva VFab elegida.
+      var vfabSelect = document.getElementById('arbolVfabSelect'+i);
+      if(vfabSelect){
+        vfabSelect.addEventListener('change', function(){
+          var key = keyOf(nodo.material, nodo.alt);
+          var nuevasElecciones = Object.assign({}, eleccionesVfabUsuario);
+          nuevasElecciones[key] = parseInt(vfabSelect.value, 10);
+          construirYMostrarArbol(arbolMaterialBase, arbolAltBase, nuevasElecciones);
+        });
+      }
     });
+
+    // Si se pidió resaltar una etapa específica (salto desde Listas de Materiales), se
+    // desplaza la vista hasta ella y se aplica un realce visual temporal.
+    if(arbolResaltarKey){
+      nodos.forEach(function(nodo, i){
+        if(keyOf(nodo.material, nodo.alt) === arbolResaltarKey){
+          var el = document.querySelectorAll('.arbol-nodo')[i];
+          if(el){
+            el.classList.add('resaltado');
+            setTimeout(function(){ el.scrollIntoView({behavior:'smooth', block:'center'}); }, 60);
+          }
+        }
+      });
+    }
   }
 
   buildBtn.addEventListener('click', function(){
     var mat = materialSeleccionado;
-    var alt = altSelect.value;
     if(!window.BOM_ROWS || window.BOM_ROWS.length===0){
       alert('No hay Listas de Materiales cargadas. Carga el Excel en la pestaña "Listas de Materiales" primero.');
       return;
@@ -5623,25 +6239,78 @@ function formatFechaHoraCorta(d){
       alert('No hay Componentes cargados. Carga el archivo de Componentes en la pestaña "Listas de Materiales" primero.');
       return;
     }
-    if(!alt){
-      // Si el material tiene una sola alternativa registrada, se usa esa automáticamente.
-      if(altSelect.options.length === 2){
-        alt = altSelect.options[1].value;
-        altSelect.value = alt;
-      } else {
-        alert('Selecciona la Alternativa de lista de materiales de ese Material.');
+
+    arbolResaltarKey = null;
+
+    if(arbolModoSeleccion === 'vfab'){
+      // Modo por defecto: se eligió directamente una Versión de Fabricación real y
+      // completa — se fija como elección forzada desde el inicio, así el árbol arranca
+      // exactamente con esa versión (sin caer en otra combinación ambigua posible).
+      var selectedOpt = vfabInicialSelect.options[vfabInicialSelect.selectedIndex];
+      if(!selectedOpt || !selectedOpt.value){
+        alert('Selecciona una Versión de Fabricación de la lista (o cambia a "Por Alternativa" si este producto no tiene ninguna registrada).');
         return;
+      }
+      var altElegida = selectedOpt.getAttribute('data-alt');
+      var idxElegido = parseInt(selectedOpt.getAttribute('data-idx'), 10);
+      var keyElegida = keyOf(mat, altElegida);
+      var elecciones = {};
+      elecciones[keyElegida] = idxElegido;
+      eleccionesVfabUsuario = elecciones;
+      construirYMostrarArbol(mat, altElegida, elecciones);
+    } else {
+      // Modo "Por Alternativa" (anterior): puede ser ambiguo si esa alternativa tiene más
+      // de una VFab real — en ese caso construirYMostrarArbol ya genera todas las
+      // combinaciones posibles y el usuario las navega con el selector de combinaciones.
+      var alt = altSelect.value;
+      if(!alt){
+        if(altSelect.options.length === 2){
+          alt = altSelect.options[1].value;
+          altSelect.value = alt;
+        } else {
+          alert('Selecciona la Alternativa de lista de materiales de ese Material.');
+          return;
+        }
+      }
+      eleccionesVfabUsuario = {};
+      construirYMostrarArbol(mat, alt, {});
+    }
+  });
+
+  /* Construye TODAS las combinaciones de árbol para (mat, alt) con las elecciones de VFab
+     ya fijadas por el usuario (elecciones), guarda el estado de navegación, y muestra el
+     primer árbol (o el que corresponda si se pide resaltar una etapa específica). */
+  function construirYMostrarArbol(mat, alt, elecciones){
+    var t0 = (typeof performance!=='undefined' && performance.now) ? performance.now() : Date.now();
+    var resultado2 = construirTodosLosArboles(mat, alt, elecciones);
+    arbolesActuales = resultado2.arboles;
+    arbolSeRecorto = resultado2.seRecorto;
+    arbolMaterialBase = mat;
+    arbolAltBase = normAlt(alt);
+    eleccionesVfabUsuario = elecciones;
+
+    // Si se pidió resaltar una combinación Material+Alt específica (saltando desde Listas
+    // de Materiales), se muestra el primer árbol que la contenga; si no, el primero.
+    indiceArbolActual = 0;
+    if(arbolResaltarKey){
+      for(var i=0; i<arbolesActuales.length; i++){
+        if(arbolesActuales[i].some(function(n){ return keyOf(n.material, n.alt) === arbolResaltarKey; })){
+          indiceArbolActual = i;
+          break;
+        }
       }
     }
 
-    var nodos = construirArbol(mat, alt);
     emptyState.style.display = 'none';
     resultado.style.display = 'block';
-    renderArbol(nodos, mat, normAlt(alt));
+    renderArbol(arbolesActuales[indiceArbolActual] || [], mat, normAlt(alt));
 
+    var t1 = (typeof performance!=='undefined' && performance.now) ? performance.now() : Date.now();
+    var nodos = arbolesActuales[indiceArbolActual] || [];
     var totalAdv = nodos.reduce(function(s,n){ return s+n.advertencias.length; }, 0);
-    statusEl.textContent = nodos.length + ' etapa(s) · ' + (totalAdv>0 ? totalAdv+' advertencia(s)' : 'sin advertencias');
-  });
+    var combTxt = arbolesActuales.length > 1 ? (' · ' + arbolesActuales.length + ' combinaciones posibles' + (arbolSeRecorto ? ' (se muestran las primeras '+MAX_ARBOLES_COMBINACIONES+')' : '')) : '';
+    statusEl.textContent = nodos.length + ' etapa(s) · ' + (totalAdv>0 ? totalAdv+' advertencia(s)' : 'sin advertencias') + combTxt + ' · ' + Math.round(t1-t0) + 'ms';
+  }
 
   /* Se refresca automáticamente si el usuario carga/actualiza Listas de Materiales o
      Componentes mientras está en esta pestaña — invalida el caché de productos terminados
@@ -5650,6 +6319,91 @@ function formatFechaHoraCorta(d){
   window.__refreshArbolView = function(){
     __productosTerminadosCache = { rowsRef: null, lista: null };
   };
+
+  /* Punto de entrada usado por el botón "Ver en Árbol del producto" del drawer de Listas
+     de Materiales: recibe un Material+Alt de CUALQUIER etapa, cambia a esta pestaña,
+     encuentra a qué producto(s) terminado(s) llega avanzando desde ahí, construye ese
+     árbol y resalta el nodo de origen. Si hay más de un producto terminado posible
+     (material intermedio compartido por varias listas), se listan todos para elegir. */
+  window.__irAlArbolDelProducto = function(material, alt){
+    if(window.__activateSuiteTab) window.__activateSuiteTab('arbol');
+    // Cierra cualquier panel de filtro (Maestro de Materiales o Listas de Materiales) que
+    // pudiera haber quedado abierto, para que la vista del árbol no aparezca con algo
+    // encima tapándola.
+    document.querySelectorAll('.filter-panel.open').forEach(function(p){ p.classList.remove('open'); });
+    var mat = normMat(material);
+    var altN = normAlt(alt);
+
+    if(!window.BOM_ROWS || window.BOM_ROWS.length===0 || !window.BOM_COMP_ROWS || window.BOM_COMP_ROWS.length===0){
+      alert('Carga Listas de Materiales y Componentes en la pestaña "Listas de Materiales" primero.');
+      return;
+    }
+
+    statusEl.textContent = 'Buscando en qué árbol(es) aparece este material…';
+    emptyState.style.display = 'none';
+    resultado.style.display = 'block';
+    resultado.innerHTML = '<div class="arbol-card" style="text-align:center; color:var(--ink-faint); padding:40px 20px;">Calculando…</div>';
+
+    // Se difiere con un pequeño timeout para que el "Calculando…" llegue a pintarse antes
+    // de la búsqueda hacia adelante (que puede tomar hasta un par de segundos con archivos
+    // grandes), en vez de congelar la UI sin ningún indicio de que está trabajando.
+    setTimeout(function(){
+      var destinos = encontrarProductosTerminados(mat, altN);
+      if(destinos.length === 0){
+        resultado.innerHTML = '<div class="arbol-card">No se encontró ningún producto terminado (Acondicionado) que use el material <strong>'+esc(mat)+'</strong> (alt. '+esc(altN)+') en su cadena — revisa que los archivos de Componentes estén completos y actualizados.</div>';
+        statusEl.textContent = '';
+        return;
+      }
+
+      arbolResaltarKey = keyOf(mat, altN);
+
+      if(destinos.length === 1){
+        materialInput.value = destinos[0].materialFinal;
+        materialSeleccionado = destinos[0].materialFinal;
+        eleccionesVfabUsuario = {};
+        var prod = getProductosTerminados().filter(function(p){ return p.material===destinos[0].materialFinal; })[0];
+        if(prod){ llenarAlternativas(prod.alts); llenarVfabInicial(prod.material, prod.alts); }
+        construirYMostrarArbol(destinos[0].materialFinal, destinos[0].altFinal, {});
+      } else {
+        // Varios productos terminados posibles: se listan todos para que el usuario elija
+        // a cuál ir, en vez de adivinar — cada uno muestra el camino completo hacia allá.
+        renderSelectorDestinos(mat, altN, destinos);
+      }
+    }, 30);
+  };
+
+  /* Lista todos los productos terminados posibles cuando encontrarProductosTerminados
+     devolvió más de uno, cada uno con su camino resumido, para que el usuario elija cuál
+     árbol construir. */
+  function renderSelectorDestinos(mat, altN, destinos){
+    var html = '<div class="arbol-card">'+
+      '<div class="arbol-resumen"><h2>El material '+esc(mat)+' (alt. '+esc(altN)+') aparece en '+destinos.length+' árboles distintos</h2></div>'+
+      '<div style="display:flex; flex-direction:column; gap:8px; max-width:640px; margin:0 auto;">'+
+      destinos.map(function(d, i){
+        var caminoTxt = d.camino.map(function(c){ return c.etapa; }).join(' → ');
+        return '<button type="button" class="arbol-destino-btn" data-idx="'+i+'">'+
+          '<span class="mat-code">'+esc(d.materialFinal)+'</span> <span class="badge badge-neutro">Alt. '+esc(d.altFinal)+'</span>'+
+          '<div style="font-size:11.5px; color:var(--ink-faint); margin-top:3px;">'+esc(caminoTxt)+'</div>'+
+        '</button>';
+      }).join('')+
+      '</div>'+
+    '</div>';
+    resultado.innerHTML = html;
+    statusEl.textContent = destinos.length + ' producto(s) terminado(s) posibles';
+
+    Array.prototype.forEach.call(resultado.querySelectorAll('.arbol-destino-btn'), function(btn){
+      btn.addEventListener('click', function(){
+        var idx = parseInt(btn.getAttribute('data-idx'), 10);
+        var d = destinos[idx];
+        materialInput.value = d.materialFinal;
+        materialSeleccionado = d.materialFinal;
+        eleccionesVfabUsuario = {};
+        var prod = getProductosTerminados().filter(function(p){ return p.material===d.materialFinal; })[0];
+        if(prod){ llenarAlternativas(prod.alts); llenarVfabInicial(prod.material, prod.alts); }
+        construirYMostrarArbol(d.materialFinal, d.altFinal, {});
+      });
+    });
+  }
 
   var arbolHeader = document.getElementById('arbolHeaderTop');
   var arbolToggle = document.getElementById('arbolHeaderToggle');

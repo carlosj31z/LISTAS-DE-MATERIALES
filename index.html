@@ -842,28 +842,51 @@
   .expl-resolver-row select{ flex:1; min-width:220px; padding:7px 10px; border-radius:8px; border:1px solid var(--border); font-family:var(--mono); font-size:12.5px; }
 
   /* Tabla de resultados (paso 3): una fila resumen por producto explotado, expandible
-     para ver el árbol completo sin perder ningún detalle. */
-  .expl-result-table{ width:100%; border-collapse:collapse; font-size:13px; }
+     para ver el árbol completo sin perder ningún detalle. Se envuelve en un contenedor
+     con scroll horizontal propio (igual que la tabla de entrada) para que en pantallas
+     angostas la tabla no desborde el ancho de la página — se desplaza dentro de su propio
+     recuadro en vez de romper el layout general. */
+  .expl-result-table-wrap{ overflow-x:auto; border:1px solid var(--border); border-radius:10px; -webkit-overflow-scrolling:touch; }
+  .expl-result-table{ width:100%; min-width:640px; border-collapse:collapse; font-size:12.5px; table-layout:fixed; }
   .expl-result-table thead th{
-    text-align:left; padding:10px 12px; background:var(--surface-alt); font-family:var(--mono); font-size:11px;
-    text-transform:uppercase; letter-spacing:.04em; color:var(--ink-soft); border-bottom:1px solid var(--border);
+    text-align:left; padding:9px 10px; background:var(--surface-alt); font-family:var(--mono); font-size:10.5px;
+    text-transform:uppercase; letter-spacing:.03em; color:var(--ink-soft); border-bottom:1px solid var(--border); white-space:nowrap;
   }
-  .expl-result-table td{ padding:10px 12px; border-bottom:1px solid var(--border-soft); vertical-align:top; }
+  .expl-result-table td{ padding:9px 10px; border-bottom:1px solid var(--border-soft); vertical-align:top; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .expl-result-table col.col-chev{ width:28px; }
+  .expl-result-table col.col-mat{ width:118px; }
+  .expl-result-table col.col-alt{ width:52px; }
+  .expl-result-table col.col-vfab{ width:80px; }
+  .expl-result-table col.col-alcance{ width:auto; }
+  .expl-result-table col.col-motivo{ width:150px; }
+  .expl-result-table col.col-play{ width:56px; }
   .expl-result-row{ cursor:pointer; transition:background .12s; }
   .expl-result-row:hover{ background:var(--surface-alt); }
   .expl-result-row.expandido{ background:var(--teal-soft); }
   .expl-result-row .chev{ transition:transform .2s var(--ease); display:inline-block; }
   .expl-result-row.expandido .chev{ transform:rotate(90deg); }
   .expl-motivo{
-    display:inline-flex; align-items:center; gap:5px; padding:3px 9px; border-radius:20px; font-size:11.5px; font-weight:600;
+    display:inline-flex; align-items:center; gap:5px; padding:3px 9px; border-radius:20px; font-size:11px; font-weight:600;
+    max-width:100%; overflow:hidden; text-overflow:ellipsis;
   }
   .expl-motivo.ok{ background:var(--teal-soft); color:#0A5352; }
   .expl-motivo.z{ background:var(--brick-soft); color:var(--brick); }
   .expl-motivo.vfab{ background:var(--violet-soft); color:var(--violet); }
   .expl-motivo.inactiva{ background:var(--amber-soft); color:var(--amber); }
   .expl-motivo.incoherencia{ background:#EAE6F5; color:#5B4B8A; }
-  .expl-detalle-row td{ background:var(--surface-alt); padding:0; }
-  .expl-detalle-inner{ padding:16px 20px 20px 44px; }
+  .expl-detalle-row td{ background:var(--surface-alt); padding:0; white-space:normal; }
+  .expl-detalle-inner{ padding:16px 20px 20px 20px; }
+  @media (max-width: 720px){
+    .expl-detalle-inner{ padding:14px 14px 16px; }
+  }
+  .expl-play-btn{
+    width:30px; height:30px; border-radius:50%; border:1px solid var(--teal); background:var(--teal-soft);
+    color:#0A5352; cursor:pointer; display:flex; align-items:center; justify-content:center;
+    transition:background .15s, transform .1s;
+  }
+  .expl-play-btn:hover{ background:var(--teal); color:#fff; }
+  .expl-play-btn:active{ transform:scale(0.92); }
+  .expl-play-btn svg{ width:14px; height:14px; margin-left:1px; }
 </style>
 </head>
 <body>
@@ -6491,6 +6514,28 @@ function formatFechaHoraCorta(d){
     statusEl.textContent = nodos.length + ' etapa(s) · ' + (totalAdv>0 ? totalAdv+' advertencia(s)' : 'sin advertencias') + combTxt + ' · ' + Math.round(t1-t0) + 'ms';
   }
 
+  /* Punto de entrada usado por "Explosión masiva" (botón de abrir árbol en un resultado):
+     cambia a esta pestaña, deja el buscador y los selectores coherentes con el producto
+     que se está mostrando, y construye el árbol fijando EXACTAMENTE la Versión de
+     Fabricación que ya se resolvió allá — para que se vea la misma combinación que generó
+     la fila de la tabla, no otra distinta por casualidad de orden. */
+  function abrirArbolDesdeExplosion(material, alt, vfabIndex){
+    if(window.__activateSuiteTab) window.__activateSuiteTab('arbol');
+    document.querySelectorAll('.filter-panel.open').forEach(function(p){ p.classList.remove('open'); });
+    var mat = normMat(material);
+    var altN = normAlt(alt);
+    var elecciones = {};
+    elecciones[keyOf(mat, altN)] = vfabIndex;
+    eleccionesVfabUsuario = elecciones;
+    arbolResaltarKey = null;
+    seleccionarProducto(mat);
+    // seleccionarProducto ya deja el select de Alternativa/VFab llenado; se fuerza además
+    // el valor concreto que corresponde a esta combinación, por si el material tuviera
+    // varias alternativas y seleccionarProducto hubiera dejado otra por defecto.
+    if(altSelect) altSelect.value = altN;
+    construirYMostrarArbol(mat, altN, elecciones);
+  }
+
   /* Se refresca automáticamente si el usuario carga/actualiza Listas de Materiales o
      Componentes mientras está en esta pestaña — invalida el caché de productos terminados
      (por si hay materiales nuevos que buscar) sin reconstruir un árbol ya mostrado, para
@@ -6506,6 +6551,8 @@ function formatFechaHoraCorta(d){
      pudiera desincronizarse. */
   window.__arbolAPI = {
     construirTodosLosArboles: construirTodosLosArboles,
+    construirYMostrarArbol: construirYMostrarArbol,
+    abrirArbolDesdeExplosion: abrirArbolDesdeExplosion,
     buildBomIndex: buildBomIndex,
     buildVfabIndex: buildVfabIndex,
     buildCompFirstPosIndex: buildCompFirstPosIndex,
@@ -6938,7 +6985,7 @@ function formatFechaHoraCorta(d){
       var arbol = res.arboles[0] || [];
       var motivo = determinarMotivo(arbol);
       resultadosExplosion.push({
-        material: f.material, alt: f.alt, version: f.version, centro: f.centro,
+        material: f.material, alt: f.alt, version: f.version, centro: f.centro, vfabIndex: f.vfabIndex,
         arbol: arbol, motivo: motivo
       });
     });
@@ -6964,21 +7011,26 @@ function formatFechaHoraCorta(d){
     var filasHtml = resultadosExplosion.map(function(r, i){
       var ultimaEtapa = r.arbol.length ? r.arbol[r.arbol.length-1].etapa : '—';
       var totalEtapas = r.arbol.length;
+      var alcanceTxt = totalEtapas + ' etapa(s), hasta ' + a.esc(ultimaEtapa);
       return '<tr class="expl-result-row" data-idx="'+i+'">'+
         '<td><span class="chev">▶</span></td>'+
-        '<td><span class="mat-code" style="font-family:var(--mono); font-weight:700; color:var(--navy-deep);">'+a.esc(r.material)+'</span></td>'+
+        '<td title="'+a.esc(r.material)+'"><span class="mat-code" style="font-family:var(--mono); font-weight:700; color:var(--navy-deep);">'+a.esc(r.material)+'</span></td>'+
         '<td>'+a.esc(r.alt)+'</td>'+
         '<td style="font-family:var(--mono);">'+a.esc(r.version)+'</td>'+
-        '<td>'+totalEtapas+' etapa(s), hasta '+a.esc(ultimaEtapa)+'</td>'+
-        '<td><span class="expl-motivo '+r.motivo.tipo+'">'+MOTIVO_LABELS[r.motivo.tipo]+'</span></td>'+
+        '<td title="'+alcanceTxt+'">'+alcanceTxt+'</td>'+
+        '<td title="'+a.esc(r.motivo.texto)+'"><span class="expl-motivo '+r.motivo.tipo+'">'+MOTIVO_LABELS[r.motivo.tipo]+'</span></td>'+
+        '<td><button type="button" class="expl-play-btn" data-idx="'+i+'" title="Abrir este árbol en la pestaña Árbol del producto">'+
+          '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7Z"/></svg>'+
+        '</button></td>'+
       '</tr>'+
-      '<tr class="expl-detalle-row" id="explDetalle'+i+'" style="display:none;"><td colspan="6"><div class="expl-detalle-inner" id="explDetalleInner'+i+'"></div></td></tr>';
+      '<tr class="expl-detalle-row" id="explDetalle'+i+'" style="display:none;"><td colspan="7"><div class="expl-detalle-inner" id="explDetalleInner'+i+'"></div></td></tr>';
     }).join('');
 
-    resultBody.innerHTML = '<table class="expl-result-table">'+
-      '<thead><tr><th></th><th>Material</th><th>Alt.</th><th>VFab</th><th>Alcance</th><th>Motivo de detención</th></tr></thead>'+
+    resultBody.innerHTML = '<div class="expl-result-table-wrap"><table class="expl-result-table">'+
+      '<colgroup><col class="col-chev"><col class="col-mat"><col class="col-alt"><col class="col-vfab"><col class="col-alcance"><col class="col-motivo"><col class="col-play"></colgroup>'+
+      '<thead><tr><th></th><th>Material</th><th>Alt.</th><th>VFab</th><th>Alcance</th><th>Motivo de detención</th><th>Ver árbol</th></tr></thead>'+
       '<tbody>'+filasHtml+'</tbody>'+
-    '</table>';
+    '</table></div>';
 
     Array.prototype.forEach.call(resultBody.querySelectorAll('.expl-result-row'), function(tr){
       tr.addEventListener('click', function(){
@@ -6992,6 +7044,21 @@ function formatFechaHoraCorta(d){
         }
         detalleRow.style.display = abierto ? 'none' : 'table-row';
         tr.classList.toggle('expandido', !abierto);
+      });
+    });
+
+    // Botón "play": abre el árbol de esa fila directamente en la vista gráfica completa
+    // de "Árbol del producto" (diagrama, selector de combinaciones, componentes
+    // desplegables…), fijando exactamente la misma Versión de Fabricación ya resuelta
+    // aquí — sin volver a preguntar nada, y sin disparar el toggle de expandir de la fila.
+    Array.prototype.forEach.call(resultBody.querySelectorAll('.expl-play-btn'), function(btn){
+      btn.addEventListener('click', function(e){
+        e.stopPropagation();
+        var idx = parseInt(btn.getAttribute('data-idx'), 10);
+        var r = resultadosExplosion[idx];
+        if(a.abrirArbolDesdeExplosion){
+          a.abrirArbolDesdeExplosion(r.material, r.alt, r.vfabIndex);
+        }
       });
     });
   }

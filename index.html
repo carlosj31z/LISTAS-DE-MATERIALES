@@ -5648,7 +5648,7 @@ function formatFechaHoraCorta(d){
      todavía por cuál VFab candidata continuar si hay más de una — eso lo decide quien
      llama, pasando "vfabIndexElegido" (0 = primera, por defecto). Devuelve el nodo más la
      información necesaria para que el llamador siga retrocediendo. */
-  function construirNodoIndividual(matActual, altActual, visitados, vfabIndexElegido){
+  function construirNodoIndividual(matActual, altActual, visitados, vfabIndexElegido, digito1Objetivo){
     var bomIdx = buildBomIndex();
     var compIdx = buildCompFirstPosIndex();
     var vfabIdx = buildVfabIndex();
@@ -5679,12 +5679,35 @@ function formatFechaHoraCorta(d){
     var digito2Real = null;
     var totalVfabCandidatas = vfabReales ? vfabReales.length : 0;
     if(vfabReales && vfabReales.length > 0){
-      var elegido = vfabReales[Math.min(vfabIndexElegido||0, vfabReales.length-1)];
+      var indiceElegido;
+      if(vfabIndexElegido !== null && vfabIndexElegido !== undefined){
+        // Elección FORZADA (el usuario la fijó a mano en el selector de esta etapa, o viene
+        // de "Explosión masiva"/"Ver en Árbol del producto") — se respeta tal cual, sin
+        // aplicar ningún filtro por dígito 1.
+        indiceElegido = Math.min(vfabIndexElegido, vfabReales.length-1);
+      } else if(digito1Objetivo){
+        // SIN elección forzada, pero ya se conoce el dígito 1 de la cadena (confirmado por
+        // el usuario: el dígito 1 identifica la alternativa de Fabricación de toda la
+        // cadena, y debe ser el MISMO en todas las etapas) — se prefiere automáticamente,
+        // entre las VFab reales de esta combinación, la que comparta ese dígito 1. Si
+        // ninguna coincide, se cae al comportamiento anterior (la primera de la lista), y
+        // la incoherencia se sigue detectando y avisando más abajo como ya hacía.
+        var idxCoincide = -1;
+        for(var vi=0; vi<vfabReales.length; vi++){
+          if(String(vfabReales[vi].version||'').charAt(0) === digito1Objetivo){ idxCoincide = vi; break; }
+        }
+        indiceElegido = idxCoincide !== -1 ? idxCoincide : 0;
+      } else {
+        // Primer nodo de la cadena (todavía no hay dígito 1 objetivo): comportamiento de
+        // siempre, la primera VFab real de la lista.
+        indiceElegido = 0;
+      }
+      var elegido = vfabReales[indiceElegido];
       nodo.version = elegido.version;
       nodo.versionEsReal = true;
       nodo.vfabBloqueada = elegido.bloqueada;
       nodo.vfabOpciones = vfabReales; // todas las candidatas, para el selector de UI
-      nodo.vfabIndexElegido = Math.min(vfabIndexElegido||0, vfabReales.length-1);
+      nodo.vfabIndexElegido = indiceElegido;
       if(nodo.vfabBloqueada){
         nodo.advertencias.push('Esta Versión de Fabricación figura BLOQUEADA en el archivo de Versiones de Fabricación cargado.');
       }
@@ -5925,7 +5948,7 @@ function formatFechaHoraCorta(d){
     var seRecorto = false;
     var vfabIdx = buildVfabIndex();
 
-    function explorar(matActual, altActual, visitados, nodosAcumulados){
+    function explorar(matActual, altActual, visitados, nodosAcumulados, digito1Objetivo){
       if(arbolesCompletos.length >= MAX_ARBOLES_COMBINACIONES){ seRecorto = true; return; }
       var key = keyOf(matActual, altActual);
       if(visitados[key]){
@@ -5946,7 +5969,7 @@ function formatFechaHoraCorta(d){
           if(arbolesCompletos.length >= MAX_ARBOLES_COMBINACIONES){ seRecorto = true; break; }
           var eleccionesConEsta = Object.assign({}, eleccionesForzadas);
           eleccionesConEsta[key] = i;
-          explorarConEleccion(matActual, altActual, visitados, nodosAcumulados, eleccionesConEsta);
+          explorarConEleccion(matActual, altActual, visitados, nodosAcumulados, eleccionesConEsta, digito1Objetivo);
         }
         return;
       }
@@ -5954,10 +5977,26 @@ function formatFechaHoraCorta(d){
       var nuevosVisitados = Object.assign({}, visitados);
       nuevosVisitados[key] = true;
 
-      var forzado = eleccionesForzadas.hasOwnProperty(key) ? eleccionesForzadas[key] : 0;
-      var paso = construirNodoIndividual(matActual, altActual, nuevosVisitados, forzado);
+      // "forzado" solo lleva un valor cuando el usuario (o el punto de partida elegido
+      // explícitamente) fijó una VFab concreta para ESTA combinación — en cualquier otro
+      // caso se pasa null, para que construirNodoIndividual decida por sí mismo usando
+      // digito1Objetivo (preferir la VFab coherente con el resto de la cadena) en vez de
+      // forzar siempre la primera de la lista.
+      var forzado = eleccionesForzadas.hasOwnProperty(key) ? eleccionesForzadas[key] : null;
+      var paso = construirNodoIndividual(matActual, altActual, nuevosVisitados, forzado, digito1Objetivo);
       var nodo = paso.nodo;
       var nuevaCadena = nodosAcumulados.concat([nodo]);
+
+      // Una vez construido este nodo, si todavía no había un dígito 1 objetivo para la
+      // cadena (es el primer nodo, o los anteriores no tenían VFab real), se fija ahora a
+      // partir de la VFab real recién obtenida — así todos los nodos SIGUIENTES (más
+      // antiguos, hacia Fabricación) heredan la preferencia por ese mismo dígito 1. Cada
+      // rama de la exploración lleva su propia copia de este valor (parámetro, no
+      // variable compartida), para no mezclar el dígito 1 de una combinación con otra.
+      var digito1ParaSiguientes = digito1Objetivo;
+      if(!digito1ParaSiguientes && nodo.versionEsReal && String(nodo.version||'').length>=1){
+        digito1ParaSiguientes = String(nodo.version).charAt(0);
+      }
 
       if(!paso.infoRetroceso){
         // Fin de esta rama (Fabricación, fin natural, o no se puede seguir).
@@ -5971,22 +6010,52 @@ function formatFechaHoraCorta(d){
         return;
       }
 
-      explorar(resuelto.siguiente.material, resuelto.siguiente.alt, nuevosVisitados, nuevaCadena);
+      explorar(resuelto.siguiente.material, resuelto.siguiente.alt, nuevosVisitados, nuevaCadena, digito1ParaSiguientes);
     }
 
     // Variante de explorar() que respeta un mapa de elecciones ya fijadas para esta rama
     // específica (usado dentro de la ramificación, para no reventar combinatoriamente).
-    function explorarConEleccion(matActual, altActual, visitados, nodosAcumulados, eleccionesRama){
+    function explorarConEleccion(matActual, altActual, visitados, nodosAcumulados, eleccionesRama, digito1Objetivo){
       var eleccionesOriginal = eleccionesForzadas;
       eleccionesForzadas = eleccionesRama;
-      explorar(matActual, altActual, visitados, nodosAcumulados);
+      explorar(matActual, altActual, visitados, nodosAcumulados, digito1Objetivo);
       eleccionesForzadas = eleccionesOriginal;
     }
 
-    explorar(normMat(materialInicial), normAlt(altInicial), {}, []);
+    explorar(normMat(materialInicial), normAlt(altInicial), {}, [], null);
 
-    var arboles = arbolesCompletos.map(function(nodos){ return completarArbol(nodos); });
-    return { arboles: arboles, seRecorto: seRecorto };
+    // Cada árbol recibe sus PROPIAS copias de los nodos antes de completarArbol (que
+    // mutará advertencias, version, componentes de cada uno): cuando la ramificación
+    // ocurre en una etapa intermedia (ej. Envase con varias VFab), los nodos previos a esa
+    // ramificación (ej. Acondicionado) son el MISMO objeto compartido entre ramas — sin
+    // este clonado, una advertencia añadida en un árbol "se filtraba" a los demás árboles
+    // que comparten ese nodo, aunque no les correspondiera.
+    var arboles = arbolesCompletos.map(function(nodos){
+      var copia = nodos.map(function(n){
+        var c = Object.assign({}, n);
+        c.advertencias = n.advertencias.slice();
+        return c;
+      });
+      return completarArbol(copia);
+    });
+
+    // Se reordenan las combinaciones para que la(s) COHERENTE(S) — sin ninguna advertencia
+    // de INCOHERENCIA/INCONSISTENCIA de Versión de Fabricación — aparezcan primero, ya que
+    // esa es la combinación real y correcta según la lógica de versionamiento (mismo
+    // dígito 1 en toda la cadena). Así el usuario ve de entrada la combinación correcta
+    // por defecto, sin tener que navegar manualmente entre "Combinación X de N" para
+    // encontrarla — las demás (con datos incoherentes en SAP) siguen disponibles ahí por
+    // si se necesita revisarlas. Dentro de cada grupo se preserva el orden de generación.
+    function esCombinacionCoherente(nodos){
+      return !nodos.some(function(n){
+        return n.advertencias.some(function(w){ return w.indexOf('INCOHERENCIA')!==-1 || w.indexOf('INCONSISTENCIA')!==-1; });
+      });
+    }
+    var coherentes = arboles.filter(esCombinacionCoherente);
+    var incoherentes = arboles.filter(function(a){ return !esCombinacionCoherente(a); });
+    var arbolesOrdenados = coherentes.concat(incoherentes);
+
+    return { arboles: arbolesOrdenados, seRecorto: seRecorto };
   }
 
   /* Mantiene compatibilidad con el resto del módulo: construye solo el PRIMER árbol

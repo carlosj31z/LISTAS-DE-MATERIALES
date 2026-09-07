@@ -8131,7 +8131,17 @@ function formatFechaHoraCorta(d){
      desbordamiento al final es la red de seguridad: si la combinación elegida no existe
      en el calendario se devuelve null (no hay fecha) en vez de una fecha desplazada que
      falsearía el filtro en silencio. */
-  function celdaAFecha(v){
+  /* fmt indica cómo leer "a/b/aa": 'dmy' (día primero) o 'mdy' (mes primero). Se pasa
+     explícitamente porque el formato es una propiedad de la COLUMNA, no del valor
+     suelto: "3/12/26" es legítimo en ambos y no hay forma de resolverlo mirándolo solo.
+     Cuando no se indica nada se asume 'dmy', la convención local, que es lo correcto
+     para una fecha tecleada por la persona en la pregunta.
+
+     El control de desbordamiento del final es la red de seguridad que faltaba: sin él,
+     leer "7/26/26" como día 7 del mes 26 devolvía febrero de 2028 — una fecha futura
+     que pasaba cualquier comparación de "últimos N días" y falseaba el filtro en
+     silencio. Ahora una combinación que no existe en el calendario devuelve null. */
+  function celdaAFecha(v, fmt){
     if(!v) return null;
     var s = String(v).trim();
     var m = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})/);
@@ -8139,15 +8149,56 @@ function formatFechaHoraCorta(d){
       var a = parseInt(m[1],10), b = parseInt(m[2],10), y = parseInt(m[3],10);
       if(y<100) y += 2000;
       var d, mo;
-      if(a > 12 && b <= 12){ d = a; mo = b; }        // 28/12/2022 -> DD/MM
-      else if(b > 12 && a <= 12){ d = b; mo = a; }   // 7/26/26    -> M/D
-      else { d = a; mo = b; }                        // ambiguo    -> DD/MM
+      if(a > 12 && b <= 12){ d = a; mo = b; }        // decisivo: sólo cabe DD/MM
+      else if(b > 12 && a <= 12){ d = b; mo = a; }   // decisivo: sólo cabe M/D
+      else if(fmt === 'mdy'){ d = b; mo = a; }       // ambiguo: lo resuelve la columna
+      else { d = a; mo = b; }
       var dt = new Date(y, mo-1, d);
       if(isNaN(dt.getTime()) || dt.getMonth() !== mo-1 || dt.getDate() !== d) return null;
       return dt;
     }
     var iso = new Date(s);
     return isNaN(iso.getTime()) ? null : iso;
+  }
+
+  /* Deduce si una columna de fechas viene en D/M o en M/D recorriendo sus valores hasta
+     encontrar uno decisivo (un componente > 12 no puede ser un mes). Hace falta porque
+     las dos vistas usan formatos distintos — el BOM "28/12/2022", el Maestro "7/26/26" —
+     y los valores ambiguos como "3/12/26" sólo se pueden resolver por el conjunto de la
+     columna, nunca fila a fila. */
+  function detectarFormatoFecha(columna){
+    var valores = [];
+    if(vistaActiva()==='mm'){
+      var filas = window.__mmGetFilteredRows ? window.__mmGetFilteredRows() : [];
+      for(var i=0;i<filas.length;i++) valores.push(filas[i][columna]);
+    } else {
+      var cols = columnasDeVistaActual(), idx = cols.indexOf(columna);
+      var arrs = (idx===-1 || !window.__bomGetFilteredRows) ? [] : window.__bomGetFilteredRows();
+      for(var j=0;j<arrs.length;j++) valores.push(arrs[j][idx]);
+    }
+    for(var k=0;k<valores.length;k++){
+      var mm = String(valores[k]||'').trim().match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-]\d{2,4}/);
+      if(!mm) continue;
+      var p = parseInt(mm[1],10), q = parseInt(mm[2],10);
+      if(q > 12 && p <= 12) return 'mdy';
+      if(p > 12 && q <= 12) return 'dmy';
+    }
+    return 'dmy';
+  }
+
+  /* El formato de fecha se resuelve UNA vez por condición, no dentro del predicado: es
+     una propiedad de los datos de la columna, y detectarlo por fila supondría recorrer
+     la tabla entera por cada fila. */
+  function prepararCondiciones(condiciones){
+    return (condiciones||[]).map(function(c){
+      if(!c) return c;
+      var c2 = {};
+      for(var k in c){ if(Object.prototype.hasOwnProperty.call(c,k)) c2[k] = c[k]; }
+      if(c.operador==='ultimos_dias' || c.operador==='antes_de' || c.operador==='despues_de'){
+        c2.__fmtFecha = detectarFormatoFecha(c.columna);
+      }
+      return c2;
+    });
   }
 
   function celdaANumero(v){
@@ -8202,18 +8253,22 @@ function formatFechaHoraCorta(d){
         return n4!==null && v4!==null && n4 <= v4;
       }
       case 'ultimos_dias': {
-        var fecha1 = celdaAFecha(valorCelda);
+        var fecha1 = celdaAFecha(valorCelda, cond.__fmtFecha);
         if(!fecha1) return false;
         var dias = celdaANumero(cond.valor) || 0;
         var limite = new Date(); limite.setHours(0,0,0,0); limite.setDate(limite.getDate()-dias);
-        return fecha1 >= limite;
+        // El tope superior no es cosmético: sin él cualquier fecha futura pasaba el
+        // filtro, así que un dato mal tecleado en SAP (o mal interpretado aquí) se
+        // colaba en TODAS las consultas de "últimos N días".
+        var hoyFin = new Date(); hoyFin.setHours(23,59,59,999);
+        return fecha1 >= limite && fecha1 <= hoyFin;
       }
       case 'antes_de': {
-        var fecha2 = celdaAFecha(valorCelda), ref2 = celdaAFecha(cond.valor);
+        var fecha2 = celdaAFecha(valorCelda, cond.__fmtFecha), ref2 = celdaAFecha(cond.valor);
         return fecha2 && ref2 && fecha2 < ref2;
       }
       case 'despues_de': {
-        var fecha3 = celdaAFecha(valorCelda), ref3 = celdaAFecha(cond.valor);
+        var fecha3 = celdaAFecha(valorCelda, cond.__fmtFecha), ref3 = celdaAFecha(cond.valor);
         return fecha3 && ref3 && fecha3 > ref3;
       }
       default:
@@ -8227,9 +8282,14 @@ function formatFechaHoraCorta(d){
     if(!condiciones || condiciones.length===0){
       window.__iaChatExtraFilter = null;
     } else {
+      // Se limpia el filtro anterior ANTES de preparar las condiciones: detectarFormatoFecha
+      // muestrea las filas actualmente visibles, y si la consulta previa las había reducido
+      // (o dejado en cero) la detección se haría sobre una muestra pobre o vacía.
+      window.__iaChatExtraFilter = null;
+      var preparadas = prepararCondiciones(condiciones);
       window.__iaChatExtraFilter = function(rowObj, vista, rowArr){
-        for(var i=0;i<condiciones.length;i++){
-          if(!evaluarCondicion(condiciones[i], rowObj, rowArr)) return false;
+        for(var i=0;i<preparadas.length;i++){
+          if(!evaluarCondicion(preparadas[i], rowObj, rowArr)) return false;
         }
         return true;
       };
@@ -8241,7 +8301,10 @@ function formatFechaHoraCorta(d){
   /* Cuenta cuántas filas de la vista actual cumplen las condiciones, SIN cambiar el
      filtro visible — usado para "tipo":"pregunta_sobre_resultados" (ej. "¿tiene todas
      actualizadas?"), donde se responde con un conteo en vez de filtrar la tabla. */
-  function contarCoincidencias(condiciones){
+  function contarCoincidencias(condicionesCrudas){
+    // Mismo tratamiento que en activarFiltroIA: sin esto el conteo usaría el formato de
+    // fecha por defecto y no coincidiría con lo que muestra la tabla.
+    var condiciones = prepararCondiciones(condicionesCrudas);
     var filas, columnas;
     if(vistaActiva()==='mm'){
       filas = (window.__mmGetFilteredRows ? window.__mmGetFilteredRows() : []);

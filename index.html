@@ -168,6 +168,13 @@
     border-bottom:1px solid var(--border); padding:14px 32px; box-shadow:var(--shadow-sm);
   }
   .toolbar-row{ display:flex; flex-wrap:wrap; gap:10px; align-items:center; }
+  /* Variante compacta: mismo comportamiento, pero pensada para que TODOS los filtros y el
+     botón de exportar quepan en una sola fila sin envolver — padding, gap y tipografía
+     reducidos en sus botones (ver .filter-btn-compact / .btn-compact ya existente). */
+  .toolbar-row-compact{ gap:6px; flex-wrap:nowrap; overflow-x:auto; padding-bottom:2px; }
+  .toolbar-row-compact .search-box{ flex:0 0 200px; min-width:160px; max-width:200px; }
+  .toolbar-row-compact::-webkit-scrollbar{ height:4px; }
+  .toolbar-row-compact::-webkit-scrollbar-thumb{ background:var(--border); border-radius:4px; }
   .search-box{ position:relative; flex:1 1 280px; min-width:220px; max-width:420px; }
   .search-box input{
     width:100%; padding:9px 12px 9px 34px; border:1px solid var(--border); border-radius:var(--radius);
@@ -176,7 +183,7 @@
   }
   .search-box input:focus{ background:#fff; border-color:var(--teal); outline:none; box-shadow:0 0 0 3px rgba(14,124,123,0.12); }
   .search-box svg{ position:absolute; left:10px; top:50%; transform:translateY(-50%); width:15px; height:15px; color:var(--ink-faint); pointer-events:none; }
-  .toolbar-divider{ width:1px; align-self:stretch; min-height:28px; background:var(--border); margin:0 2px; }
+  .toolbar-divider{ width:1px; align-self:stretch; min-height:28px; background:var(--border); margin:0 2px; flex:none; }
 
   .filter-group{position:relative;}
   .filter-btn{
@@ -184,6 +191,7 @@
     background:var(--surface-alt); border-radius:var(--radius); font-size:13px; color:var(--ink); cursor:pointer;
     white-space:nowrap; transition:border-color .15s var(--ease), background .15s var(--ease), transform .1s var(--ease);
   }
+  .filter-btn-compact{ padding:6px 9px; font-size:11.5px; gap:4px; flex:none; }
   .filter-btn:hover{border-color:var(--ink-faint); transform:translateY(-1px);}
   .filter-btn.active{ border-color:var(--teal); background:var(--teal-soft); color:var(--navy-deep); }
   .filter-btn.active-hv1{ border-color:var(--violet); background:var(--violet-soft); color:var(--violet); font-weight:600; }
@@ -801,6 +809,27 @@
   .arbol-destino-btn:hover{ background:var(--teal-soft); border-color:var(--teal); }
   .arbol-destino-btn .mat-code{ font-family:var(--mono); font-weight:700; color:var(--navy-deep); font-size:13.5px; }
 
+  /* Botón flotante de Auditoría de incoherencias: discreto, esquina inferior izquierda,
+     solo ícono — semitransparente hasta que se pasa el cursor o se enfoca con teclado, para
+     no competir visualmente con la tabla principal. */
+  .audit-fab{
+    position:fixed; left:20px; bottom:20px; width:44px; height:44px; border-radius:50%;
+    border:1px solid var(--border); background:var(--surface); color:var(--brick);
+    display:flex; align-items:center; justify-content:center; cursor:pointer; z-index:60;
+    opacity:0.35; box-shadow:0 2px 10px rgba(0,0,0,0.06);
+    transition:opacity .2s var(--ease), transform .15s var(--ease), box-shadow .2s var(--ease);
+  }
+  .audit-fab:hover, .audit-fab:focus-visible{
+    opacity:1; transform:translateY(-2px); box-shadow:0 6px 18px rgba(0,0,0,0.12);
+  }
+  .audit-fab svg{ width:20px; height:20px; }
+  .audit-fab:disabled{ opacity:0.5; cursor:wait; }
+  @keyframes spin{ from{ transform:rotate(0deg); } to{ transform:rotate(360deg); } }
+  @media (max-width: 720px){
+    .audit-fab{ left:14px; bottom:14px; width:40px; height:40px; }
+    .audit-fab svg{ width:18px; height:18px; }
+  }
+
   /* ================= EXPLOSIÓN MASIVA ================= */
   .expl-card{
     background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-lg);
@@ -1038,7 +1067,7 @@
   </header>
 
   <div class="toolbar">
-    <div class="toolbar-row">
+    <div class="toolbar-row toolbar-row-compact">
       <div class="search-box">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
         <input type="text" id="bomSearchInput" placeholder="Buscar por material, descripción, categoría o usuario…">
@@ -1064,34 +1093,26 @@
 
       <div class="toolbar-divider"></div>
 
-      <button id="bomToggleMM" class="filter-btn" title="Filtrar solo registros que contengan 'MM' en la descripción (Muestras Médicas)">
+      <button id="bomToggleMM" class="filter-btn filter-btn-compact" title="Filtrar solo registros que contengan 'MM' en la descripción (Muestras Médicas)">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true" style="width:14px;height:14px;"><path d="M9 3h6v6l4 8a2 2 0 0 1-2 3H7a2 2 0 0 1-2-3l4-8V3z"/><line x1="9" y1="3" x2="15" y2="3"/><line x1="8" y1="14" x2="16" y2="14"/></svg>
-        MM (Muestras médicas)
+        MM
       </button>
 
-      <button id="bomToggleOmitInactivos" class="filter-btn btn-brick" title="Excluir registros con Estado = Inactivo">Omitir Inactivos</button>
+      <button id="bomToggleOmitInactivos" class="filter-btn filter-btn-compact btn-brick" title="Excluir registros con Estado = Inactivo">Omitir inactivos</button>
 
-      <button id="bomToggleHv1Pendiente" class="filter-btn" title="Mostrar solo listas cuyos componentes aún referencian el código antiguo de un material Hv.1 (pendientes de actualizar)" style="border-color:var(--violet);">Pendientes Hv.1</button>
-      <button id="bomToggleHv1Actualizada" class="filter-btn" title="Mostrar solo listas cuyos componentes ya referencian directamente el material Hv.1 (ya actualizadas)" style="border-color:var(--violet);">Actualizadas Hv.1</button>
+      <button id="bomToggleHv1Pendiente" class="filter-btn filter-btn-compact" title="Mostrar solo listas cuyos componentes aún referencian el código antiguo de un material Hv.1 (pendientes de actualizar)" style="border-color:var(--violet);">Pend. Hv.1</button>
+      <button id="bomToggleHv1Actualizada" class="filter-btn filter-btn-compact" title="Mostrar solo listas cuyos componentes ya referencian directamente el material Hv.1 (ya actualizadas)" style="border-color:var(--violet);">Actual. Hv.1</button>
 
-      <button id="bomToggleConcPendiente" class="filter-btn" title="Mostrar solo listas cuyos componentes referencian el código antiguo de un material nuevo de Envase y Empaque (ZMEE) — pendientes de generar conciliación" style="border-color:var(--orange);">Pendientes conciliación</button>
+      <button id="bomToggleConcPendiente" class="filter-btn filter-btn-compact" title="Mostrar solo listas cuyos componentes referencian el código antiguo de un material nuevo de Envase y Empaque (ZMEE) — pendientes de generar conciliación" style="border-color:var(--orange);">Pend. conciliación</button>
 
-      <button id="bomToggleVfabBloqueada" class="filter-btn" title="Mostrar solo listas que tienen al menos una Versión de Fabricación con Bloqueo de versión de fabricación = 1 (bloqueada)" style="border-color:#963B32;">Con Vfab bloqueada</button>
+      <button id="bomToggleVfabBloqueada" class="filter-btn filter-btn-compact" title="Mostrar solo listas que tienen al menos una Versión de Fabricación con Bloqueo de versión de fabricación = 1 (bloqueada)" style="border-color:#963B32;">VFab bloqueada</button>
 
       <div class="toolbar-divider"></div>
 
-      <button class="btn btn-ghost" id="bomClearFilters">Limpiar filtros</button>
-      <button class="btn btn-primary" id="bomExportAuditoria" title="Excel con 2 hojas: incoherencias de secuencia de posiciones en Listas de Materiales, e incoherencias de Versiones de Fabricación (dígito 1, dígitos 3-4, alternativa esperada)">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 9v4M12 17h.01M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z"/></svg>
-        Auditoría de incoherencias
-      </button>
-      <button class="btn btn-primary" id="bomExportDetallado" title="Excel con una fila por cada componente: estado de la lista, bloqueo Z del material y si el componente es exclusivo del producto">
+      <button class="btn btn-ghost btn-compact" id="bomClearFilters">Limpiar</button>
+      <button class="btn btn-primary btn-compact" id="bomExportDetallado" title="Excel con una fila por cada componente: estado de la lista, bloqueo Z del material y si el componente es exclusivo del producto">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="15" y2="17"/></svg>
-        Exportar detalle de componentes
-      </button>
-      <button class="btn btn-primary" id="bomExportXlsx">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-        Exportar XLSX
+        Exportar detalle
       </button>
     </div>
 
@@ -1138,6 +1159,10 @@
 
     <footer class="page-footer">LISTAS DE MATERIALES — Datos según exportación de SAP</footer>
   </main>
+
+  <button type="button" class="audit-fab" id="bomExportAuditoria" title="Auditoría de incoherencias — Excel con Listas de Materiales y Versiones de Fabricación">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 9v4M12 17h.01M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z"/></svg>
+  </button>
 
 </section>
 
@@ -4712,6 +4737,27 @@ function formatFechaHoraCorta(d){
     var iPos = idxCols['Núm.posición'], iComp = idxCols['Componente'], iDenom = idxCols['Denominación de componente'];
     var iPosAlt = idxCols['Posición alternativa'];
 
+    // Índice Material+Alt+ListaTecnica -> {descripcion, creadoEl, creadoPor}, construido
+    // sobre el BOM principal (ROWS/COLUMNS de esta misma pestaña) para poder anotar cada
+    // hallazgo con contexto legible sin tener que ir a buscarlo a mano en otra hoja.
+    var idxBom = {};
+    COLUMNS.forEach(function(c,i){ idxBom[c]=i; });
+    var bMat = idxBom['Material'], bAlt = idxBom['Lista mat.alternat.'], bListaTec = idxBom['Lista de materiales'];
+    var bDesc = idxBom['Descripción de LMat'], bCreadoEl = idxBom['Creado el'], bCreadoPor = idxBom['Creado por'];
+    var contextoPorLista = {};
+    ROWS.forEach(function(row){
+      var mat = String((bMat!==undefined ? row[bMat] : '')||'').trim();
+      if(!mat) return;
+      var alt = String((bAlt!==undefined ? row[bAlt] : '')||'').trim() || '1';
+      var listaTec = bListaTec!==undefined ? String(row[bListaTec]||'').trim() : '';
+      var key = mat + '||' + alt + '||' + listaTec;
+      contextoPorLista[key] = {
+        descripcion: bDesc!==undefined ? row[bDesc] : '',
+        creadoEl: bCreadoEl!==undefined ? row[bCreadoEl] : '',
+        creadoPor: bCreadoPor!==undefined ? row[bCreadoPor] : ''
+      };
+    });
+
     // Agrupar cada fila por su lista técnica exacta (Material+Alt+ListaTecnica) — la misma
     // clave completa ya usada en el resto de la app para no mezclar dos listas técnicas
     // distintas que compartan Material+Alt (ej. Acondicionado vs Fórmula cuali-cuantitativa
@@ -4793,6 +4839,18 @@ function formatFechaHoraCorta(d){
           });
         }
       }
+    });
+
+    // Se enriquece cada hallazgo con el contexto del Material (descripción, fecha y
+    // usuario de creación de la lista), tomado del BOM principal — se hace en una pasada
+    // final para no repetir la búsqueda del contexto en cada uno de los distintos tipos de
+    // hallazgo generados arriba.
+    hallazgos.forEach(function(h){
+      var key = h.material + '||' + h.alt + '||' + h.listaTecnica;
+      var ctx = contextoPorLista[key] || {};
+      h.descripcion = ctx.descripcion || '';
+      h.creadoEl = ctx.creadoEl || '';
+      h.creadoPor = ctx.creadoPor || '';
     });
 
     return hallazgos;
@@ -5259,9 +5317,9 @@ function formatFechaHoraCorta(d){
     var btn = document.getElementById('bomExportAuditoria');
     var textoOriginal = btn.innerHTML;
     btn.disabled = true;
-    btn.innerHTML = 'Analizando…';
+    btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="animation:spin .8s linear infinite;"><path d="M21 12a9 9 0 1 1-9-9"/></svg>';
 
-    // Se difiere con un pequeño timeout para que el botón alcance a mostrar "Analizando…"
+    // Se difiere con un pequeño timeout para que el botón alcance a mostrar el spinner
     // antes de bloquear el hilo con el barrido de todos los árboles, que puede tomar unos
     // segundos con miles de productos terminados.
     await new Promise(function(resolve){ setTimeout(resolve, 30); });
@@ -5311,12 +5369,12 @@ function formatFechaHoraCorta(d){
       var wb = XLSX.utils.book_new();
 
       // Hoja 1 — Listas de Materiales
-      var headers1 = ['Material','Alt.','Lista técnica','Tipo de incoherencia','Posición','Componente','Detalle'];
+      var headers1 = ['Material','Descripción','Alt.','Lista técnica','Tipo de incoherencia','Posición','Componente','Creado el','Creado por','Detalle'];
       var aoa1 = [headers1].concat(hallazgosListas.map(function(h){
-        return [h.material, h.alt, h.listaTecnica, h.tipo, h.posicion, h.componente||'', h.detalle];
+        return [h.material, h.descripcion||'', h.alt, h.listaTecnica, h.tipo, h.posicion, h.componente||'', h.creadoEl||'', h.creadoPor||'', h.detalle];
       }));
       var ws1 = XLSX.utils.aoa_to_sheet(aoa1);
-      ws1['!cols'] = [{wch:14},{wch:7},{wch:14},{wch:22},{wch:16},{wch:13},{wch:80}];
+      ws1['!cols'] = [{wch:14},{wch:34},{wch:7},{wch:14},{wch:22},{wch:16},{wch:13},{wch:13},{wch:13},{wch:70}];
       aplicarEstiloHoja(ws1, headers1, hallazgosListas, function(i){ return hallazgosListas[i].tipo; });
       XLSX.utils.book_append_sheet(wb, ws1, 'Listas de Materiales');
 
@@ -5360,27 +5418,6 @@ function formatFechaHoraCorta(d){
       btn.disabled = false;
       btn.innerHTML = textoOriginal;
     }
-  });
-
-  document.getElementById('bomExportXlsx').addEventListener('click', ()=>{
-    if(ROWS.length === 0) {
-      alert('No hay datos para exportar. Carga un archivo Excel primero.');
-      return;
-    }
-    const filtered = window.__bomLastFiltered || getFiltered();
-    const headers = TABLE_COLS.map(c=>c.label);
-    const aoa = [headers];
-    filtered.forEach(row=>{
-      aoa.push(TABLE_COLS.map(c=>{
-        let v = row[c.i];
-        if(v===null||v===undefined) v='';
-        return v;
-      }));
-    });
-    const ws = XLSX.utils.aoa_to_sheet(aoa);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Listas de Materiales');
-    XLSX.writeFile(wb, `bom_export_filtrado_${new Date().toISOString().slice(0,10)}.xlsx`);
   });
 
   headerRow.addEventListener('click', (e)=>{

@@ -177,7 +177,7 @@ module.exports = async (req, res) => {
 
 function construirPrompt({ pregunta, vista, columnas, filtrosExistentes }) {
   const listaColumnas = columnas.map((c) => `- "${c}"`).join('\n');
-  const listaFiltros = (filtrosExistentes || [])
+  const listaFiltros = (Array.isArray(filtrosExistentes) ? filtrosExistentes : [])
     .map((f) => `- "${f.nombre}": ${f.descripcion}`)
     .join('\n') || '(ninguno para esta vista)';
 

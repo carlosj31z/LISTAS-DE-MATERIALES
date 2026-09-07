@@ -2857,6 +2857,97 @@ function formatFechaHoraCorta(d){
   let vMaterial, vCentro, vVersion, vValidezA, vValidoDe, vAlt, vUtil, vTextoVersion, vBloqueo;
   let VFAB_MAP = new Map(); // Material||Alt -> array de filas de VFAB_ROWS (solo Utilización LMat = 1)
 
+  /* Extrae el código entre paréntesis al final de un texto tipo "PLANTA ATE (1020)" o
+     "MIRIAM ELIZABETH FERREYRA (MFERREYRAM)" -> "1020" / "MFERREYRAM". Si no hay
+     paréntesis, devuelve el texto tal cual (recortado). */
+  function extraerCodigoEntreParentesis(texto){
+    var s = String(texto==null?'':texto).trim();
+    var m = s.match(/\(([^()]*)\)\s*$/);
+    return m ? m[1].trim() : s;
+  }
+
+  /* Detecta y transforma el formato "SAPUI5" de exportación de Versiones de Fabricación
+     (columnas con texto descriptivo + código entre paréntesis, ej. "PLANTA ATE (1020)",
+     "No bloqueado ()", "Bloqueado para cada utilización (1)") a la estructura interna que
+     el resto de la app ya espera desde el formato clásico de export de SAP: columnas
+     "Material", "Centro", "Versión fabricación", "Lista mat.alternat.", "Utilización
+     LMat", "Bloqueo de versión de fabricación", "Válido de", "Validez a", "Creado el",
+     "Creado por", "Modificado el", "Modificado por", más los campos adicionales pedidos
+     (tamaño de lote, hoja de ruta, línea de fabricación).
+
+     Se trabaja por POSICIÓN DE COLUMNA (A, B, C…), no por nombre de encabezado: el export
+     de SAPUI5 repite el nombre "Fecha fin validez" en dos columnas distintas (J y T, con
+     significados distintos según el propio pedido — J es la fecha de fin de vigencia real
+     y T se usa como fecha de inicio de vigencia), así que leer por nombre con
+     sheet_to_json normal perdería una de las dos por colisión de claves.
+
+     El Centro se limita a Planta Ate (1020) y Planta Lima (1021): cualquier otro (ej. "CD
+     EXTERNO (1030)") se descarta, tal como se indicó explícitamente. */
+  var COL_VFAB_SAPUI5 = {
+    material: 0, centro: 1, version: 2, statusBloqueo: 3,
+    contGrupoHRuta: 6, creadoEl: 8, fechaFinValidez: 9, creadoPor: 14,
+    fechaInicioVigencia: 19, grupoHojasRuta: 22, lineaFabricacion: 23, listaAlt: 24,
+    modificadoEl: 27, modificadoPor: 28, tamanoLoteMax: 35, tamanoLoteMin: 36,
+    txtVersionFabric: 41, utilizacionLMat: 44
+  };
+
+  function esFormatoVfabSapui5(headerRow){
+    var h = (headerRow||[]).map(function(v){ return String(v||'').trim(); });
+    return h[COL_VFAB_SAPUI5.centro] === 'Centro'
+      && h[COL_VFAB_SAPUI5.statusBloqueo] === 'Status de bloqueo'
+      && h[COL_VFAB_SAPUI5.version] === 'Versión fabricación';
+  }
+
+  var CENTROS_VFAB_VALIDOS = { '1020': true, '1021': true };
+
+  function transformarVfabSapui5(dataRows){
+    var STATUS_A_CODIGO = {
+      'no bloqueado': '0',
+      'bloqueado para cada utilización': '1',
+      'bloqueado para aprovisiomiento automático': '2',
+      'bloqueado para aprovisionamiento automático': '2' // por si el export corrige la errata ortográfica de SAP en algún momento
+    };
+    var C = COL_VFAB_SAPUI5;
+
+    var filasTransformadas = [];
+    var omitidasPorCentro = 0;
+    dataRows.forEach(function(row){
+      var material = row[C.material];
+      if(!material) return; // fila vacía de cola
+      var centroCod = extraerCodigoEntreParentesis(row[C.centro]);
+      if(!CENTROS_VFAB_VALIDOS[centroCod]){
+        omitidasPorCentro++;
+        return;
+      }
+      var statusTexto = String(row[C.statusBloqueo]||'').trim();
+      var statusBase = statusTexto.replace(/\s*\([^()]*\)\s*$/, '').trim().toLowerCase();
+      var statusCodigo = STATUS_A_CODIGO.hasOwnProperty(statusBase) ? STATUS_A_CODIGO[statusBase] : extraerCodigoEntreParentesis(statusTexto);
+
+      filasTransformadas.push({
+        'Material': material,
+        'Centro': centroCod,
+        'Versión fabricación': extraerCodigoEntreParentesis(row[C.version]),
+        'Lista mat.alternat.': String(row[C.listaAlt]!=null ? row[C.listaAlt] : '').trim(),
+        'Utilización LMat': extraerCodigoEntreParentesis(row[C.utilizacionLMat]) || '1',
+        'Bloqueo de versión de fabricación': statusCodigo,
+        'Válido de': row[C.fechaInicioVigencia],
+        'Validez a': row[C.fechaFinValidez],
+        'Creado el': row[C.creadoEl],
+        'Creado por': extraerCodigoEntreParentesis(row[C.creadoPor]),
+        'Modificado el': row[C.modificadoEl],
+        'Modificado por': extraerCodigoEntreParentesis(row[C.modificadoPor]),
+        'Texto de versión de producción': row[C.txtVersionFabric],
+        'Tamaño lote máx.': row[C.tamanoLoteMax],
+        'Tamaño lote mín.': row[C.tamanoLoteMin],
+        'Grupo hojas ruta': row[C.grupoHojasRuta],
+        'Cont.grupo HRuta': row[C.contGrupoHRuta],
+        'Línea de fabricación': row[C.lineaFabricacion]
+      });
+    });
+
+    return { filas: filasTransformadas, omitidasPorCentro: omitidasPorCentro };
+  }
+
   function normKey(material, alt){
     const a = (alt===''||alt===null||alt===undefined) ? '1' : String(alt).trim();
     return String(material).trim() + '||' + a;
@@ -3258,7 +3349,30 @@ function formatFechaHoraCorta(d){
       const workbook = XLSX.read(data, { type: 'array' });
       const firstSheet = workbook.SheetNames[0];
       const worksheet = workbook.Sheets[firstSheet];
-      const jsonData = XLSX.utils.sheet_to_json(worksheet, { defval: '' });
+
+      // Se detecta el formato "SAPUI5" (columnas con texto + código entre paréntesis, y
+      // "Fecha fin validez" repetida dos veces con significados distintos) leyendo primero
+      // por POSICIÓN de columna, ya que sheet_to_json por nombre pierde una de las dos
+      // columnas duplicadas. Si no calza ese formato, se seguirá con el flujo clásico de
+      // siempre (sheet_to_json por nombre de columna).
+      const rawRows = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: '', raw: false });
+      const headerRow = rawRows[0] || [];
+      let jsonData;
+
+      if(esFormatoVfabSapui5(headerRow)){
+        const dataRows = rawRows.slice(1);
+        const transformado = transformarVfabSapui5(dataRows);
+        jsonData = transformado.filas;
+        if(jsonData.length === 0){
+          alert('No se encontró ninguna fila con Centro 1020 o 1021 en este archivo.');
+          return;
+        }
+        if(transformado.omitidasPorCentro > 0){
+          console.info(`Auditoría VFab: se omitieron ${transformado.omitidasPorCentro} fila(s) con Centro distinto de 1020/1021.`);
+        }
+      } else {
+        jsonData = XLSX.utils.sheet_to_json(worksheet, { defval: '' });
+      }
 
       if(jsonData.length === 0) {
         alert('El archivo de Versiones de Fabricación está vacío o no tiene datos.');

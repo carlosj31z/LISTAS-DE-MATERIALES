@@ -830,6 +830,106 @@
     .audit-fab svg{ width:18px; height:18px; }
   }
 
+  /* ================= CHAT CON IA ================= */
+  .ia-chat-fab{
+    position:fixed; right:20px; bottom:20px; width:52px; height:52px; border-radius:50%;
+    border:none; background:var(--teal); color:#fff; display:flex; align-items:center; justify-content:center;
+    cursor:pointer; z-index:70; box-shadow:0 4px 16px rgba(14,124,123,0.35);
+    transition:transform .15s var(--ease), box-shadow .2s var(--ease);
+  }
+  .ia-chat-fab:hover{ transform:translateY(-2px) scale(1.04); box-shadow:0 8px 22px rgba(14,124,123,0.42); }
+  .ia-chat-fab svg{ width:22px; height:22px; }
+  @media (max-width: 720px){ .ia-chat-fab{ right:14px; bottom:14px; width:46px; height:46px; } .ia-chat-fab svg{ width:19px; height:19px; } }
+
+  .ia-chat-overlay{
+    position:fixed; inset:0; background:rgba(18,33,50,0.35); backdrop-filter:blur(1px);
+    opacity:0; pointer-events:none; transition:opacity .2s var(--ease); z-index:79;
+  }
+  .ia-chat-overlay.open{ opacity:1; pointer-events:auto; }
+
+  .ia-chat-panel{
+    position:fixed; top:0; right:0; height:100%; width:420px; max-width:94vw; background:#fff;
+    box-shadow:var(--shadow-lg); transform:translateX(100%); transition:transform .24s var(--ease);
+    z-index:80; display:flex; flex-direction:column;
+  }
+  .ia-chat-panel.open{ transform:translateX(0); }
+
+  .ia-chat-header{
+    display:flex; align-items:flex-start; justify-content:space-between; gap:10px;
+    padding:18px 18px 14px; border-bottom:1px solid var(--border-soft);
+  }
+  .ia-chat-eyebrow{ font-family:var(--mono); font-size:10.5px; letter-spacing:.05em; color:var(--teal); font-weight:700; margin-bottom:3px; }
+  .ia-chat-header h3{ font-family:var(--display); font-size:17px; margin:0; color:var(--ink); }
+  .ia-chat-header-actions{ display:flex; gap:4px; flex:none; }
+  .ia-chat-icon-btn{
+    width:30px; height:30px; border-radius:8px; border:none; background:transparent; color:var(--ink-soft);
+    cursor:pointer; display:flex; align-items:center; justify-content:center; transition:background .15s;
+  }
+  .ia-chat-icon-btn:hover{ background:var(--surface-alt); color:var(--ink); }
+  .ia-chat-icon-btn svg{ width:17px; height:17px; }
+
+  .ia-chat-config{ padding:14px 18px; border-bottom:1px solid var(--border-soft); background:var(--surface-alt); }
+  .ia-chat-config label{ font-size:12px; font-weight:600; color:var(--ink-soft); display:block; margin-bottom:6px; }
+  .ia-chat-config-row{ display:flex; gap:8px; }
+  .ia-chat-config-row input{
+    flex:1; padding:8px 10px; border:1px solid var(--border); border-radius:8px; font-size:12.5px; font-family:var(--mono);
+  }
+  .ia-chat-hint{ font-size:11px; color:var(--ink-faint); margin:8px 0 0; line-height:1.4; }
+
+  .ia-chat-messages{ flex:1; overflow-y:auto; padding:16px 18px; display:flex; flex-direction:column; gap:12px; }
+  .ia-chat-msg{ max-width:100%; }
+  .ia-chat-msg p{ margin:0; font-size:13.5px; line-height:1.5; }
+  .ia-chat-msg-user{
+    align-self:flex-end; background:var(--navy); color:#fff; padding:9px 13px; border-radius:14px 14px 3px 14px;
+    max-width:85%;
+  }
+  .ia-chat-msg-ia{
+    background:var(--surface-alt); border:1px solid var(--border-soft); padding:11px 14px; border-radius:3px 14px 14px 14px;
+    color:var(--ink);
+  }
+  .ia-chat-msg-ia em{ color:var(--teal); font-style:normal; font-weight:600; }
+  .ia-chat-msg-error{
+    background:var(--brick-soft); border:1px solid var(--brick); color:var(--brick); padding:11px 14px; border-radius:10px; font-size:13px;
+  }
+  .ia-chat-razonamiento{
+    display:flex; gap:7px; align-items:flex-start; margin-top:8px; padding-top:8px; border-top:1px dashed var(--border);
+    font-size:12px; color:var(--ink-faint); font-style:italic;
+  }
+  .ia-chat-razonamiento svg{ width:13px; height:13px; flex:none; margin-top:2px; color:var(--teal); }
+  .ia-chat-resultado-badge{
+    display:inline-flex; align-items:center; gap:5px; margin-top:9px; padding:4px 10px; border-radius:20px;
+    background:var(--teal-soft); color:#0A5352; font-size:12px; font-weight:600;
+  }
+  .ia-chat-sugerencias{ display:flex; flex-direction:column; gap:6px; margin-top:10px; }
+  .ia-chat-sugerencia-btn{
+    text-align:left; padding:8px 11px; border-radius:9px; border:1px solid var(--border); background:#fff;
+    font-size:12.5px; color:var(--navy-deep); cursor:pointer; transition:border-color .15s, background .15s;
+  }
+  .ia-chat-sugerencia-btn:hover{ border-color:var(--teal); background:var(--teal-soft); }
+  .ia-chat-loading{ display:flex; gap:4px; padding:4px 0; }
+  .ia-chat-loading span{
+    width:6px; height:6px; border-radius:50%; background:var(--ink-faint);
+    animation:iaChatBounce 1s infinite ease-in-out;
+  }
+  .ia-chat-loading span:nth-child(2){ animation-delay:.15s; }
+  .ia-chat-loading span:nth-child(3){ animation-delay:.3s; }
+  @keyframes iaChatBounce{ 0%,80%,100%{ transform:scale(0.6); opacity:.5; } 40%{ transform:scale(1); opacity:1; } }
+
+  .ia-chat-input-row{ display:flex; gap:8px; padding:14px 18px; border-top:1px solid var(--border-soft); }
+  .ia-chat-input-row input{
+    flex:1; padding:10px 13px; border:1px solid var(--border); border-radius:20px; font-size:13.5px;
+    background:var(--surface-alt); transition:border-color .15s, background .15s;
+  }
+  .ia-chat-input-row input:focus{ outline:none; border-color:var(--teal); background:#fff; }
+  .ia-chat-send-btn{
+    width:38px; height:38px; border-radius:50%; border:none; background:var(--teal); color:#fff;
+    display:flex; align-items:center; justify-content:center; cursor:pointer; flex:none; transition:background .15s, transform .1s;
+  }
+  .ia-chat-send-btn:hover{ background:var(--navy-deep); }
+  .ia-chat-send-btn:active{ transform:scale(0.93); }
+  .ia-chat-send-btn:disabled{ opacity:0.5; cursor:default; }
+  .ia-chat-send-btn svg{ width:16px; height:16px; }
+
   /* ================= EXPLOSIÓN MASIVA ================= */
   .expl-card{
     background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-lg);
@@ -2360,6 +2460,10 @@ function formatFechaHoraCorta(d){
         }
         if(hay.indexOf(q) === -1) return false;
       }
+      // Filtro adicional aplicado por el Chat con IA (ver módulo "ia-chat" al final del
+      // archivo) — recibe la fila como objeto {columna: valor}, igual que ya la maneja
+      // esta vista, y se ignora silenciosamente si no hay ningún filtro de IA activo.
+      if(window.__iaChatExtraFilter && !window.__iaChatExtraFilter(r, 'mm')) return false;
       return true;
     });
   }
@@ -2414,6 +2518,12 @@ function formatFechaHoraCorta(d){
       if(c.filterable && c.filterable !== 'fecha') renderMmFilterPanel(c);
     });
   }
+
+  /* Expuesto para el módulo "ia-chat": permite reaplicar el filtrado tras activar/limpiar
+     el predicado de IA, y consultar qué columnas existen en esta vista. */
+  window.__mmApplyFilters = function(){ applyFilters(false); };
+  window.__mmGetColumns = function(){ return SUMMARY_COLS.map(function(c){ return c.key; }); };
+  window.__mmGetFilteredRows = function(){ return state.filtered || []; };
 
   function updateSortArrows(){
     Array.prototype.forEach.call(theadRow.querySelectorAll('[data-arrow]'), function(el){
@@ -4163,6 +4273,15 @@ function formatFechaHoraCorta(d){
       const hay = COLUMNS.map((_, i) => String(row[i] || '')).join(' ').toLowerCase();
       if(!hay.includes(searchTerm)) return false;
     }
+    // Filtro adicional aplicado por el Chat con IA (ver módulo "ia-chat" al final del
+    // archivo) — esta vista guarda las filas como arrays por posición, así que se arma un
+    // objeto {columna: valor} bajo demanda antes de pasarlo al predicado, para que la
+    // misma función de traducción de condiciones sirva igual en MM y en BOM.
+    if(window.__iaChatExtraFilter){
+      const rowObj = {};
+      for(let i=0;i<COLUMNS.length;i++) rowObj[COLUMNS[i]] = row[i];
+      if(!window.__iaChatExtraFilter(rowObj, 'bom', row)) return false;
+    }
     return true;
   }
 
@@ -4807,6 +4926,19 @@ function formatFechaHoraCorta(d){
   // Expuesta globalmente para que otras vistas (el propio botón "Ver en Árbol del
   // producto" dentro de este mismo drawer) puedan cerrarlo antes de cambiar de pestaña.
   window.__closeBomDrawer = closeDrawer;
+
+  /* Expuesto para el módulo "ia-chat": permite aplicar el operador "filtro_existente"
+     (Pend. Hv.1 / Actual. Hv.1 / Pend. conciliación / VFab bloqueada) sobre la fila cruda
+     (array por posición, tal como ya la maneja este módulo) sin duplicar esa lógica. */
+  window.__bomFiltrosExistentes = {
+    'Pend. Hv.1': function(rowArr){ return hasHv1Pending(rowArr); },
+    'Actual. Hv.1': function(rowArr){ return hasHv1Updated(rowArr); },
+    'Pend. conciliación': function(rowArr){ return hasConciliacionPending(rowArr); },
+    'VFab bloqueada': function(rowArr){ return hasVfabBloqueada(rowArr); }
+  };
+  window.__bomApplyFilters = function(){ updateAll(); };
+  window.__bomGetColumns = function(){ return COLUMNS.slice(); };
+  window.__bomGetFilteredRows = function(){ return getFiltered(); };
 
   document.getElementById('bomDrawerClose').addEventListener('click', closeDrawer);
   const bomComponentsDrawerClose = document.getElementById('bomComponentsDrawerClose');
@@ -7769,6 +7901,412 @@ function formatFechaHoraCorta(d){
   var explToggle = document.getElementById('explosionHeaderToggle');
   if(explHeader && explToggle){
     explToggle.addEventListener('click', function(){ explHeader.classList.toggle('top-collapsed'); });
+  }
+
+})();
+</script>
+
+<!-- ========================= CHAT CON IA (Gemini vía endpoint propio) ========================= -->
+<button type="button" class="ia-chat-fab" id="iaChatFab" title="Chat con IA — filtra con preguntas en lenguaje natural">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+</button>
+
+<div class="ia-chat-overlay" id="iaChatOverlay"></div>
+<div class="ia-chat-panel" id="iaChatPanel">
+  <div class="ia-chat-header">
+    <div>
+      <div class="ia-chat-eyebrow">CHAT CON IA · <span id="iaChatVistaLabel">—</span></div>
+      <h3>Filtra con lenguaje natural</h3>
+    </div>
+    <div class="ia-chat-header-actions">
+      <button type="button" class="ia-chat-icon-btn" id="iaChatConfigBtn" title="Configurar la URL del endpoint (Vercel)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      </button>
+      <button type="button" class="ia-chat-icon-btn" id="iaChatCloseBtn" title="Cerrar">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <div class="ia-chat-config" id="iaChatConfigBox" style="display:none;">
+    <label for="iaChatEndpointInput">URL del endpoint (tu despliegue de Vercel)</label>
+    <div class="ia-chat-config-row">
+      <input type="text" id="iaChatEndpointInput" placeholder="https://tu-proyecto.vercel.app/api/chat-ia">
+      <button type="button" class="btn btn-primary btn-compact" id="iaChatEndpointSave">Guardar</button>
+    </div>
+    <p class="ia-chat-hint">Se guarda solo en este navegador. La API key de Gemini nunca pasa por aquí — vive en la variable de entorno del servidor.</p>
+  </div>
+
+  <div class="ia-chat-messages" id="iaChatMessages">
+    <div class="ia-chat-msg ia-chat-msg-ia">
+      <p>Pregúntame en lenguaje natural sobre lo que ves en esta tabla — por ejemplo: <em>"qué listas se crearon en las últimas 2 semanas"</em> o <em>"cuáles tienen alternativa de conciliación 66"</em>. Voy a filtrar la tabla directamente.</p>
+    </div>
+  </div>
+
+  <div class="ia-chat-input-row">
+    <input type="text" id="iaChatInput" placeholder="Escribe tu pregunta…" autocomplete="off">
+    <button type="button" class="ia-chat-send-btn" id="iaChatSendBtn" title="Enviar">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 2 11 13"/><path d="M22 2 15 22l-4-9-9-4Z"/></svg>
+    </button>
+  </div>
+</div>
+
+<script>
+/* ============================================================
+   CHAT CON IA (Gemini vía endpoint propio en Vercel)
+
+   Este módulo NUNCA conoce ninguna API key — solo le habla a un endpoint
+   propio (configurado por el usuario, guardado en localStorage) que es quien
+   de verdad llama a Gemini desde el servidor. Aquí solo se arma la solicitud
+   (pregunta + nombres de columnas + filtros disponibles de la vista activa —
+   nunca los datos de SAP en sí) y se traduce la respuesta a un filtro real
+   sobre las tablas ya existentes, reutilizando los hooks
+   window.__iaChatExtraFilter / __mmApplyFilters / __bomApplyFilters /
+   __bomFiltrosExistentes ya preparados en los módulos de MM y BOM.
+   ============================================================ */
+(function(){
+
+  var LS_KEY_ENDPOINT = 'iaChatEndpointUrl';
+
+  var fab = document.getElementById('iaChatFab');
+  var overlay = document.getElementById('iaChatOverlay');
+  var panel = document.getElementById('iaChatPanel');
+  var closeBtn = document.getElementById('iaChatCloseBtn');
+  var configBtn = document.getElementById('iaChatConfigBtn');
+  var configBox = document.getElementById('iaChatConfigBox');
+  var endpointInput = document.getElementById('iaChatEndpointInput');
+  var endpointSaveBtn = document.getElementById('iaChatEndpointSave');
+  var messagesBox = document.getElementById('iaChatMessages');
+  var input = document.getElementById('iaChatInput');
+  var sendBtn = document.getElementById('iaChatSendBtn');
+  var vistaLabel = document.getElementById('iaChatVistaLabel');
+
+  function esc(v){
+    if(v===null||v===undefined) return '';
+    return String(v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  /* ---------- Vista activa: MM o BOM ---------- */
+  function vistaActiva(){
+    var mmActiva = document.getElementById('view-mm') && document.getElementById('view-mm').classList.contains('active');
+    return mmActiva ? 'mm' : 'bom';
+  }
+
+  var LABELS_VISTA = { mm: 'Maestro de Materiales', bom: 'Listas de Materiales' };
+
+  var FILTROS_EXISTENTES_BOM = [
+    { nombre: 'Pend. Hv.1', descripcion: 'Listas cuyos componentes aún referencian el código antiguo de un material renombrado a Hv.1 (pendientes de actualizar)' },
+    { nombre: 'Actual. Hv.1', descripcion: 'Listas cuyos componentes ya referencian directamente el material Hv.1 (ya actualizadas)' },
+    { nombre: 'Pend. conciliación', descripcion: 'Listas cuyos componentes referencian el código antiguo de un material nuevo de Envase y Empaque (ZMEE), pendientes de generar conciliación' },
+    { nombre: 'VFab bloqueada', descripcion: 'Listas con al menos una Versión de Fabricación con Bloqueo de versión de fabricación = 1' }
+  ];
+
+  function columnasDeVistaActual(){
+    if(vistaActiva()==='mm'){
+      return window.__mmGetColumns ? window.__mmGetColumns() : [];
+    }
+    return window.__bomGetColumns ? window.__bomGetColumns() : [];
+  }
+
+  function filtrosDeVistaActual(){
+    return vistaActiva()==='mm' ? [] : FILTROS_EXISTENTES_BOM;
+  }
+
+  /* ---------- Apertura / cierre del panel ---------- */
+  function abrirPanel(){
+    vistaLabel.textContent = LABELS_VISTA[vistaActiva()];
+    panel.classList.add('open');
+    overlay.classList.add('open');
+    setTimeout(function(){ input.focus(); }, 200);
+  }
+  function cerrarPanel(){
+    panel.classList.remove('open');
+    overlay.classList.remove('open');
+  }
+  fab.addEventListener('click', abrirPanel);
+  closeBtn.addEventListener('click', cerrarPanel);
+  overlay.addEventListener('click', cerrarPanel);
+  document.addEventListener('keydown', function(e){ if(e.key==='Escape' && panel.classList.contains('open')) cerrarPanel(); });
+
+  /* ---------- Configuración del endpoint (guardada solo en este navegador) ---------- */
+  function getEndpointUrl(){
+    return (localStorage.getItem(LS_KEY_ENDPOINT) || '').trim();
+  }
+  configBtn.addEventListener('click', function(){
+    var abierta = configBox.style.display !== 'none';
+    if(!abierta) endpointInput.value = getEndpointUrl();
+    configBox.style.display = abierta ? 'none' : 'block';
+  });
+  endpointSaveBtn.addEventListener('click', function(){
+    var url = endpointInput.value.trim();
+    if(!url){ alert('Ingresa la URL de tu endpoint (ej. https://tu-proyecto.vercel.app/api/chat-ia).'); return; }
+    localStorage.setItem(LS_KEY_ENDPOINT, url);
+    configBox.style.display = 'none';
+    agregarMensajeIA('Listo — endpoint guardado en este navegador. Ya puedes hacer preguntas.');
+  });
+
+  /* ---------- Mensajes en el panel ---------- */
+  function agregarMensajeUsuario(texto){
+    var div = document.createElement('div');
+    div.className = 'ia-chat-msg ia-chat-msg-user';
+    div.innerHTML = '<p>'+esc(texto)+'</p>';
+    messagesBox.appendChild(div);
+    messagesBox.scrollTop = messagesBox.scrollHeight;
+  }
+
+  function agregarMensajeIA(html){
+    var div = document.createElement('div');
+    div.className = 'ia-chat-msg ia-chat-msg-ia';
+    div.innerHTML = html;
+    messagesBox.appendChild(div);
+    messagesBox.scrollTop = messagesBox.scrollHeight;
+    return div;
+  }
+
+  function agregarMensajeError(texto){
+    var div = document.createElement('div');
+    div.className = 'ia-chat-msg ia-chat-msg-error';
+    div.innerHTML = '<p>'+esc(texto)+'</p>';
+    messagesBox.appendChild(div);
+    messagesBox.scrollTop = messagesBox.scrollHeight;
+  }
+
+  function agregarIndicadorCargando(){
+    var div = document.createElement('div');
+    div.className = 'ia-chat-msg ia-chat-msg-ia';
+    div.innerHTML = '<div class="ia-chat-loading"><span></span><span></span><span></span></div>';
+    messagesBox.appendChild(div);
+    messagesBox.scrollTop = messagesBox.scrollHeight;
+    return div;
+  }
+
+  /* ---------- Traducción de condiciones a un predicado real ---------- */
+
+  /* Convierte un valor de celda (string, fecha dd/mm/aaaa o similar) a un objeto Date, o
+     null si no se puede interpretar — usado por los operadores de fecha. */
+  function celdaAFecha(v){
+    if(!v) return null;
+    var s = String(v).trim();
+    var m = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})/);
+    if(m){
+      var d = parseInt(m[1],10), mo = parseInt(m[2],10)-1, y = parseInt(m[3],10);
+      if(y<100) y += 2000;
+      var dt = new Date(y, mo, d);
+      return isNaN(dt.getTime()) ? null : dt;
+    }
+    var iso = new Date(s);
+    return isNaN(iso.getTime()) ? null : iso;
+  }
+
+  function celdaANumero(v){
+    if(v===null||v===undefined||v==='') return null;
+    var n = parseFloat(String(v).replace(/,/g,''));
+    return isNaN(n) ? null : n;
+  }
+
+  /* Evalúa UNA condición {columna, operador, valor} contra una fila (objeto {col:valor}).
+     rowArr es la fila cruda por posición (solo disponible en BOM), necesaria para poder
+     invocar los filtros especiales ya existentes (window.__bomFiltrosExistentes). */
+  function evaluarCondicion(cond, rowObj, rowArr){
+    var operador = cond.operador;
+
+    if(operador === 'filtro_existente'){
+      var fn = window.__bomFiltrosExistentes && window.__bomFiltrosExistentes[cond.valor];
+      if(!fn){
+        // Filtro que la IA nombró pero que no existe en este vocabulario — no se puede
+        // evaluar con certeza, así que no se descarta la fila por esto (falla abierto,
+        // nunca oculta datos por un nombre de filtro mal reconocido).
+        return true;
+      }
+      return !!fn(rowArr || rowObj);
+    }
+
+    var valorCelda = rowObj[cond.columna];
+    if(valorCelda===undefined) return true; // columna no existe en esta vista: no se filtra por ella
+
+    switch(operador){
+      case 'igual':
+        return String(valorCelda||'').trim().toLowerCase() === String(cond.valor||'').trim().toLowerCase();
+      case 'distinto':
+        return String(valorCelda||'').trim().toLowerCase() !== String(cond.valor||'').trim().toLowerCase();
+      case 'contiene':
+        return String(valorCelda||'').toLowerCase().indexOf(String(cond.valor||'').toLowerCase()) !== -1;
+      case 'no_contiene':
+        return String(valorCelda||'').toLowerCase().indexOf(String(cond.valor||'').toLowerCase()) === -1;
+      case 'mayor_que': {
+        var n1 = celdaANumero(valorCelda), v1 = celdaANumero(cond.valor);
+        return n1!==null && v1!==null && n1 > v1;
+      }
+      case 'menor_que': {
+        var n2 = celdaANumero(valorCelda), v2 = celdaANumero(cond.valor);
+        return n2!==null && v2!==null && n2 < v2;
+      }
+      case 'mayor_o_igual': {
+        var n3 = celdaANumero(valorCelda), v3 = celdaANumero(cond.valor);
+        return n3!==null && v3!==null && n3 >= v3;
+      }
+      case 'menor_o_igual': {
+        var n4 = celdaANumero(valorCelda), v4 = celdaANumero(cond.valor);
+        return n4!==null && v4!==null && n4 <= v4;
+      }
+      case 'ultimos_dias': {
+        var fecha1 = celdaAFecha(valorCelda);
+        if(!fecha1) return false;
+        var dias = celdaANumero(cond.valor) || 0;
+        var limite = new Date(); limite.setHours(0,0,0,0); limite.setDate(limite.getDate()-dias);
+        return fecha1 >= limite;
+      }
+      case 'antes_de': {
+        var fecha2 = celdaAFecha(valorCelda), ref2 = celdaAFecha(cond.valor);
+        return fecha2 && ref2 && fecha2 < ref2;
+      }
+      case 'despues_de': {
+        var fecha3 = celdaAFecha(valorCelda), ref3 = celdaAFecha(cond.valor);
+        return fecha3 && ref3 && fecha3 > ref3;
+      }
+      default:
+        return true; // operador no reconocido: no se descarta la fila por él
+    }
+  }
+
+  /* Todas las condiciones deben cumplirse (AND) — consistente con cómo ya combinan sus
+     propios filtros ambas vistas. */
+  function activarFiltroIA(condiciones){
+    if(!condiciones || condiciones.length===0){
+      window.__iaChatExtraFilter = null;
+    } else {
+      window.__iaChatExtraFilter = function(rowObj, vista, rowArr){
+        for(var i=0;i<condiciones.length;i++){
+          if(!evaluarCondicion(condiciones[i], rowObj, rowArr)) return false;
+        }
+        return true;
+      };
+    }
+    if(vistaActiva()==='mm' && window.__mmApplyFilters) window.__mmApplyFilters();
+    if(vistaActiva()==='bom' && window.__bomApplyFilters) window.__bomApplyFilters();
+  }
+
+  /* Cuenta cuántas filas de la vista actual cumplen las condiciones, SIN cambiar el
+     filtro visible — usado para "tipo":"pregunta_sobre_resultados" (ej. "¿tiene todas
+     actualizadas?"), donde se responde con un conteo en vez de filtrar la tabla. */
+  function contarCoincidencias(condiciones){
+    var filas, columnas;
+    if(vistaActiva()==='mm'){
+      filas = (window.__mmGetFilteredRows ? window.__mmGetFilteredRows() : []);
+      return filas.filter(function(r){
+        for(var i=0;i<condiciones.length;i++){ if(!evaluarCondicion(condiciones[i], r, null)) return false; }
+        return true;
+      }).length + '/' + filas.length;
+    }
+    var rowsArr = (window.__bomGetFilteredRows ? window.__bomGetFilteredRows() : []);
+    columnas = columnasDeVistaActual();
+    var total = 0, coinciden = 0;
+    rowsArr.forEach(function(rowArr){
+      total++;
+      var rowObj = {};
+      for(var i=0;i<columnas.length;i++) rowObj[columnas[i]] = rowArr[i];
+      var ok = true;
+      for(var j=0;j<condiciones.length;j++){ if(!evaluarCondicion(condiciones[j], rowObj, rowArr)){ ok=false; break; } }
+      if(ok) coinciden++;
+    });
+    return coinciden + '/' + total;
+  }
+
+  /* ---------- Envío de la pregunta al endpoint ---------- */
+  async function enviarPregunta(pregunta){
+    var url = getEndpointUrl();
+    if(!url){
+      agregarMensajeError('Primero configura la URL de tu endpoint con el ícono de engranaje, arriba.');
+      configBox.style.display = 'block';
+      return;
+    }
+
+    agregarMensajeUsuario(pregunta);
+    var cargando = agregarIndicadorCargando();
+    sendBtn.disabled = true;
+
+    try{
+      var resp = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          pregunta: pregunta,
+          vista: LABELS_VISTA[vistaActiva()],
+          columnas: columnasDeVistaActual(),
+          filtrosExistentes: filtrosDeVistaActual()
+        })
+      });
+
+      var data = await resp.json().catch(function(){ return null; });
+      cargando.remove();
+
+      if(!resp.ok || !data){
+        agregarMensajeError((data && data.error) ? data.error : ('El servidor respondió con error ('+resp.status+').'));
+        return;
+      }
+      if(data.error){
+        agregarMensajeError(data.error);
+        return;
+      }
+
+      renderRespuestaIA(data);
+    } catch(err){
+      cargando.remove();
+      agregarMensajeError('No se pudo contactar al endpoint. Revisa la URL configurada y tu conexión.');
+    } finally {
+      sendBtn.disabled = false;
+    }
+  }
+
+  function renderRespuestaIA(data){
+    var razonamientoHtml = data.razonamiento ?
+      '<div class="ia-chat-razonamiento"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a7 7 0 0 0-4 12.7V17a2 2 0 0 0 2 2h4a2 2 0 0 0 2-2v-2.3A7 7 0 0 0 12 2Z"/><path d="M9 21h6"/></svg><span>'+esc(data.razonamiento)+'</span></div>' : '';
+
+    if(data.tipo === 'filtro' && Array.isArray(data.condiciones) && data.condiciones.length){
+      activarFiltroIA(data.condiciones);
+      var recuento = vistaActiva()==='mm' ? (window.__mmGetFilteredRows?window.__mmGetFilteredRows().length:'—') : (window.__bomGetFilteredRows?window.__bomGetFilteredRows().length:'—');
+      agregarMensajeIA(
+        '<p>Filtro aplicado sobre la tabla.</p>'+
+        '<span class="ia-chat-resultado-badge">'+recuento+' resultado(s)</span>'+
+        razonamientoHtml
+      );
+    } else if(data.tipo === 'pregunta_sobre_resultados' && Array.isArray(data.condiciones) && data.condiciones.length){
+      var conteo = contarCoincidencias(data.condiciones);
+      agregarMensajeIA(
+        '<p>De las filas actualmente visibles: <strong>'+esc(conteo)+'</strong> cumplen esa condición.</p>'+
+        razonamientoHtml
+      );
+    } else {
+      var sugerenciasHtml = '';
+      if(Array.isArray(data.sugerencias) && data.sugerencias.length){
+        sugerenciasHtml = '<div class="ia-chat-sugerencias">'+data.sugerencias.map(function(s){
+          return '<button type="button" class="ia-chat-sugerencia-btn">'+esc(s)+'</button>';
+        }).join('')+'</div>';
+      }
+      var div = agregarMensajeIA(
+        '<p>No estoy seguro de cómo filtrar con esa pregunta. '+(data.sugerencias&&data.sugerencias.length?'Prueba con:':'¿Puedes reformularla?')+'</p>'+
+        sugerenciasHtml+
+        razonamientoHtml
+      );
+      Array.prototype.forEach.call(div.querySelectorAll('.ia-chat-sugerencia-btn'), function(btn){
+        btn.addEventListener('click', function(){ enviarPregunta(btn.textContent); });
+      });
+    }
+  }
+
+  function manejarEnvio(){
+    var texto = input.value.trim();
+    if(!texto) return;
+    input.value = '';
+    enviarPregunta(texto);
+  }
+  sendBtn.addEventListener('click', manejarEnvio);
+  input.addEventListener('keydown', function(e){ if(e.key==='Enter') manejarEnvio(); });
+
+  // Si el usuario ya había configurado un endpoint en una sesión anterior, se abre el
+  // panel ya listo para preguntar sin pedirle que reconfigure nada.
+  if(!getEndpointUrl()){
+    configBox.style.display = 'none'; // se muestra recién cuando el usuario abra config, para no interrumpir antes de que sepa qué es esto
   }
 
 })();

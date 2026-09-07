@@ -841,18 +841,25 @@
   .ia-chat-fab svg{ width:22px; height:22px; }
   @media (max-width: 720px){ .ia-chat-fab{ right:14px; bottom:14px; width:46px; height:46px; } .ia-chat-fab svg{ width:19px; height:19px; } }
 
-  .ia-chat-overlay{
-    position:fixed; inset:0; background:rgba(18,33,50,0.35); backdrop-filter:blur(1px);
-    opacity:0; pointer-events:none; transition:opacity .2s var(--ease); z-index:79;
-  }
-  .ia-chat-overlay.open{ opacity:1; pointer-events:auto; }
+  /* El chat dejó de ser un panel lateral a pantalla completa: ahora es una ventana
+     flotante anclada sobre su botón, al estilo de los chats de redes sociales. Por eso
+     el overlay oscuro desaparece — la tabla debe seguir visible y utilizable con el
+     chat abierto, y el cierre al hacer clic fuera lo gestiona un listener en document. */
+  .ia-chat-overlay{ display:none; }
 
   .ia-chat-panel{
-    position:fixed; top:0; right:0; height:100%; width:420px; max-width:94vw; background:#fff;
-    box-shadow:var(--shadow-lg); transform:translateX(100%); transition:transform .24s var(--ease);
-    z-index:80; display:flex; flex-direction:column;
+    position:fixed; right:20px; bottom:84px; width:380px; max-width:calc(100vw - 40px);
+    height:min(560px, calc(100vh - 120px)); background:#fff;
+    border:1px solid var(--border-soft); border-radius:16px;
+    box-shadow:0 12px 40px rgba(18,33,50,0.18);
+    transform-origin:100% 100%; transform:translateY(12px) scale(.96); opacity:0; pointer-events:none;
+    transition:transform .18s var(--ease), opacity .18s var(--ease);
+    z-index:80; display:flex; flex-direction:column; overflow:hidden;
   }
-  .ia-chat-panel.open{ transform:translateX(0); }
+  .ia-chat-panel.open{ transform:translateY(0) scale(1); opacity:1; pointer-events:auto; }
+  @media (max-width: 720px){
+    .ia-chat-panel{ right:10px; left:10px; width:auto; bottom:76px; height:min(70vh, calc(100vh - 100px)); }
+  }
 
   .ia-chat-header{
     display:flex; align-items:flex-start; justify-content:space-between; gap:10px;
@@ -8020,22 +8027,45 @@ function formatFechaHoraCorta(d){
   function abrirPanel(){
     vistaLabel.textContent = LABELS_VISTA[vistaActiva()];
     panel.classList.add('open');
-    overlay.classList.add('open');
     setTimeout(function(){ input.focus(); }, 200);
   }
   function cerrarPanel(){
     panel.classList.remove('open');
-    overlay.classList.remove('open');
   }
-  fab.addEventListener('click', abrirPanel);
+  // El botón flotante alterna: en una ventana flotante se espera que el mismo botón
+  // que la abre también la baje.
+  fab.addEventListener('click', function(){
+    if(panel.classList.contains('open')) cerrarPanel(); else abrirPanel();
+  });
   closeBtn.addEventListener('click', cerrarPanel);
-  overlay.addEventListener('click', cerrarPanel);
   document.addEventListener('keydown', function(e){ if(e.key==='Escape' && panel.classList.contains('open')) cerrarPanel(); });
 
+  /* Se minimiza al hacer clic en cualquier otro sitio, como los chats de redes sociales.
+     Va en fase de captura para que un clic sobre un control de la tabla que detenga la
+     propagación lo cierre igual, y se excluye el botón flotante porque ese ya alterna
+     por su cuenta (si no, abrir y cerrar se pisarían en el mismo clic). */
+  document.addEventListener('mousedown', function(e){
+    if(!panel.classList.contains('open')) return;
+    if(panel.contains(e.target) || fab.contains(e.target)) return;
+    cerrarPanel();
+  }, true);
+
   /* ---------- Configuración del endpoint (guardada solo en este navegador) ---------- */
+  /* El endpoint por defecto es el que manda. Una URL guardada en este navegador solo se
+     respeta si es http(s) y apunta a una ruta real: un valor antiguo como el origen del
+     sitio ("https://…vercel.app/") hacía que el POST cayera sobre un archivo estático y
+     Vercel respondiera 405 Method Not Allowed, con el chat roto sin explicación visible.
+     Ese caso se purga solo, así que un navegador con el valor viejo se repara en la
+     primera pregunta sin que nadie tenga que tocar la configuración. */
   function getEndpointUrl(){
     var guardada = (localStorage.getItem(LS_KEY_ENDPOINT) || '').trim();
-    return guardada || ENDPOINT_POR_DEFECTO;
+    if(!guardada) return ENDPOINT_POR_DEFECTO;
+    try{
+      var u = new URL(guardada);
+      if((u.protocol==='http:' || u.protocol==='https:') && u.pathname && u.pathname!=='/') return guardada;
+    }catch(e){}
+    localStorage.removeItem(LS_KEY_ENDPOINT);
+    return ENDPOINT_POR_DEFECTO;
   }
   configBtn.addEventListener('click', function(){
     var abierta = configBox.style.display !== 'none';
@@ -8282,6 +8312,33 @@ function formatFechaHoraCorta(d){
     }).join('')+'</div>';
   }
 
+  /* Una condición que nombra una columna inexistente en la vista activa era el fallo más
+     traicionero del chat: evaluarCondicion la deja pasar (return true, para no ocultar
+     datos por un nombre mal reconocido), así que el filtro "se aplicaba" sin recortar
+     nada y la tabla seguía mostrando el total — parecía que la IA respondía pero no
+     filtraba. Se valida ANTES de aplicar, contra la misma lista de columnas que se le
+     envió al modelo: si nombra algo que no está en ella, se lo inventó. */
+  function condicionesInvalidas(condiciones){
+    var disponibles = columnasDeVistaActual();
+    var filtrosOk = filtrosDeVistaActual().map(function(f){ return f.nombre; });
+    var malas = [];
+    (condiciones||[]).forEach(function(c){
+      if(!c) return;
+      if(c.operador === 'filtro_existente'){
+        if(filtrosOk.indexOf(c.valor) === -1) malas.push('el filtro "'+c.valor+'"');
+      } else if(!c.columna || disponibles.indexOf(c.columna) === -1){
+        malas.push('la columna "'+(c.columna||'(vacía)')+'"');
+      }
+    });
+    return malas;
+  }
+
+  function avisoColumnasInvalidas(malas){
+    return textoIA('Me referí a '+malas.join(' y ')+', que no existe'+(malas.length>1?'n':'')+
+      ' en *'+LABELS_VISTA[vistaActiva()]+'*. Preferí no filtrar antes que darte un resultado falso — '+
+      'reformula la pregunta con una columna de esta pestaña y lo intento de nuevo.');
+  }
+
   function renderRespuestaIA(data){
     var razonamientoHtml = data.razonamiento ?
       '<div class="ia-chat-razonamiento"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a7 7 0 0 0-4 12.7V17a2 2 0 0 0 2 2h4a2 2 0 0 0 2-2v-2.3A7 7 0 0 0 12 2Z"/><path d="M9 21h6"/></svg><span>'+esc(data.razonamiento)+'</span></div>' : '';
@@ -8291,16 +8348,26 @@ function formatFechaHoraCorta(d){
     var cuerpo;
 
     if(data.tipo === 'filtro' && Array.isArray(data.condiciones) && data.condiciones.length){
-      activarFiltroIA(data.condiciones);
-      var recuento = vistaActiva()==='mm' ? (window.__mmGetFilteredRows?window.__mmGetFilteredRows().length:'—') : (window.__bomGetFilteredRows?window.__bomGetFilteredRows().length:'—');
-      // El conteo lo pone la aplicación, no la IA: el prompt le prohíbe expresamente
-      // adelantar cifras para que no se contradiga con la tabla real.
-      cuerpo = textoIA(data.mensaje || 'Filtro aplicado sobre la tabla.')+
-        '<span class="ia-chat-resultado-badge">'+recuento+' resultado(s)</span>';
+      var malasF = condicionesInvalidas(data.condiciones);
+      if(malasF.length){
+        cuerpo = avisoColumnasInvalidas(malasF);
+      } else {
+        activarFiltroIA(data.condiciones);
+        var recuento = vistaActiva()==='mm' ? (window.__mmGetFilteredRows?window.__mmGetFilteredRows().length:'—') : (window.__bomGetFilteredRows?window.__bomGetFilteredRows().length:'—');
+        // El conteo lo pone la aplicación, no la IA: el prompt le prohíbe expresamente
+        // adelantar cifras para que no se contradiga con la tabla real.
+        cuerpo = textoIA(data.mensaje || 'Filtro aplicado sobre la tabla.')+
+          '<span class="ia-chat-resultado-badge">'+recuento+' resultado(s)</span>';
+      }
     } else if(data.tipo === 'pregunta_sobre_resultados' && Array.isArray(data.condiciones) && data.condiciones.length){
-      var conteo = contarCoincidencias(data.condiciones);
-      cuerpo = textoIA(data.mensaje || 'De las filas actualmente visibles:')+
-        '<span class="ia-chat-resultado-badge">'+esc(conteo)+' coinciden</span>';
+      var malasP = condicionesInvalidas(data.condiciones);
+      if(malasP.length){
+        cuerpo = avisoColumnasInvalidas(malasP);
+      } else {
+        var conteo = contarCoincidencias(data.condiciones);
+        cuerpo = textoIA(data.mensaje || 'De las filas actualmente visibles:')+
+          '<span class="ia-chat-resultado-badge">'+esc(conteo)+' coinciden</span>';
+      }
     } else if(data.tipo === 'conversacion'){
       cuerpo = textoIA(data.mensaje || '¿Sobre qué te gustaría filtrar esta tabla?');
     } else {

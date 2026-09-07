@@ -1081,6 +1081,10 @@
       <div class="toolbar-divider"></div>
 
       <button class="btn btn-ghost" id="bomClearFilters">Limpiar filtros</button>
+      <button class="btn btn-primary" id="bomExportAuditoria" title="Excel con 2 hojas: incoherencias de secuencia de posiciones en Listas de Materiales, e incoherencias de Versiones de Fabricación (dígito 1, dígitos 3-4, alternativa esperada)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 9v4M12 17h.01M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z"/></svg>
+        Auditoría de incoherencias
+      </button>
       <button class="btn btn-primary" id="bomExportDetallado" title="Excel con una fila por cada componente: estado de la lista, bloqueo Z del material y si el componente es exclusivo del producto">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="15" y2="17"/></svg>
         Exportar detalle de componentes
@@ -4671,6 +4675,173 @@ function formatFechaHoraCorta(d){
   overlay.addEventListener('click', closeDrawer);
   document.addEventListener('keydown', (e)=>{ if(e.key==='Escape') closeDrawer(); });
 
+  /* ============================================================
+     AUDITORÍA DE INCOHERENCIAS (Excel de 2 hojas)
+
+     Hoja 1 — Listas de Materiales: recorre TODO el archivo de Componentes
+     cargado y detecta problemas de SECUENCIA DE POSICIONES dentro de cada
+     lista (Material + Alternativa + Lista técnica), sin necesitar construir
+     ningún árbol: saltos indebidos en la numeración base (0010,0020,0050 —
+     falta 0030/0040), posiciones alternativas (ej. 0021) sin su base
+     correspondiente (0020), y formatos de posición no reconocibles.
+
+     Hoja 2 — Versiones de Fabricación: reconstruye TODOS los árboles
+     posibles a partir de cada producto terminado (Acondicionado) con VFab
+     real cargada, reutilizando exactamente la misma lógica de
+     window.__arbolAPI que usan "Árbol del producto" y "Explosión masiva" —
+     nunca una copia aparte — y recopila las advertencias de incoherencia
+     (dígito 1, dígitos 3-4, alternativa esperada) que ya se detectan ahí.
+     ============================================================ */
+
+  /* Normaliza un valor de "Núm.posición" a 4 dígitos numéricos. Devuelve null si el valor
+     no se puede interpretar como un número de posición válido (ej. texto corrupto) — ese
+     caso se reporta aparte como "formato de posición inválido", en vez de intentar
+     ordenarlo junto a las demás posiciones numéricas. */
+  function normalizarPosicionAuditoria(raw){
+    var s = String(raw==null?'':raw).trim();
+    if(!s) return null;
+    var n = parseFloat(s.replace(',', '.'));
+    if(isNaN(n)) return null;
+    return String(Math.round(n)).padStart(4, '0');
+  }
+
+  function generarHojaIncoherenciasListas(){
+    var idxCols = {};
+    COMP_COLUMNS.forEach(function(c,i){ idxCols[c]=i; });
+    var iMat = idxCols['Material'], iAlt = idxCols['Lista mat.alternat.'], iListaTec = idxCols['Lista de materiales'];
+    var iPos = idxCols['Núm.posición'], iComp = idxCols['Componente'], iDenom = idxCols['Denominación de componente'];
+    var iPosAlt = idxCols['Posición alternativa'];
+
+    // Agrupar cada fila por su lista técnica exacta (Material+Alt+ListaTecnica) — la misma
+    // clave completa ya usada en el resto de la app para no mezclar dos listas técnicas
+    // distintas que compartan Material+Alt (ej. Acondicionado vs Fórmula cuali-cuantitativa
+    // del mismo material).
+    var listas = {};
+    COMP_ROWS.forEach(function(row){
+      var mat = String(row[iMat]||'').trim();
+      if(!mat) return;
+      var alt = String(row[iAlt]||'').trim() || '1';
+      var listaTec = iListaTec!==undefined ? String(row[iListaTec]||'').trim() : '';
+      var key = mat + '||' + alt + '||' + listaTec;
+      if(!listas[key]) listas[key] = { material:mat, alt:alt, listaTecnica:listaTec, filas:[] };
+      listas[key].filas.push({
+        posRaw: iPos!==undefined ? row[iPos] : '',
+        pos: normalizarPosicionAuditoria(iPos!==undefined ? row[iPos] : ''),
+        esAlternativa: iPosAlt!==undefined && String(row[iPosAlt]||'').trim().toUpperCase() === 'X',
+        componente: iComp!==undefined ? String(row[iComp]||'').trim() : '',
+        denominacion: iDenom!==undefined ? row[iDenom] : ''
+      });
+    });
+
+    var hallazgos = [];
+    Object.keys(listas).forEach(function(key){
+      var lista = listas[key];
+
+      // 1) Formato de posición no reconocible.
+      lista.filas.forEach(function(f){
+        if(f.pos === null){
+          hallazgos.push({
+            material: lista.material, alt: lista.alt, listaTecnica: lista.listaTecnica,
+            tipo: 'Formato inválido', posicion: String(f.posRaw), componente: f.componente,
+            detalle: 'La posición "' + f.posRaw + '" no se pudo interpretar como un número de posición válido (revisar el formato de esa celda en el Excel de origen).'
+          });
+        }
+      });
+
+      var posValidas = lista.filas.filter(function(f){ return f.pos !== null; });
+      var posSet = {};
+      posValidas.forEach(function(f){ posSet[f.pos] = true; });
+
+      // 2) Posición alternativa sin su base correspondiente (ej. existe 0021 pero no 0020).
+      //    Se usa tanto el indicador formal "Posición alternativa"='X' de SAP como, de
+      //    respaldo, el patrón numérico (terminar en dígito != 0 y no ser múltiplo de 10).
+      var basesFaltantes = {};
+      posValidas.forEach(function(f){
+        var esAltPorPatron = f.pos.slice(-1) !== '0';
+        if((f.esAlternativa || esAltPorPatron) && esAltPorPatron){
+          var base = f.pos.slice(0, -1) + '0';
+          if(base !== f.pos && !posSet[base] && !basesFaltantes[f.pos]){
+            basesFaltantes[f.pos] = true;
+            hallazgos.push({
+              material: lista.material, alt: lista.alt, listaTecnica: lista.listaTecnica,
+              tipo: 'Alternativa sin base', posicion: f.pos, componente: f.componente,
+              detalle: 'Existe la posición alternativa ' + f.pos + ' pero falta su posición base ' + base + ' en esta misma lista — debería existir el material principal en ' + base + ' además del alternativo en ' + f.pos + '.'
+            });
+          }
+        }
+      });
+
+      // 3) Saltos indebidos en la secuencia de posiciones BASE (múltiplos de 10):
+      //    0010, 0020, 0050 -> falta 0030 y 0040.
+      var bases = Object.keys(posSet).filter(function(p){ return p.slice(-1)==='0'; })
+        .map(function(p){ return parseInt(p,10); }).sort(function(a,b){ return a-b; });
+      for(var i=0; i<bases.length-1; i++){
+        var diff = bases[i+1] - bases[i];
+        if(diff > 10){
+          var faltantes = [];
+          for(var f2=bases[i]+10; f2<bases[i+1]; f2+=10){ faltantes.push(String(f2).padStart(4,'0')); }
+          hallazgos.push({
+            material: lista.material, alt: lista.alt, listaTecnica: lista.listaTecnica,
+            tipo: 'Salto en la secuencia', posicion: String(bases[i]).padStart(4,'0') + ' → ' + String(bases[i+1]).padStart(4,'0'),
+            componente: '', detalle: 'La secuencia de posiciones salta de ' + String(bases[i]).padStart(4,'0') + ' a ' + String(bases[i+1]).padStart(4,'0') + ' — falta(n): ' + faltantes.join(', ') + '.'
+          });
+        } else if(diff !== 10 && diff !== 0){
+          hallazgos.push({
+            material: lista.material, alt: lista.alt, listaTecnica: lista.listaTecnica,
+            tipo: 'Incremento irregular', posicion: String(bases[i]).padStart(4,'0') + ' → ' + String(bases[i+1]).padStart(4,'0'),
+            componente: '', detalle: 'El incremento entre ' + String(bases[i]).padStart(4,'0') + ' y ' + String(bases[i+1]).padStart(4,'0') + ' es de ' + diff + ' (se esperaba 10).'
+          });
+        }
+      }
+    });
+
+    return hallazgos;
+  }
+
+  /* Recorre TODOS los productos terminados (Acondicionado) que tengan al menos una
+     Versión de Fabricación real cargada, reconstruye sus árboles con
+     window.__arbolAPI.construirTodosLosArboles (la MISMA lógica que ya usan "Árbol del
+     producto" y "Explosión masiva" — nunca una copia aparte) y recopila las advertencias
+     de incoherencia de Versión de Fabricación que esa lógica ya detecta: dígito 1
+     inconsistente entre etapas, dígitos 3-4 vs Alternativa propia, y alternativa esperada
+     no registrada en la etapa previa. */
+  function generarHojaIncoherenciasVfab(){
+    var api = window.__arbolAPI;
+    if(!api){ return { hallazgos: [], sinApi: true }; }
+
+    var bomIdx = api.buildBomIndex();
+    var acondicionados = [];
+    Object.keys(bomIdx.byKey).forEach(function(k){
+      var e = bomIdx.byKey[k];
+      if(api.esEtapaAcondicionado(e.etapa)) acondicionados.push(e);
+    });
+
+    var hallazgos = [];
+    var arbolesRevisados = 0;
+    acondicionados.forEach(function(prod){
+      var res = api.construirTodosLosArboles(prod.material, prod.alt, {});
+      res.arboles.forEach(function(arbol){
+        arbolesRevisados++;
+        arbol.forEach(function(n){
+          n.advertencias.forEach(function(w){
+            if(w.indexOf('INCOHERENCIA') === -1 && w.indexOf('INCONSISTENCIA') === -1) return;
+            var tipo = 'Otra incoherencia';
+            if(w.indexOf('empieza con') !== -1) tipo = 'Dígito 1 distinto entre etapas';
+            else if(w.indexOf('dígitos 3-4') !== -1) tipo = 'Dígitos 3-4 vs Alternativa propia';
+            else if(w.indexOf('no tiene registrada la Alternativa') !== -1) tipo = 'Alternativa esperada no registrada';
+            hallazgos.push({
+              productoTerminado: prod.material, altProducto: prod.alt,
+              etapa: n.etapa||'—', material: n.material, alt: n.alt,
+              version: n.version||'—', tipo: tipo, detalle: w
+            });
+          });
+        });
+      });
+    });
+
+    return { hallazgos: hallazgos, sinApi: false, totalAcondicionados: acondicionados.length, totalArboles: arbolesRevisados };
+  }
+
   document.getElementById('bomExportDetallado').addEventListener('click', ()=>{
     if(ROWS.length === 0) {
       alert('No hay datos para exportar. Carga un archivo Excel primero.');
@@ -5071,6 +5242,126 @@ function formatFechaHoraCorta(d){
     XLSX.writeFile(wb, `lmat_detalle_componentes_${new Date().toISOString().slice(0,10)}.xlsx`);
   });
 
+  document.getElementById('bomExportAuditoria').addEventListener('click', async ()=>{
+    if(COMP_ROWS.length === 0){
+      alert('No hay Componentes cargados. Carga el archivo de Componentes primero.');
+      return;
+    }
+    if(VFAB_ROWS.length === 0){
+      alert('No hay Versiones de Fabricación cargadas. Carga ese archivo primero.');
+      return;
+    }
+    if(!window.__arbolAPI){
+      alert('El módulo del Árbol del producto aún no terminó de inicializarse — espera un momento y vuelve a intentar.');
+      return;
+    }
+
+    var btn = document.getElementById('bomExportAuditoria');
+    var textoOriginal = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = 'Analizando…';
+
+    // Se difiere con un pequeño timeout para que el botón alcance a mostrar "Analizando…"
+    // antes de bloquear el hilo con el barrido de todos los árboles, que puede tomar unos
+    // segundos con miles de productos terminados.
+    await new Promise(function(resolve){ setTimeout(resolve, 30); });
+
+    try{
+      var hallazgosListas = generarHojaIncoherenciasListas();
+      var resultVfab = generarHojaIncoherenciasVfab();
+      var hallazgosVfab = resultVfab.hallazgos;
+
+      var HEADER_FILL = { patternType:'solid', fgColor:{ rgb:'1F3B57' } };
+      var HEADER_FONT = { bold:true, color:{ rgb:'FFFFFF' }, sz:11, name:'Calibri' };
+      var THIN_BORDER = { style:'thin', color:{ rgb:'D8DEE1' } };
+      var CELL_BORDER = { top:THIN_BORDER, bottom:THIN_BORDER, left:THIN_BORDER, right:THIN_BORDER };
+      var FONT_NORMAL = { sz:10, name:'Calibri' };
+      var FILL_TIPOS = {
+        'Salto en la secuencia': { patternType:'solid', fgColor:{ rgb:'FFF3D6' } },
+        'Incremento irregular': { patternType:'solid', fgColor:{ rgb:'FFF3D6' } },
+        'Alternativa sin base': { patternType:'solid', fgColor:{ rgb:'F5D0CC' } },
+        'Formato inválido': { patternType:'solid', fgColor:{ rgb:'E3D3F0' } },
+        'Dígito 1 distinto entre etapas': { patternType:'solid', fgColor:{ rgb:'EAE6F5' } },
+        'Dígitos 3-4 vs Alternativa propia': { patternType:'solid', fgColor:{ rgb:'F5D0CC' } },
+        'Alternativa esperada no registrada': { patternType:'solid', fgColor:{ rgb:'FFF3D6' } }
+      };
+
+      function aplicarEstiloHoja(ws, headers, filas, filaAColorTipo){
+        var lastCol = XLSX.utils.encode_col(headers.length-1);
+        var lastRow = filas.length+1;
+        ws['!autofilter'] = { ref: 'A1:'+lastCol+lastRow };
+        ws['!freeze'] = { xSplit:0, ySplit:1 };
+        for(var c=0;c<headers.length;c++){
+          var addr = XLSX.utils.encode_cell({r:0,c:c});
+          ws[addr].s = { fill:HEADER_FILL, font:HEADER_FONT, alignment:{ vertical:'center', horizontal:'center', wrapText:true }, border:CELL_BORDER };
+        }
+        filas.forEach(function(_, i){
+          var rIdx = i+1;
+          var tipo = filaAColorTipo(i);
+          var fill = FILL_TIPOS[tipo] || null;
+          for(var cc=0;cc<headers.length;cc++){
+            var addr2 = XLSX.utils.encode_cell({r:rIdx,c:cc});
+            if(!ws[addr2]) ws[addr2] = { t:'s', v:'' };
+            ws[addr2].s = { fill: fill||undefined, font:FONT_NORMAL, border:CELL_BORDER, alignment:{ vertical:'center', wrapText:true } };
+          }
+        });
+        ws['!ref'] = 'A1:'+lastCol+lastRow;
+      }
+
+      var wb = XLSX.utils.book_new();
+
+      // Hoja 1 — Listas de Materiales
+      var headers1 = ['Material','Alt.','Lista técnica','Tipo de incoherencia','Posición','Componente','Detalle'];
+      var aoa1 = [headers1].concat(hallazgosListas.map(function(h){
+        return [h.material, h.alt, h.listaTecnica, h.tipo, h.posicion, h.componente||'', h.detalle];
+      }));
+      var ws1 = XLSX.utils.aoa_to_sheet(aoa1);
+      ws1['!cols'] = [{wch:14},{wch:7},{wch:14},{wch:22},{wch:16},{wch:13},{wch:80}];
+      aplicarEstiloHoja(ws1, headers1, hallazgosListas, function(i){ return hallazgosListas[i].tipo; });
+      XLSX.utils.book_append_sheet(wb, ws1, 'Listas de Materiales');
+
+      // Hoja 2 — Versiones de Fabricación
+      var headers2 = ['Producto terminado','Alt. producto','Etapa','Material','Alt.','VFab','Tipo de incoherencia','Detalle'];
+      var aoa2 = [headers2].concat(hallazgosVfab.map(function(h){
+        return [h.productoTerminado, h.altProducto, h.etapa, h.material, h.alt, h.version, h.tipo, h.detalle];
+      }));
+      var ws2 = XLSX.utils.aoa_to_sheet(aoa2);
+      ws2['!cols'] = [{wch:16},{wch:12},{wch:16},{wch:14},{wch:7},{wch:9},{wch:26},{wch:90}];
+      aplicarEstiloHoja(ws2, headers2, hallazgosVfab, function(i){ return hallazgosVfab[i].tipo; });
+      XLSX.utils.book_append_sheet(wb, ws2, 'Versiones de Fabricación');
+
+      // Hoja de leyenda / resumen
+      var legendAoa = [
+        ['Auditoría de incoherencias — Resumen'],
+        ['Hoja "Listas de Materiales": ' + hallazgosListas.length + ' incoherencia(s) de secuencia de posiciones encontradas.'],
+        ['Hoja "Versiones de Fabricación": ' + hallazgosVfab.length + ' incoherencia(s) encontradas, revisando ' + resultVfab.totalArboles + ' árbol(es) posibles a partir de ' + resultVfab.totalAcondicionados + ' producto(s) terminado(s) con Versión de Fabricación cargada.'],
+        [''],
+        ['Tipos de incoherencia — Listas de Materiales:'],
+        ['• Salto en la secuencia / Incremento irregular: faltan posiciones intermedias en la numeración base (0010, 0020, 0030…).'],
+        ['• Alternativa sin base: existe una posición alternativa (ej. 0021) pero no su posición base correspondiente (0020) en la misma lista.'],
+        ['• Formato inválido: el valor de la columna "Núm.posición" no se pudo interpretar como número — revisar esa celda en el Excel de origen.'],
+        [''],
+        ['Tipos de incoherencia — Versiones de Fabricación:'],
+        ['• Dígito 1 distinto entre etapas: dos etapas de la misma cadena tienen Versiones de Fabricación cuyo primer dígito no coincide (debería ser el mismo en toda la cadena).'],
+        ['• Dígitos 3-4 vs Alternativa propia: la Versión de Fabricación está registrada contra una Alternativa distinta a la que indican sus propios dígitos 3-4.'],
+        ['• Alternativa esperada no registrada: el dígito 2 de una etapa señala una Alternativa de la etapa previa que no existe registrada en las Listas de Materiales.'],
+      ];
+      var wsLegend2 = XLSX.utils.aoa_to_sheet(legendAoa);
+      wsLegend2['!cols'] = [{wch:120}];
+      wsLegend2['A1'].s = { font:{ bold:true, sz:12, name:'Calibri' } };
+      for(var li=5; li<=12; li++){
+        var cellRef = 'A'+li;
+        if(wsLegend2[cellRef]) wsLegend2[cellRef].s = { font:{ sz:10, name:'Calibri', color:{ rgb:'5C6B77' } } };
+      }
+      XLSX.utils.book_append_sheet(wb, wsLegend2, 'Resumen');
+
+      XLSX.writeFile(wb, `auditoria_incoherencias_${new Date().toISOString().slice(0,10)}.xlsx`);
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = textoOriginal;
+    }
+  });
+
   document.getElementById('bomExportXlsx').addEventListener('click', ()=>{
     if(ROWS.length === 0) {
       alert('No hay datos para exportar. Carga un archivo Excel primero.');
@@ -5467,6 +5758,7 @@ function formatFechaHoraCorta(d){
     var iTexto = idx['Texto de alternativa'];
     var iCentro = idx['Centro-instalación'];
     var iUtil = idx['Utilización LMat'];
+    var iListaTec = idx['Lista de materiales'];
 
     var byKey = {};
     var altsByMaterial = {};
@@ -5486,7 +5778,8 @@ function formatFechaHoraCorta(d){
         descripcion: iDesc!==undefined ? row[iDesc] : '',
         estado: iEstado!==undefined ? row[iEstado] : '',
         etapa: iTexto!==undefined ? row[iTexto] : '',
-        centro: iCentro!==undefined ? row[iCentro] : ''
+        centro: iCentro!==undefined ? row[iCentro] : '',
+        listaTecnica: iListaTec!==undefined ? String(row[iListaTec]||'').trim() : ''
       };
       byKey[key] = entry;
       if(!altsByMaterial[mat]) altsByMaterial[mat] = [];
@@ -5603,8 +5896,12 @@ function formatFechaHoraCorta(d){
 
   /* Devuelve TODOS los componentes de una lista (Material, Alt) — no solo el de posición
      0010 — con su estado de bloqueo Z resuelto, para el desplegable "ojo" de cada etapa. */
+  var __allCompsIndexCache = { rowsRef: null, index: null };
   function buildAllCompsIndex(){
     var rows = window.BOM_COMP_ROWS || [];
+    if(__allCompsIndexCache.rowsRef === rows && __allCompsIndexCache.index){
+      return __allCompsIndexCache.index;
+    }
     var cols = window.BOM_COMP_COLUMNS || [];
     var idx = {};
     cols.forEach(function(c,i){ idx[c]=i; });
@@ -5615,26 +5912,58 @@ function formatFechaHoraCorta(d){
     var iDenom = idx['Denominación de componente'];
     var iCantidad = idx['Cantidad componente'];
     var iUM = idx['Un.medida componente'];
+    var iListaTec = idx['Lista de materiales'];
 
-    var byKey = {};
+    // Índice por Material+Alt+ListaTecnica (clave completa, sin ambigüedad — evita mezclar
+    // componentes de dos listas técnicas distintas que comparten el mismo Material+Alt,
+    // como ACONDICIONADO vs FORMULA CUALI-CUANTITATIVA del mismo material) y, como
+    // respaldo, también por Material+Alt solo (para archivos de Componentes que no traigan
+    // la columna "Lista de materiales").
+    var byKeyCompleta = {};
+    var byKeySimple = {};
     rows.forEach(function(row){
       var mat = normMat(iMaterial!==undefined ? row[iMaterial] : '');
       if(!mat) return;
       var alt = normAlt(iAlt!==undefined ? row[iAlt] : '');
-      var key = mat + '||' + alt;
-      if(!byKey[key]) byKey[key] = [];
-      byKey[key].push({
+      var listaTec = iListaTec!==undefined ? String(row[iListaTec]||'').trim() : '';
+      var keySimple = mat + '||' + alt;
+      var entry = {
         pos: iPos!==undefined ? String(row[iPos]||'').trim() : '',
         componente: iComponente!==undefined ? normMat(row[iComponente]) : '',
         denominacion: iDenom!==undefined ? row[iDenom] : '',
         cantidad: iCantidad!==undefined ? row[iCantidad] : '',
         um: iUM!==undefined ? row[iUM] : ''
+      };
+      if(listaTec){
+        var keyCompleta = keySimple + '||' + listaTec;
+        if(!byKeyCompleta[keyCompleta]) byKeyCompleta[keyCompleta] = [];
+        byKeyCompleta[keyCompleta].push(entry);
+      }
+      if(!byKeySimple[keySimple]) byKeySimple[keySimple] = [];
+      byKeySimple[keySimple].push(entry);
+    });
+    [byKeyCompleta, byKeySimple].forEach(function(byKey){
+      Object.keys(byKey).forEach(function(k){
+        byKey[k].sort(function(a,b){ return a.pos < b.pos ? -1 : (a.pos > b.pos ? 1 : 0); });
       });
     });
-    Object.keys(byKey).forEach(function(k){
-      byKey[k].sort(function(a,b){ return a.pos < b.pos ? -1 : (a.pos > b.pos ? 1 : 0); });
-    });
-    return { byKey: byKey };
+
+    /* Devuelve los componentes de un nodo del árbol, usando la Lista técnica exacta
+       (n.listaTecnica, ya resuelta por buildBomIndex) cuando el archivo de Componentes
+       trae esa columna — si no la trae, o no hay coincidencia por esa vía, cae al índice
+       simple por Material+Alt como respaldo (comportamiento anterior). */
+    function componentesDe(material, alt, listaTecnica){
+      var keySimple = material + '||' + alt;
+      if(listaTecnica){
+        var keyCompleta = keySimple + '||' + listaTecnica;
+        if(byKeyCompleta[keyCompleta]) return byKeyCompleta[keyCompleta];
+      }
+      return byKeySimple[keySimple] || [];
+    }
+
+    var resultAllComps = { byKey: byKeySimple, componentesDe: componentesDe };
+    __allCompsIndexCache = { rowsRef: rows, index: resultAllComps };
+    return resultAllComps;
   }
 
   /* Algoritmo principal: reconstruye la cadena de etapas retrocediendo desde
@@ -5668,6 +5997,7 @@ function formatFechaHoraCorta(d){
       etapa: bomEntry ? bomEntry.etapa : '(no encontrada)',
       estado: bomEntry ? bomEntry.estado : '',
       centro: bomEntry ? bomEntry.centro : '',
+      listaTecnica: bomEntry ? bomEntry.listaTecnica : '',
       esFabricacion: esFab || !bomEntry,
       version: null,
       versionEsReal: false,
@@ -5861,8 +6191,7 @@ function formatFechaHoraCorta(d){
         var avisoD34 = verificarCoherenciaDigitos34(n.version, n.alt);
         if(avisoD34) n.advertencias.push(avisoD34);
       }
-      var key = n.material + '||' + n.alt;
-      n.componentes = allCompsIdx.byKey[key] || [];
+      n.componentes = allCompsIdx.componentesDe(n.material, n.alt, n.listaTecnica);
     });
     return nodos;
   }
@@ -6627,6 +6956,7 @@ function formatFechaHoraCorta(d){
     buildCompFirstPosIndex: buildCompFirstPosIndex,
     esEtapaAcondicionado: esEtapaAcondicionado,
     esEtapaFabricacion: esEtapaFabricacion,
+    estadoZDelMaterial: estadoZDelMaterial,
     normMat: normMat,
     normAlt: normAlt,
     keyOf: keyOf,
@@ -6973,9 +7303,14 @@ function formatFechaHoraCorta(d){
         return '<option value="'+oi+'">'+getApi().esc(label)+'</option>';
       }).join('');
       var avisoEscrita = p.vfabEscrita ? '<div style="font-size:11.5px; color:var(--brick); margin-top:2px;">No se encontró "'+getApi().esc(p.vfabEscrita)+'" registrada — elige una de las reales.</div>' : '';
+      // "TODAS": cuando el material tiene más de una VFab real disponible, se ofrece
+      // generar un árbol completo por CADA UNA en la misma ejecución (en vez de forzar a
+      // elegir solo una) — es lo que necesita, por ejemplo, el formato de exportación que
+      // pide un bloque por cada Versión de Fabricación del material de entrada.
+      var opcionTodas = p.opciones.length > 1 ? '<option value="todas">— Generar TODAS ('+p.opciones.length+') —</option>' : '';
       return '<div class="expl-resolver-row" data-idx="'+i+'">'+
         '<span class="mat-code">'+getApi().esc(p.material)+'</span>'+
-        '<select data-idx="'+i+'">'+opcionesHtml+'</select>'+
+        '<select data-idx="'+i+'">'+opcionTodas+opcionesHtml+'</select>'+
         avisoEscrita+
       '</div>';
     }).join('');
@@ -6986,8 +7321,14 @@ function formatFechaHoraCorta(d){
     Array.prototype.forEach.call(resolverBody.querySelectorAll('select'), function(sel){
       var idx = parseInt(sel.getAttribute('data-idx'), 10);
       var p = filasPendientes[idx];
-      var elegida = p.opciones[parseInt(sel.value, 10)];
-      filasResueltas.push({ material: p.material, alt: elegida.alt, vfabIndex: elegida.idx, version: elegida.version, centro: elegida.centro });
+      if(sel.value === 'todas'){
+        p.opciones.forEach(function(o){
+          filasResueltas.push({ material: p.material, alt: o.alt, vfabIndex: o.idx, version: o.version, centro: o.centro });
+        });
+      } else {
+        var elegida = p.opciones[parseInt(sel.value, 10)];
+        filasResueltas.push({ material: p.material, alt: elegida.alt, vfabIndex: elegida.idx, version: elegida.version, centro: elegida.centro });
+      }
     });
     resolverCard.style.display = 'none';
     ejecutarExplosion();
@@ -7133,40 +7474,64 @@ function formatFechaHoraCorta(d){
   }
 
   /* ---------- Exportación a Excel ---------- */
+  /* ---------- Exportación a Excel (formato "EXPLOSIÓN" a nivel de componente) ---------- */
   exportBtn.addEventListener('click', function(){
     if(resultadosExplosion.length === 0){
       alert('No hay resultados para exportar.');
       return;
     }
     var a = getApi();
-    var headers = ['Material inicial','Alt.','VFab inicial','Centro','Etapa','Material etapa','Alt. etapa','VFab etapa','¿VFab real?','Estado lista','Código Z','VFab bloqueada','Motivo de detención del árbol','Advertencias de esta etapa'];
+
+    // Formato fijo acordado: una fila por CADA COMPONENTE de cada etapa (no una fila por
+    // etapa) — Centro, Material padre y VFab de entrada se repiten en todo el bloque del
+    // árbol; Etapa/Material hijo/VFab cambian según la etapa; luego el detalle del
+    // componente (posición, código, descripción, cantidad, unidad).
+    var headers = ['Centro','Material padre','VFab','Etapa','Material hijo','VFab','Posición','Componente','Descripción de componente','Cantidad','UM'];
     var aoa = [headers];
-    var filasMotivo = []; // fila (índice en aoa) -> tipo de motivo, para colorear luego
+
+    // Metadatos por fila para poder aplicar color/comentario después de tener toda la
+    // hoja armada: qué celdas de esa fila deben marcarse y con qué texto de comentario.
+    // rowMeta[i] = { lmatBloqueada:bool, vfabBloqueada:bool, comentarioComponente:string|null }
+    var rowMeta = [];
 
     resultadosExplosion.forEach(function(r){
-      if(r.arbol.length === 0){
-        aoa.push([r.material, r.alt, r.version, r.centro||'—', '(sin etapas)', '', '', '', '', '', '', '', MOTIVO_LABELS[r.motivo.tipo], r.motivo.texto]);
-        filasMotivo.push(r.motivo.tipo);
-        return;
-      }
-      r.arbol.forEach(function(n, i){
-        aoa.push([
-          r.material, r.alt, r.version, r.centro||'—',
-          n.etapa||'—', n.material, n.alt, n.version, n.versionEsReal?'Sí':'No (estimada)',
-          n.estado||'—', n.bloqueoZ||'—', n.vfabBloqueada?'Sí':'No',
-          i===r.arbol.length-1 ? MOTIVO_LABELS[r.motivo.tipo] : '',
-          n.advertencias.join(' | ')
-        ]);
-        filasMotivo.push(i===r.arbol.length-1 ? r.motivo.tipo : null);
+      if(r.arbol.length === 0) return; // sin etapas reconstruidas: no hay nada que desglosar a nivel de componente
+      r.arbol.forEach(function(n){
+        var lmatBloqueada = n.estado && String(n.estado).trim().toLowerCase() === 'inactivo';
+        var vfabBloqueada = !!n.vfabBloqueada;
+        var comps = n.componentes || [];
+
+        if(comps.length === 0){
+          // Etapa sin componentes cargados: igual se deja constancia de la etapa en una
+          // fila (sin desglose), para no perder de vista que esa etapa existe en el árbol.
+          aoa.push([r.centro||'—', r.material, r.version, n.etapa||'—', n.material, n.version, '—', '—', '(sin componentes cargados)', '', '']);
+          rowMeta.push({ lmatBloqueada: lmatBloqueada, vfabBloqueada: vfabBloqueada, zTexto: null });
+          return;
+        }
+
+        comps.forEach(function(c){
+          var estadoComp = a.estadoZDelMaterial(c.componente);
+          aoa.push([
+            r.centro||'—', r.material, r.version, n.etapa||'—', n.material, n.version,
+            c.pos||'—', c.componente||'—', c.denominacion||'', c.cantidad!==''&&c.cantidad!=null ? Number(c.cantidad)||c.cantidad : '', c.um||''
+          ]);
+          rowMeta.push({
+            lmatBloqueada: lmatBloqueada,
+            vfabBloqueada: vfabBloqueada,
+            zTexto: estadoComp ? ('BLOQUEO ' + estadoComp) : null
+          });
+        });
       });
     });
 
+    if(aoa.length === 1){
+      alert('No hay ninguna etapa con datos para exportar en este formato.');
+      return;
+    }
+
     var ws = XLSX.utils.aoa_to_sheet(aoa);
     ws['!cols'] = [
-      {wch:14},{wch:7},{wch:11},{wch:8},
-      {wch:20},{wch:14},{wch:7},{wch:11},{wch:11},
-      {wch:11},{wch:9},{wch:12},
-      {wch:24},{wch:60}
+      {wch:9},{wch:15},{wch:8},{wch:16},{wch:16},{wch:8},{wch:11},{wch:13},{wch:43},{wch:13},{wch:7}
     ];
     var lastCol = XLSX.utils.encode_col(headers.length-1);
     var lastRow = aoa.length;
@@ -7177,61 +7542,76 @@ function formatFechaHoraCorta(d){
     var HEADER_FONT = { bold:true, color:{ rgb:'FFFFFF' }, sz:11, name:'Calibri' };
     var THIN_BORDER = { style:'thin', color:{ rgb:'D8DEE1' } };
     var CELL_BORDER = { top:THIN_BORDER, bottom:THIN_BORDER, left:THIN_BORDER, right:THIN_BORDER };
-    var FILL_Z = { patternType:'solid', fgColor:{ rgb:'F5D0CC' } };
-    var FILL_VFAB = { patternType:'solid', fgColor:{ rgb:'E3D3F0' } };
-    var FILL_INACTIVA = { patternType:'solid', fgColor:{ rgb:'FFF3D6' } };
-    var FILL_INCOHERENCIA = { patternType:'solid', fgColor:{ rgb:'EAE6F5' } };
-    var FILL_OK = { patternType:'solid', fgColor:{ rgb:'DEF0EF' } };
+    var FILL_AMARILLO = { patternType:'solid', fgColor:{ rgb:'FFF200' } };
     var FONT_NORMAL = { sz:10, name:'Calibri' };
-    var FONT_BOLD_BRICK = { sz:10, name:'Calibri', bold:true, color:{ rgb:'963B32' } };
+    var FONT_BOLD = { sz:10, name:'Calibri', bold:true };
+
+    // Índices de columna (0-based) según el orden de "headers" — E=Material hijo (4),
+    // F=VFab (5), H=Componente (7).
+    var COL_MATERIAL_HIJO = 4, COL_VFAB = 5, COL_COMPONENTE = 7;
 
     for(var c=0; c<headers.length; c++){
       var addr = XLSX.utils.encode_cell({r:0, c});
       ws[addr].s = { fill: HEADER_FILL, font: HEADER_FONT, alignment:{ vertical:'center', horizontal:'center', wrapText:true }, border: CELL_BORDER };
     }
-    filasMotivo.forEach(function(tipo, i){
+
+    /* Agrega (o añade a) el comentario de una celda, en el formato que espera
+       xlsx-js-style/SheetJS: un array de {a: autor, t: texto} en la propiedad "c". */
+    function agregarComentario(addr, texto){
+      if(!ws[addr]) ws[addr] = { t:'s', v:'' };
+      if(!ws[addr].c) ws[addr].c = [];
+      ws[addr].c.push({ a:'SAP MM & LM', t: texto });
+    }
+
+    rowMeta.forEach(function(meta, i){
       var rIdx = i+1;
-      var fill = null, font = FONT_NORMAL;
-      if(tipo === 'z'){ fill = FILL_Z; font = FONT_BOLD_BRICK; }
-      else if(tipo === 'vfab'){ fill = FILL_VFAB; }
-      else if(tipo === 'inactiva'){ fill = FILL_INACTIVA; }
-      else if(tipo === 'incoherencia'){ fill = FILL_INCOHERENCIA; }
-      else if(tipo === 'ok'){ fill = FILL_OK; }
+      // Estilo base de toda la fila (bordes + fuente normal), luego se pintan de amarillo
+      // solo las celdas puntuales observadas — no toda la fila, tal como se pidió.
       for(var cc=0; cc<headers.length; cc++){
         var addr2 = XLSX.utils.encode_cell({r:rIdx, c:cc});
         if(!ws[addr2]) ws[addr2] = { t:'s', v:'' };
-        ws[addr2].s = { fill: fill||undefined, font, border: CELL_BORDER, alignment:{ vertical:'center', wrapText:true } };
+        ws[addr2].s = { font: FONT_NORMAL, border: CELL_BORDER, alignment:{ vertical:'center', wrapText:true } };
+      }
+
+      if(meta.lmatBloqueada){
+        var addrLmat = XLSX.utils.encode_cell({r:rIdx, c:COL_MATERIAL_HIJO});
+        ws[addrLmat].s = { fill: FILL_AMARILLO, font: FONT_BOLD, border: CELL_BORDER, alignment:{ vertical:'center', wrapText:true } };
+        agregarComentario(addrLmat, 'LMAT BLOQUEADA');
+      }
+      if(meta.vfabBloqueada){
+        var addrVfab = XLSX.utils.encode_cell({r:rIdx, c:COL_VFAB});
+        ws[addrVfab].s = { fill: FILL_AMARILLO, font: FONT_BOLD, border: CELL_BORDER, alignment:{ vertical:'center', wrapText:true } };
+        agregarComentario(addrVfab, 'VFAB BLOQUEADA');
+      }
+      if(meta.zTexto){
+        var addrComp = XLSX.utils.encode_cell({r:rIdx, c:COL_COMPONENTE});
+        ws[addrComp].s = { fill: FILL_AMARILLO, font: FONT_BOLD, border: CELL_BORDER, alignment:{ vertical:'center', wrapText:true } };
+        agregarComentario(addrComp, meta.zTexto);
       }
     });
     ws['!ref'] = 'A1:'+lastCol+lastRow;
 
     var wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Explosión masiva');
+    XLSX.utils.book_append_sheet(wb, ws, 'EXPLOSION');
 
     var legendAoa = [
-      ['Leyenda de colores — Motivo de detención del árbol'],
-      ['Rojo — Bloqueo Z (Z1/Z2/Z3) en algún material de la cadena.'],
-      ['Violeta — Versión de Fabricación bloqueada en alguna etapa.'],
-      ['Ámbar — Lista de materiales inactiva en alguna etapa.'],
-      ['Violeta claro — Incoherencia de datos detectada (dígito 1, dígitos 3-4, o alternativa inconsistente) — revisar la columna "Advertencias".'],
-      ['Verde — Árbol completo hasta Fabricación (o fin natural en materia prima), sin bloqueos detectados.'],
+      ['Leyenda — Explosión masiva'],
+      ['Amarillo con comentario "LMAT BLOQUEADA" (sobre la columna "Material hijo") — esa lista de materiales figura INACTIVA en SAP. Pasa el cursor sobre la celda para ver el comentario.'],
+      ['Amarillo con comentario "VFAB BLOQUEADA" (sobre la columna "VFab" de esa etapa) — esa Versión de Fabricación figura bloqueada en el archivo de Versiones de Fabricación cargado.'],
+      ['Amarillo con comentario "BLOQUEO Z1 / Z2 / Z3" (sobre la columna "Componente") — ese componente figura con ese estado en el Maestro de Materiales.'],
       [''],
-      ['Nota: cada fila representa UNA ETAPA de la cadena reconstruida para el Material inicial de esa fila — varias filas seguidas con el mismo "Material inicial" son las distintas etapas de un mismo árbol (Acondicionado, Envase, Fabricación…). La columna "Motivo de detención del árbol" solo se completa en la ÚLTIMA etapa de cada árbol.'],
-      ['Nota: "¿VFab real?" indica si la Versión de Fabricación de esa etapa específica está registrada tal cual en el archivo de Versiones de Fabricación cargado, o si se estimó con la fórmula por no encontrarse un registro real — esta app nunca inventa Versiones de Fabricación para construir el árbol, solo para completar una etapa cuando de verdad no hay dato real disponible.'],
+      ['Nota: cada bloque de filas con el mismo "Material padre" + "VFab" (columnas B y C) corresponde a UN árbol completo, desglosado componente por componente en cada etapa. Si el material de partida tenía más de una Versión de Fabricación disponible, aparece un bloque completo por cada una, uno detrás del otro.'],
     ];
     var wsLegend = XLSX.utils.aoa_to_sheet(legendAoa);
-    wsLegend['!cols'] = [{wch:110}];
+    wsLegend['!cols'] = [{wch:120}];
     wsLegend['A1'].s = { font:{ bold:true, sz:12, name:'Calibri' } };
-    wsLegend['A2'].s = { fill:FILL_Z, font:FONT_BOLD_BRICK };
-    wsLegend['A3'].s = { fill:FILL_VFAB, font:FONT_NORMAL };
-    wsLegend['A4'].s = { fill:FILL_INACTIVA, font:FONT_NORMAL };
-    wsLegend['A5'].s = { fill:FILL_INCOHERENCIA, font:FONT_NORMAL };
-    wsLegend['A6'].s = { fill:FILL_OK, font:FONT_NORMAL };
-    wsLegend['A8'].s = { font:{ italic:true, sz:10, name:'Calibri', color:{ rgb:'5C6B77' } } };
-    wsLegend['A9'].s = { font:{ italic:true, sz:10, name:'Calibri', color:{ rgb:'5C6B77' } } };
+    wsLegend['A2'].s = { fill:FILL_AMARILLO, font:FONT_BOLD };
+    wsLegend['A3'].s = { fill:FILL_AMARILLO, font:FONT_BOLD };
+    wsLegend['A4'].s = { fill:FILL_AMARILLO, font:FONT_BOLD };
+    wsLegend['A6'].s = { font:{ italic:true, sz:10, name:'Calibri', color:{ rgb:'5C6B77' } } };
     XLSX.utils.book_append_sheet(wb, wsLegend, 'Leyenda');
 
-    XLSX.writeFile(wb, 'explosion_masiva_'+new Date().toISOString().slice(0,10)+'.xlsx');
+    XLSX.writeFile(wb, 'EXPLOSION_'+new Date().toISOString().slice(0,10).replace(/-/g,'_')+'.xlsx');
   });
 
   var explHeader = document.getElementById('explosionHeaderTop');
@@ -7243,5 +7623,4 @@ function formatFechaHoraCorta(d){
 })();
 </script>
 </body>
-</html>
 </html>

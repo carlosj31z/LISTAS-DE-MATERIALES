@@ -8144,6 +8144,21 @@ function formatFechaHoraCorta(d){
   function celdaAFecha(v, fmt){
     if(!v) return null;
     var s = String(v).trim();
+
+    /* Los exports de SAP traen algunas fechas como NÚMERO DE SERIE de Excel: en la
+       vista de Listas de Materiales "Creado el" vale 44923, no "28/12/2022" — la tabla
+       lo formatea al pintarlo, pero el valor crudo es numérico. Sin este caso, String(44923)
+       no casa con el patrón de fecha y se caía a new Date("44923"), que JavaScript lee
+       como el AÑO 44923. Esa fecha absurda pasaba cualquier comparación de "últimos N
+       días", así que TODAS las filas del BOM coincidían con cualquier filtro de fecha. */
+    if(typeof v === 'number' || /^\d+(\.\d+)?$/.test(s)){
+      var serie = parseFloat(s);
+      if(!(serie >= 1 && serie <= 2958465)) return null;   // fuera del rango del sistema 1900 de Excel
+      var ms = Date.UTC(1899, 11, 30) + Math.round(serie) * 86400000;
+      var dser = new Date(ms);
+      if(isNaN(dser.getTime())) return null;
+      return new Date(dser.getUTCFullYear(), dser.getUTCMonth(), dser.getUTCDate());
+    }
     var m = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})/);
     if(m){
       var a = parseInt(m[1],10), b = parseInt(m[2],10), y = parseInt(m[3],10);

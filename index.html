@@ -8119,15 +8119,32 @@ function formatFechaHoraCorta(d){
 
   /* Convierte un valor de celda (string, fecha dd/mm/aaaa o similar) a un objeto Date, o
      null si no se puede interpretar — usado por los operadores de fecha. */
+  /* Las dos vistas guardan la fecha en formatos DISTINTOS: el BOM en DD/MM/AAAA
+     ("28/12/2022") y el Maestro en M/D/AA ("7/26/26"). Asumir DD/MM para todo hacía que
+     "7/26/26" se leyera como día 7 del mes 26; Date desborda ese mes y devolvía febrero
+     de 2028, una fecha FUTURA que pasaba cualquier comparación de "últimos N días". Así
+     entraban miles de filas antiguas y el mismo filtro daba idéntico resultado para 7 o
+     para 14 días.
+
+     Se decide por el componente que no puede ser un mes. Si ambos son <= 12 el dato es
+     genuinamente ambiguo y se mantiene DD/MM, que es la convención local. El control de
+     desbordamiento al final es la red de seguridad: si la combinación elegida no existe
+     en el calendario se devuelve null (no hay fecha) en vez de una fecha desplazada que
+     falsearía el filtro en silencio. */
   function celdaAFecha(v){
     if(!v) return null;
     var s = String(v).trim();
     var m = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})/);
     if(m){
-      var d = parseInt(m[1],10), mo = parseInt(m[2],10)-1, y = parseInt(m[3],10);
+      var a = parseInt(m[1],10), b = parseInt(m[2],10), y = parseInt(m[3],10);
       if(y<100) y += 2000;
-      var dt = new Date(y, mo, d);
-      return isNaN(dt.getTime()) ? null : dt;
+      var d, mo;
+      if(a > 12 && b <= 12){ d = a; mo = b; }        // 28/12/2022 -> DD/MM
+      else if(b > 12 && a <= 12){ d = b; mo = a; }   // 7/26/26    -> M/D
+      else { d = a; mo = b; }                        // ambiguo    -> DD/MM
+      var dt = new Date(y, mo-1, d);
+      if(isNaN(dt.getTime()) || dt.getMonth() !== mo-1 || dt.getDate() !== d) return null;
+      return dt;
     }
     var iso = new Date(s);
     return isNaN(iso.getTime()) ? null : iso;

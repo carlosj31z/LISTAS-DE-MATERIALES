@@ -7939,7 +7939,8 @@ function formatFechaHoraCorta(d){
 
   <div class="ia-chat-messages" id="iaChatMessages">
     <div class="ia-chat-msg ia-chat-msg-ia">
-      <p>Pregúntame en lenguaje natural sobre lo que ves en esta tabla — por ejemplo: <em>"qué listas se crearon en las últimas 2 semanas"</em> o <em>"cuáles tienen alternativa de conciliación 66"</em>. Voy a filtrar la tabla directamente.</p>
+      <p>¡Hola! Soy tu asistente para esta tabla. Dime en lenguaje natural qué necesitas ver y la filtro al instante — por ejemplo: <em>"qué listas se crearon en las últimas 2 semanas"</em> o <em>"cuáles tienen alternativa de conciliación 66"</em>.</p>
+      <p>Si no sabes por dónde empezar, pregúntame qué puedo hacer.</p>
     </div>
   </div>
 
@@ -8262,40 +8263,55 @@ function formatFechaHoraCorta(d){
     }
   }
 
+  /* El texto lo escribe el modelo, así que se escapa SIEMPRE. Encima se permite
+     un único gesto de formato: *palabra* -> <em>, que ya tiene estilo propio en
+     el panel (.ia-chat-msg-ia em). Así la IA puede enfatizar sin abrir un hueco
+     de inyección de HTML. */
+  function textoIA(txt){
+    return esc(txt).split(/\n+/).map(function(linea){
+      return '<p>'+linea.replace(/\*([^*\n]+)\*/g, '<em>$1</em>')+'</p>';
+    }).join('');
+  }
+
+  /* Las sugerencias se envían TAL CUAL como siguiente pregunta al hacer clic, por
+     eso el prompt le pide al modelo que las escriba en primera persona. */
+  function sugerenciasHtmlDe(data){
+    if(!Array.isArray(data.sugerencias) || !data.sugerencias.length) return '';
+    return '<div class="ia-chat-sugerencias">'+data.sugerencias.map(function(s){
+      return '<button type="button" class="ia-chat-sugerencia-btn">'+esc(s)+'</button>';
+    }).join('')+'</div>';
+  }
+
   function renderRespuestaIA(data){
     var razonamientoHtml = data.razonamiento ?
       '<div class="ia-chat-razonamiento"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a7 7 0 0 0-4 12.7V17a2 2 0 0 0 2 2h4a2 2 0 0 0 2-2v-2.3A7 7 0 0 0 12 2Z"/><path d="M9 21h6"/></svg><span>'+esc(data.razonamiento)+'</span></div>' : '';
+    // Las sugerencias se ofrecen en CUALQUIER respuesta, no solo cuando la IA no
+    // entiende: tras aplicar un filtro también tiene sentido proponer el siguiente paso.
+    var sugerenciasHtml = sugerenciasHtmlDe(data);
+    var cuerpo;
 
     if(data.tipo === 'filtro' && Array.isArray(data.condiciones) && data.condiciones.length){
       activarFiltroIA(data.condiciones);
       var recuento = vistaActiva()==='mm' ? (window.__mmGetFilteredRows?window.__mmGetFilteredRows().length:'—') : (window.__bomGetFilteredRows?window.__bomGetFilteredRows().length:'—');
-      agregarMensajeIA(
-        '<p>Filtro aplicado sobre la tabla.</p>'+
-        '<span class="ia-chat-resultado-badge">'+recuento+' resultado(s)</span>'+
-        razonamientoHtml
-      );
+      // El conteo lo pone la aplicación, no la IA: el prompt le prohíbe expresamente
+      // adelantar cifras para que no se contradiga con la tabla real.
+      cuerpo = textoIA(data.mensaje || 'Filtro aplicado sobre la tabla.')+
+        '<span class="ia-chat-resultado-badge">'+recuento+' resultado(s)</span>';
     } else if(data.tipo === 'pregunta_sobre_resultados' && Array.isArray(data.condiciones) && data.condiciones.length){
       var conteo = contarCoincidencias(data.condiciones);
-      agregarMensajeIA(
-        '<p>De las filas actualmente visibles: <strong>'+esc(conteo)+'</strong> cumplen esa condición.</p>'+
-        razonamientoHtml
-      );
+      cuerpo = textoIA(data.mensaje || 'De las filas actualmente visibles:')+
+        '<span class="ia-chat-resultado-badge">'+esc(conteo)+' coinciden</span>';
+    } else if(data.tipo === 'conversacion'){
+      cuerpo = textoIA(data.mensaje || '¿Sobre qué te gustaría filtrar esta tabla?');
     } else {
-      var sugerenciasHtml = '';
-      if(Array.isArray(data.sugerencias) && data.sugerencias.length){
-        sugerenciasHtml = '<div class="ia-chat-sugerencias">'+data.sugerencias.map(function(s){
-          return '<button type="button" class="ia-chat-sugerencia-btn">'+esc(s)+'</button>';
-        }).join('')+'</div>';
-      }
-      var div = agregarMensajeIA(
-        '<p>No estoy seguro de cómo filtrar con esa pregunta. '+(data.sugerencias&&data.sugerencias.length?'Prueba con:':'¿Puedes reformularla?')+'</p>'+
-        sugerenciasHtml+
-        razonamientoHtml
-      );
-      Array.prototype.forEach.call(div.querySelectorAll('.ia-chat-sugerencia-btn'), function(btn){
-        btn.addEventListener('click', function(){ enviarPregunta(btn.textContent); });
-      });
+      cuerpo = textoIA(data.mensaje || ('No estoy seguro de cómo filtrar con esa pregunta. '+
+        (data.sugerencias && data.sugerencias.length ? 'Prueba con:' : '¿Puedes reformularla?')));
     }
+
+    var div = agregarMensajeIA(cuerpo + sugerenciasHtml + razonamientoHtml);
+    Array.prototype.forEach.call(div.querySelectorAll('.ia-chat-sugerencia-btn'), function(btn){
+      btn.addEventListener('click', function(){ enviarPregunta(btn.textContent); });
+    });
   }
 
   function manejarEnvio(){

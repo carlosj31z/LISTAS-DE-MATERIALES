@@ -105,6 +105,13 @@ const MAX_ACCIONES = 3;
 // modelo que no admita responseSchema ni thinkingConfig.
 const NIVEL_MINIMO_TEXTO = 3;
 
+/* Escalón desde el que arrancar. Vive fuera del handler a propósito: Vercel reutiliza la
+   instancia entre peticiones, así que una vez descubierto que este modelo rechaza, por
+   ejemplo, thinkingConfig, las siguientes preguntas ya no vuelven a gastar una llamada
+   para que Google lo repita. Se queda en 0 mientras el modelo lo admita todo, y si el
+   despliegue se enfría simplemente se vuelve a aprender en la primera pregunta. */
+let nivelAprendido = 0;
+
 /* Esquemas de salida (subconjunto de OpenAPI 3.0 que acepta Gemini vía
    generationConfig.responseSchema). Sin esto, "responseMimeType: application/json"
    por sí solo no impide que el modelo divague en el razonamiento hasta cortar el
@@ -286,21 +293,49 @@ module.exports = async (req, res) => {
         'salida JSON',
         'solo texto (el JSON se pide en el prompt)'
       ];
+      const base = { temperature: 0, maxOutputTokens: 256, responseMimeType: 'application/json', responseSchema: RESPUESTA_SCHEMA };
+      const pruebaMinima = (apiKey, n) => llamarGemini({
+        apiKey, prompt: 'Responde solo con este JSON: {"mensaje":"ok"}', config: base, nivel: n
+      });
+
+      /* Cada modo se prueba rotando de key mientras salga "cuota agotada". Probándolo solo
+         con la primera, una key sin cuota hacía concluir que el modelo no funciona en
+         ningún modo — cuando lo que pasaba era que esa key concreta estaba agotada. */
+      async function probarNivel(n) {
+        let ultima = null;
+        for (let k = 0; k < Math.min(apiKeys.length, 3); k++) {
+          ultima = await pruebaMinima(apiKeys[k], n);
+          if (ultima.status !== 429) return ultima;   // 429 = es la key, no el modo
+        }
+        return ultima;
+      }
+
       const pruebas = [];
       let nivelQueFunciona = null;
       if (existe) {
-        const base = { temperature: 0, maxOutputTokens: 256, responseMimeType: 'application/json', responseSchema: RESPUESTA_SCHEMA };
         for (let n = 0; n <= NIVEL_MINIMO_TEXTO; n++) {
-          const prueba = await llamarGemini({
-            apiKey: apiKeys[0],
-            prompt: 'Responde solo con este JSON: {"mensaje":"ok"}',
-            config: base,
-            nivel: n
-          });
+          const prueba = await probarNivel(n);
           pruebas.push({ nivel: n, modo: NOMBRES_NIVEL[n], resultado: prueba.tipo, status: prueba.status || null,
             detalle: prueba.detalle ? String(prueba.detalle).slice(0, 200) : null });
           if (prueba.tipo === 'ok') { nivelQueFunciona = n; break; }
         }
+      }
+
+      /* Estado de CADA key, no solo de la primera. Probar solo la primera lleva a
+         conclusiones falsas: si esa tiene la cuota agotada, todo el diagnóstico sale en
+         429 aunque las otras cinco estén perfectamente vivas. Nunca se devuelve una key,
+         solo su posición y el veredicto. */
+      const nivelParaProbar = nivelQueFunciona === null ? NIVEL_MINIMO_TEXTO : nivelQueFunciona;
+      const estadoKeys = [];
+      let vivas = 0;
+      for (let k = 0; k < apiKeys.length; k++) {
+        const p = await pruebaMinima(apiKeys[k], nivelParaProbar);
+        let estado;
+        if (p.tipo === 'ok' || p.tipo === 'truncado') { estado = 'operativa'; vivas++; }
+        else if (p.status === 429) estado = 'cuota agotada';
+        else if (p.status === 400 || p.status === 403) estado = 'rechazada (key inválida o sin permiso)';
+        else estado = 'error (' + (p.status || p.tipo) + ')';
+        estadoKeys.push({ key: 'GEMINI_API_KEY_' + (k + 1), estado });
       }
 
       res.status(200).json({
@@ -314,6 +349,12 @@ module.exports = async (req, res) => {
         modoQueFunciona: nivelQueFunciona === null ? null : NOMBRES_NIVEL[nivelQueFunciona],
         pruebas,
         keysConfiguradas: apiKeys.length,
+        keysOperativas: vivas,
+        estadoDeCadaKey: estadoKeys,
+        diagnosticoDeCuota: vivas === 0
+          ? 'Ninguna key puede generar ahora mismo. Si todas dicen "cuota agotada", el chat no funcionará hasta que se restablezca (suele ser cada 24 h) o hasta que cambies a un modelo con más cuota gratuita.'
+          : `${vivas} de ${apiKeys.length} key(s) pueden generar. El chat rota automáticamente hasta dar con una que responda.`,
+        consumoPorPregunta: 'Cada pregunta del chat gasta 2 llamadas (una para decidir qué consultar y otra para redactar la respuesta).',
         modelosDisponibles: disponibles
       });
       return;
@@ -397,7 +438,7 @@ module.exports = async (req, res) => {
 
      El nivel 3 es el que funcionaba antes de añadir estas mejoras, así que siempre queda
      un camino que responde; extraerJSON ya tolera que ahí venga envuelto en markdown. */
-  let nivel = 0;
+  let nivel = nivelAprendido;
   let ultimoError = null;
 
   while (llamadas < MAX_LLAMADAS && idxKey < apiKeys.length && quedaTiempo()) {
@@ -406,6 +447,7 @@ module.exports = async (req, res) => {
     const r = await llamarGemini({ apiKey: apiKeys[idxKey], prompt, config, nivel });
 
     if (r.tipo === 'ok') {
+      nivelAprendido = nivel;   // este modelo responde aquí: las próximas preguntas empiezan ya en este escalón
       res.status(200).json(sanear(r.interpretacion, fase));
       return;
     }

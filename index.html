@@ -830,7 +830,7 @@
     .audit-fab svg{ width:18px; height:18px; }
   }
 
-  /* ================= CHAT CON IA ================= */
+  /* ================= CHAT DE CONSULTA ================= */
   .ia-chat-fab{
     position:fixed; right:20px; bottom:20px; width:52px; height:52px; border-radius:50%;
     border:none; background:var(--teal); color:#fff; display:flex; align-items:center; justify-content:center;
@@ -841,15 +841,15 @@
   .ia-chat-fab svg{ width:22px; height:22px; }
   @media (max-width: 720px){ .ia-chat-fab{ right:14px; bottom:14px; width:46px; height:46px; } .ia-chat-fab svg{ width:19px; height:19px; } }
 
-  /* El chat dejó de ser un panel lateral a pantalla completa: ahora es una ventana
-     flotante anclada sobre su botón, al estilo de los chats de redes sociales. Por eso
-     el overlay oscuro desaparece — la tabla debe seguir visible y utilizable con el
-     chat abierto, y el cierre al hacer clic fuera lo gestiona un listener en document. */
+  /* El chat es una ventana flotante anclada sobre su botón, no un panel a pantalla
+     completa: la tabla debe seguir visible y utilizable con el chat abierto. Por eso no
+     hay overlay oscuro — el cierre al hacer clic fuera lo gestiona un listener en
+     document (ver el módulo del chat). */
   .ia-chat-overlay{ display:none; }
 
   .ia-chat-panel{
-    position:fixed; right:20px; bottom:84px; width:380px; max-width:calc(100vw - 40px);
-    height:min(560px, calc(100vh - 120px)); background:#fff;
+    position:fixed; right:20px; bottom:84px; width:420px; max-width:calc(100vw - 40px);
+    height:min(620px, calc(100vh - 120px)); background:var(--surface);
     border:1px solid var(--border-soft); border-radius:16px;
     box-shadow:0 12px 40px rgba(18,33,50,0.18);
     transform-origin:100% 100%; transform:translateY(12px) scale(.96); opacity:0; pointer-events:none;
@@ -858,22 +858,21 @@
   }
   .ia-chat-panel.open{ transform:translateY(0) scale(1); opacity:1; pointer-events:auto; }
   @media (max-width: 720px){
-    .ia-chat-panel{ right:10px; left:10px; width:auto; bottom:76px; height:min(70vh, calc(100vh - 100px)); }
+    .ia-chat-panel{ right:10px; left:10px; width:auto; bottom:76px; height:min(76vh, calc(100vh - 100px)); }
   }
 
   .ia-chat-header{
-    display:flex; align-items:flex-start; justify-content:space-between; gap:10px;
-    padding:18px 18px 14px; border-bottom:1px solid var(--border-soft);
+    display:flex; align-items:center; justify-content:space-between; gap:10px;
+    padding:13px 14px 12px 18px; border-bottom:1px solid var(--border-soft);
   }
-  .ia-chat-eyebrow{ font-family:var(--mono); font-size:10.5px; letter-spacing:.05em; color:var(--teal); font-weight:700; margin-bottom:3px; }
-  .ia-chat-header h3{ font-family:var(--display); font-size:17px; margin:0; color:var(--ink); }
-  .ia-chat-header-actions{ display:flex; gap:4px; flex:none; }
+  .ia-chat-header h3{ font-family:var(--display); font-size:15.5px; margin:0; color:var(--ink); font-weight:600; letter-spacing:-.01em; }
+  .ia-chat-header-actions{ display:flex; gap:2px; flex:none; }
   .ia-chat-icon-btn{
-    width:30px; height:30px; border-radius:8px; border:none; background:transparent; color:var(--ink-soft);
-    cursor:pointer; display:flex; align-items:center; justify-content:center; transition:background .15s;
+    width:30px; height:30px; border-radius:8px; border:none; background:transparent; color:var(--ink-faint);
+    cursor:pointer; display:flex; align-items:center; justify-content:center; transition:background .15s, color .15s;
   }
   .ia-chat-icon-btn:hover{ background:var(--surface-alt); color:var(--ink); }
-  .ia-chat-icon-btn svg{ width:17px; height:17px; }
+  .ia-chat-icon-btn svg{ width:16px; height:16px; }
 
   .ia-chat-config{ padding:14px 18px; border-bottom:1px solid var(--border-soft); background:var(--surface-alt); }
   .ia-chat-config label{ font-size:12px; font-weight:600; color:var(--ink-soft); display:block; margin-bottom:6px; }
@@ -883,59 +882,220 @@
   }
   .ia-chat-hint{ font-size:11px; color:var(--ink-faint); margin:8px 0 0; line-height:1.4; }
 
-  .ia-chat-messages{ flex:1; overflow-y:auto; padding:16px 18px; display:flex; flex-direction:column; gap:12px; }
+  .ia-chat-messages{ flex:1; overflow-y:auto; padding:18px; display:flex; flex-direction:column; gap:16px; }
+  .ia-chat-messages::-webkit-scrollbar{ width:8px; }
+  .ia-chat-messages::-webkit-scrollbar-thumb{ background:var(--border); border-radius:8px; }
+
+  /* ---- Estado inicial: saludo + arranques sugeridos ---- */
+  .ia-chat-empty{ margin:auto 0; padding:6px 2px 2px; }
+  .ia-chat-greeting{ font-family:var(--display); font-size:21px; line-height:1.25; color:var(--ink); margin:0 0 3px; letter-spacing:-.015em; }
+  .ia-chat-greeting span{ color:var(--teal); }
+  .ia-chat-greeting-sub{ font-size:13.5px; color:var(--ink-soft); margin:0 0 16px; }
+  .ia-chat-starters{ display:flex; flex-direction:column; gap:7px; }
+  .ia-chat-starter{
+    display:flex; align-items:center; gap:9px; text-align:left; width:100%;
+    padding:10px 12px; border-radius:11px; border:1px solid var(--border-soft); background:var(--surface);
+    font-family:var(--body); font-size:13px; color:var(--ink); cursor:pointer;
+    transition:border-color .15s var(--ease), background .15s var(--ease), transform .15s var(--ease);
+  }
+  .ia-chat-starter:hover{ border-color:var(--teal); background:var(--teal-soft); transform:translateX(2px); }
+  .ia-chat-starter svg{ width:15px; height:15px; flex:none; color:var(--teal); }
+
+  /* ---- Mensajes ---- */
   .ia-chat-msg{ max-width:100%; }
-  .ia-chat-msg p{ margin:0; font-size:13.5px; line-height:1.5; }
+  .ia-chat-msg p{ margin:0 0 8px; font-size:13.8px; line-height:1.62; color:var(--ink); }
+  .ia-chat-msg p:last-child{ margin-bottom:0; }
   .ia-chat-msg-user{
-    align-self:flex-end; background:var(--navy); color:#fff; padding:9px 13px; border-radius:14px 14px 3px 14px;
-    max-width:85%;
+    align-self:flex-end; background:var(--surface-alt); color:var(--ink); padding:9px 14px;
+    border-radius:16px 16px 4px 16px; max-width:88%;
   }
-  .ia-chat-msg-ia{
-    background:var(--surface-alt); border:1px solid var(--border-soft); padding:11px 14px; border-radius:3px 14px 14px 14px;
-    color:var(--ink);
-  }
+  .ia-chat-msg-user p{ font-size:13.5px; }
+  .ia-chat-msg-ia{ position:relative; padding-right:2px; }
+  .ia-chat-msg-ia strong{ font-weight:600; color:var(--ink); }
   .ia-chat-msg-ia em{ color:var(--teal); font-style:normal; font-weight:600; }
+  .ia-chat-msg-ia code{
+    font-family:var(--mono); font-size:12.2px; background:var(--surface-alt); color:var(--navy-deep);
+    padding:1px 5px; border-radius:5px;
+  }
+  .ia-chat-msg-ia ul{ margin:2px 0 8px; padding-left:17px; }
+  .ia-chat-msg-ia li{ font-size:13.6px; line-height:1.55; margin-bottom:4px; color:var(--ink); }
   .ia-chat-msg-error{
-    background:var(--brick-soft); border:1px solid var(--brick); color:var(--brick); padding:11px 14px; border-radius:10px; font-size:13px;
+    background:var(--brick-soft); border:1px solid var(--brick); color:var(--brick); padding:11px 14px;
+    border-radius:10px; font-size:13px;
   }
-  .ia-chat-razonamiento{
-    display:flex; gap:7px; align-items:flex-start; margin-top:8px; padding-top:8px; border-top:1px dashed var(--border);
-    font-size:12px; color:var(--ink-faint); font-style:italic;
+  .ia-chat-msg-error p{ color:var(--brick); font-size:13px; }
+
+  /* Copiar la respuesta: aparece al pasar el ratón, como en los chats de asistente. */
+  .ia-chat-copy{
+    position:absolute; top:-4px; right:-2px; opacity:0; pointer-events:none;
+    width:26px; height:26px; border-radius:7px; border:1px solid var(--border-soft); background:var(--surface);
+    color:var(--ink-faint); display:flex; align-items:center; justify-content:center; cursor:pointer;
+    transition:opacity .15s, color .15s, border-color .15s;
   }
-  .ia-chat-razonamiento svg{ width:13px; height:13px; flex:none; margin-top:2px; color:var(--teal); }
+  .ia-chat-msg-ia:hover .ia-chat-copy{ opacity:1; pointer-events:auto; }
+  .ia-chat-copy:hover{ color:var(--teal); border-color:var(--teal); }
+  .ia-chat-copy svg{ width:13px; height:13px; }
+
+  /* ---- Bloque de razonamiento (plegable) ---- */
+  .ia-chat-think{ margin-bottom:9px; }
+  .ia-chat-think-toggle{
+    display:inline-flex; align-items:center; gap:6px; padding:2px 0; border:none; background:none;
+    font-family:var(--body); font-size:12.5px; color:var(--ink-faint); cursor:pointer;
+  }
+  .ia-chat-think-toggle .chev{ width:12px; height:12px; flex:none; transition:transform .18s var(--ease); }
+  .ia-chat-think.abierto .ia-chat-think-toggle .chev{ transform:rotate(90deg); }
+  .ia-chat-think-body{
+    max-height:0; overflow:hidden; transition:max-height .28s var(--ease), opacity .2s var(--ease), margin-top .2s var(--ease);
+    opacity:0; margin-top:0;
+    border-left:2px solid var(--border); padding-left:11px;
+  }
+  .ia-chat-think.abierto .ia-chat-think-body{ max-height:420px; opacity:1; margin-top:7px; }
+  .ia-chat-think-body p{ font-size:12.6px; line-height:1.55; color:var(--ink-soft); margin:0 0 6px; }
+
+  /* El texto "pensando" recorre un brillo de izquierda a derecha mientras se espera. */
+  .ia-chat-shimmer{
+    background:linear-gradient(90deg, var(--ink-faint) 30%, var(--navy-deep) 50%, var(--ink-faint) 70%);
+    background-size:220% 100%;
+    -webkit-background-clip:text; background-clip:text; color:transparent;
+    animation:iaShimmer 2.1s linear infinite;
+  }
+  @keyframes iaShimmer{ 0%{ background-position:120% 0; } 100%{ background-position:-120% 0; } }
+
+  /* Aparición del texto palabra a palabra, como cuando la respuesta se va escribiendo. */
+  .ia-w{ opacity:0; animation:iaWordIn .34s var(--ease) forwards; }
+  @keyframes iaWordIn{ from{ opacity:0; transform:translateY(2px); } to{ opacity:1; transform:none; } }
+
+  @media (prefers-reduced-motion: reduce){
+    .ia-chat-shimmer{ animation:none; color:var(--ink-soft); background:none; -webkit-text-fill-color:currentColor; }
+    .ia-w{ opacity:1; animation:none; }
+    .ia-chat-starter:hover{ transform:none; }
+  }
+
+  /* ---- Tarjetas de resultado (lo que devuelve cada consulta) ---- */
+  .ia-card{
+    border:1px solid var(--border-soft); border-radius:11px; overflow:hidden; margin-top:10px; background:var(--surface);
+  }
+  .ia-card-head{
+    display:flex; align-items:center; justify-content:space-between; gap:8px;
+    padding:7px 11px; background:var(--surface-alt); border-bottom:1px solid var(--border-soft);
+  }
+  .ia-card-title{ font-family:var(--mono); font-size:10.5px; letter-spacing:.04em; color:var(--ink-soft); font-weight:600; text-transform:uppercase; }
+  .ia-card-count{ font-size:11px; color:var(--ink-faint); flex:none; }
+  .ia-card-body{ max-height:290px; overflow:auto; }
+  .ia-row{
+    display:block; width:100%; text-align:left; border:none; background:none; cursor:pointer;
+    padding:8px 11px; border-bottom:1px solid var(--border-soft); transition:background .12s;
+  }
+  .ia-row:last-child{ border-bottom:none; }
+  .ia-row:hover{ background:var(--teal-soft); }
+  .ia-row-top{ display:flex; align-items:baseline; gap:8px; }
+  .ia-row-code{ font-family:var(--mono); font-size:12px; color:var(--navy-deep); font-weight:600; flex:none; }
+  .ia-row-desc{ font-size:12.3px; color:var(--ink); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .ia-row-meta{ font-size:11.4px; color:var(--ink-faint); margin-top:2px; display:flex; gap:7px; flex-wrap:wrap; }
+  .ia-tag{
+    display:inline-block; padding:1px 6px; border-radius:20px; font-size:10.5px; font-weight:600;
+    background:var(--surface-alt); color:var(--ink-soft);
+  }
+  .ia-tag.ok{ background:var(--teal-soft); color:#0A5352; }
+  .ia-tag.warn{ background:var(--amber-soft); color:var(--amber); }
+  .ia-tag.bad{ background:var(--brick-soft); color:var(--brick); }
+  .ia-card-foot{
+    padding:7px 11px; border-top:1px solid var(--border-soft); background:var(--surface);
+    display:flex; justify-content:space-between; align-items:center; gap:8px;
+  }
+  .ia-card-link{
+    border:none; background:none; padding:0; font-family:var(--body); font-size:12px; color:var(--teal);
+    font-weight:600; cursor:pointer;
+  }
+  .ia-card-link:hover{ text-decoration:underline; }
+  .ia-card-note{ font-size:11px; color:var(--ink-faint); }
+
+  /* Tabla compacta dentro de una tarjeta (componentes, versiones de fabricación). */
+  .ia-mini-table{ width:100%; border-collapse:collapse; font-size:11.8px; }
+  .ia-mini-table th{
+    position:sticky; top:0; background:var(--surface-alt); text-align:left; padding:5px 8px;
+    font-weight:600; color:var(--ink-soft); font-size:10.5px; text-transform:uppercase; letter-spacing:.03em;
+    border-bottom:1px solid var(--border-soft); white-space:nowrap;
+  }
+  .ia-mini-table td{ padding:5px 8px; border-bottom:1px solid var(--border-soft); color:var(--ink); vertical-align:top; }
+  .ia-mini-table tr:last-child td{ border-bottom:none; }
+  .ia-mini-table .mono{ font-family:var(--mono); font-size:11.3px; color:var(--navy-deep); white-space:nowrap; }
+  .ia-mini-table tbody tr[data-ask]{ cursor:pointer; }
+  .ia-mini-table tbody tr[data-ask]:hover{ background:var(--teal-soft); }
+
+  /* Árbol del producto dibujado dentro del chat. */
+  .ia-tree{ padding:10px 11px; }
+  .ia-tree-node{ position:relative; padding-left:16px; padding-bottom:11px; }
+  .ia-tree-node:last-child{ padding-bottom:0; }
+  .ia-tree-node::before{
+    content:''; position:absolute; left:3px; top:5px; width:7px; height:7px; border-radius:50%;
+    background:var(--teal); box-shadow:0 0 0 2px var(--teal-soft);
+  }
+  .ia-tree-node:not(:last-child)::after{
+    content:''; position:absolute; left:6px; top:14px; bottom:0; width:1px; background:var(--border);
+  }
+  .ia-tree-etapa{ font-family:var(--mono); font-size:10px; letter-spacing:.05em; text-transform:uppercase; color:var(--teal); font-weight:700; }
+  .ia-tree-mat{ font-size:12.6px; color:var(--ink); margin-top:1px; }
+  .ia-tree-mat b{ font-family:var(--mono); font-size:12px; color:var(--navy-deep); }
+  .ia-tree-meta{ font-size:11.2px; color:var(--ink-faint); margin-top:2px; display:flex; gap:6px; flex-wrap:wrap; align-items:center; }
+  .ia-tree-warn{ font-size:11.2px; color:var(--brick); margin-top:3px; line-height:1.4; }
+
   .ia-chat-resultado-badge{
     display:inline-flex; align-items:center; gap:5px; margin-top:9px; padding:4px 10px; border-radius:20px;
     background:var(--teal-soft); color:#0A5352; font-size:12px; font-weight:600;
   }
-  .ia-chat-sugerencias{ display:flex; flex-direction:column; gap:6px; margin-top:10px; }
+
+  /* ---- Sugerencias de continuación ---- */
+  .ia-chat-sugerencias{ display:flex; flex-direction:column; gap:6px; margin-top:11px; }
   .ia-chat-sugerencia-btn{
-    text-align:left; padding:8px 11px; border-radius:9px; border:1px solid var(--border); background:#fff;
-    font-size:12.5px; color:var(--navy-deep); cursor:pointer; transition:border-color .15s, background .15s;
+    text-align:left; padding:7px 11px; border-radius:20px; border:1px solid var(--border); background:var(--surface);
+    font-family:var(--body); font-size:12.4px; color:var(--navy-deep); cursor:pointer;
+    transition:border-color .15s, background .15s;
   }
   .ia-chat-sugerencia-btn:hover{ border-color:var(--teal); background:var(--teal-soft); }
-  .ia-chat-loading{ display:flex; gap:4px; padding:4px 0; }
-  .ia-chat-loading span{
-    width:6px; height:6px; border-radius:50%; background:var(--ink-faint);
-    animation:iaChatBounce 1s infinite ease-in-out;
-  }
-  .ia-chat-loading span:nth-child(2){ animation-delay:.15s; }
-  .ia-chat-loading span:nth-child(3){ animation-delay:.3s; }
-  @keyframes iaChatBounce{ 0%,80%,100%{ transform:scale(0.6); opacity:.5; } 40%{ transform:scale(1); opacity:1; } }
 
-  .ia-chat-input-row{ display:flex; gap:8px; padding:14px 18px; border-top:1px solid var(--border-soft); }
-  .ia-chat-input-row input{
-    flex:1; padding:10px 13px; border:1px solid var(--border); border-radius:20px; font-size:13.5px;
-    background:var(--surface-alt); transition:border-color .15s, background .15s;
+  /* ---- Composer con autocompletado ---- */
+  .ia-chat-composer{ position:relative; padding:12px 14px 14px; border-top:1px solid var(--border-soft); }
+  .ia-chat-input-box{
+    display:flex; align-items:flex-end; gap:8px; padding:8px 8px 8px 14px;
+    border:1px solid var(--border); border-radius:20px; background:var(--surface-alt);
+    transition:border-color .15s, background .15s, box-shadow .15s;
   }
-  .ia-chat-input-row input:focus{ outline:none; border-color:var(--teal); background:#fff; }
+  .ia-chat-input-box:focus-within{ border-color:var(--teal); background:var(--surface); box-shadow:0 0 0 3px rgba(14,124,123,0.10); }
+  .ia-chat-input-box textarea{
+    flex:1; border:none; background:none; resize:none; outline:none; padding:6px 0;
+    font-family:var(--body); font-size:13.6px; line-height:1.5; color:var(--ink);
+    max-height:120px; overflow-y:auto;
+  }
   .ia-chat-send-btn{
-    width:38px; height:38px; border-radius:50%; border:none; background:var(--teal); color:#fff;
-    display:flex; align-items:center; justify-content:center; cursor:pointer; flex:none; transition:background .15s, transform .1s;
+    width:32px; height:32px; border-radius:50%; border:none; background:var(--teal); color:#fff;
+    display:flex; align-items:center; justify-content:center; cursor:pointer; flex:none;
+    transition:background .15s, transform .1s, opacity .15s;
   }
   .ia-chat-send-btn:hover{ background:var(--navy-deep); }
   .ia-chat-send-btn:active{ transform:scale(0.93); }
-  .ia-chat-send-btn:disabled{ opacity:0.5; cursor:default; }
-  .ia-chat-send-btn svg{ width:16px; height:16px; }
+  .ia-chat-send-btn:disabled{ opacity:0.4; cursor:default; }
+  .ia-chat-send-btn svg{ width:15px; height:15px; }
+  .ia-chat-composer-hint{ font-size:10.5px; color:var(--ink-faint); margin:6px 2px 0; text-align:right; }
+
+  .ia-chat-autocomplete{
+    position:absolute; left:14px; right:14px; bottom:calc(100% - 6px); z-index:5;
+    background:var(--surface); border:1px solid var(--border); border-radius:12px;
+    box-shadow:0 10px 30px rgba(18,33,50,0.16); overflow:hidden; display:none;
+  }
+  .ia-chat-autocomplete.open{ display:block; }
+  .ia-chat-ac-head{
+    padding:6px 11px; font-family:var(--mono); font-size:9.8px; letter-spacing:.05em; text-transform:uppercase;
+    color:var(--ink-faint); background:var(--surface-alt); border-bottom:1px solid var(--border-soft);
+  }
+  .ia-chat-ac-item{
+    display:flex; align-items:center; gap:8px; width:100%; text-align:left; border:none; background:none;
+    padding:8px 11px; cursor:pointer; font-family:var(--body); font-size:12.8px; color:var(--ink);
+  }
+  .ia-chat-ac-item:hover, .ia-chat-ac-item.activo{ background:var(--teal-soft); }
+  .ia-chat-ac-item .ac-code{ font-family:var(--mono); font-size:11.6px; color:var(--navy-deep); font-weight:600; flex:none; }
+  .ia-chat-ac-item .ac-text{ overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .ia-chat-ac-item .ac-hint{ margin-left:auto; font-size:10.5px; color:var(--ink-faint); flex:none; }
 
   /* ================= EXPLOSIÓN MASIVA ================= */
   .expl-card{
@@ -2531,6 +2691,22 @@ function formatFechaHoraCorta(d){
   window.__mmApplyFilters = function(){ applyFilters(false); };
   window.__mmGetColumns = function(){ return SUMMARY_COLS.map(function(c){ return c.key; }); };
   window.__mmGetFilteredRows = function(){ return state.filtered || []; };
+  /* Filas SIN filtrar: el "Chat de consulta" busca sobre el maestro completo, no sobre lo
+     que la tabla esté mostrando en ese momento — si no, una búsqueda daría un resultado
+     distinto según el filtro que hubiera puesto antes la persona. */
+  window.__mmGetAllRows = function(){ return state.rows || []; };
+  /* Abre la ficha de un material desde otro módulo (el chat), cambiando a esta pestaña.
+     Devuelve false si el código no está en el maestro cargado, para que quien llame pueda
+     decirlo en vez de dejar el clic sin efecto. */
+  window.__mmOpenMaterial = function(material){
+    var code = String(material||'').trim();
+    if(!code) return false;
+    var row = (state.rows||[]).find(function(r){ return String(r['Material']||'').trim() === code; });
+    if(!row) return false;
+    if(window.__activateSuiteTab) window.__activateSuiteTab('mm');
+    openDrawer(row);
+    return true;
+  };
 
   function updateSortArrows(){
     Array.prototype.forEach.call(theadRow.querySelectorAll('[data-arrow]'), function(el){
@@ -7244,6 +7420,11 @@ function formatFechaHoraCorta(d){
     buildBomIndex: buildBomIndex,
     buildVfabIndex: buildVfabIndex,
     buildCompFirstPosIndex: buildCompFirstPosIndex,
+    // Usados por el "Chat de consulta" para responder sobre componentes y para llevar a la
+    // persona desde un material intermedio hasta el producto terminado del que cuelga.
+    buildAllCompsIndex: buildAllCompsIndex,
+    getProductosTerminados: getProductosTerminados,
+    encontrarProductosTerminados: encontrarProductosTerminados,
     esEtapaAcondicionado: esEtapaAcondicionado,
     esEtapaFabricacion: esEtapaFabricacion,
     estadoZDelMaterial: estadoZDelMaterial,
@@ -7913,19 +8094,19 @@ function formatFechaHoraCorta(d){
 })();
 </script>
 
-<!-- ========================= CHAT CON IA (Gemini vía endpoint propio) ========================= -->
-<button type="button" class="ia-chat-fab" id="iaChatFab" title="Chat con IA — filtra con preguntas en lenguaje natural">
+<!-- ========================= CHAT DE CONSULTA (Gemini vía endpoint propio) ========================= -->
+<button type="button" class="ia-chat-fab" id="iaChatFab" title="Chat de consulta">
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
 </button>
 
 <div class="ia-chat-overlay" id="iaChatOverlay"></div>
 <div class="ia-chat-panel" id="iaChatPanel">
   <div class="ia-chat-header">
-    <div>
-      <div class="ia-chat-eyebrow">CHAT CON IA · <span id="iaChatVistaLabel">—</span></div>
-      <h3>Filtra con lenguaje natural</h3>
-    </div>
+    <h3>Chat de consulta</h3>
     <div class="ia-chat-header-actions">
+      <button type="button" class="ia-chat-icon-btn" id="iaChatNewBtn" title="Nueva conversación">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+      </button>
       <button type="button" class="ia-chat-icon-btn" id="iaChatConfigBtn" title="Configurar la URL del endpoint (Vercel)">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
       </button>
@@ -7945,32 +8126,51 @@ function formatFechaHoraCorta(d){
   </div>
 
   <div class="ia-chat-messages" id="iaChatMessages">
-    <div class="ia-chat-msg ia-chat-msg-ia">
-      <p>¡Hola! Soy tu asistente para esta tabla. Dime en lenguaje natural qué necesitas ver y la filtro al instante — por ejemplo: <em>"qué listas se crearon en las últimas 2 semanas"</em> o <em>"cuáles tienen alternativa de conciliación 66"</em>.</p>
-      <p>Si no sabes por dónde empezar, pregúntame qué puedo hacer.</p>
+    <!-- Estado inicial: saludo según la hora y arranques sugeridos. Se oculta con la
+         primera pregunta y vuelve con el botón de nueva conversación. -->
+    <div class="ia-chat-empty" id="iaChatEmpty">
+      <p class="ia-chat-greeting" id="iaChatGreeting">Buenas tardes</p>
+      <p class="ia-chat-greeting-sub">¿En qué te puedo ayudar?</p>
+      <div class="ia-chat-starters" id="iaChatStarters"></div>
     </div>
   </div>
 
-  <div class="ia-chat-input-row">
-    <input type="text" id="iaChatInput" placeholder="Escribe tu pregunta…" autocomplete="off">
-    <button type="button" class="ia-chat-send-btn" id="iaChatSendBtn" title="Enviar">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 2 11 13"/><path d="M22 2 15 22l-4-9-9-4Z"/></svg>
-    </button>
+  <div class="ia-chat-composer">
+    <!-- Sugerencias mientras se escribe: se rellenan desde el módulo del chat. -->
+    <div class="ia-chat-autocomplete" id="iaChatAutocomplete"></div>
+    <div class="ia-chat-input-box">
+      <textarea id="iaChatInput" rows="1" placeholder="Escribe tu consulta…" autocomplete="off"></textarea>
+      <button type="button" class="ia-chat-send-btn" id="iaChatSendBtn" title="Enviar">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 2 11 13"/><path d="M22 2 15 22l-4-9-9-4Z"/></svg>
+      </button>
+    </div>
+    <p class="ia-chat-composer-hint">Enter envía · Mayús+Enter salta de línea</p>
   </div>
 </div>
 
 <script>
 /* ============================================================
-   CHAT CON IA (Gemini vía endpoint propio en Vercel)
+   CHAT DE CONSULTA (Gemini vía endpoint propio en Vercel)
 
-   Este módulo NUNCA conoce ninguna API key — solo le habla a un endpoint
-   propio (configurado por el usuario, guardado en localStorage) que es quien
-   de verdad llama a Gemini desde el servidor. Aquí solo se arma la solicitud
-   (pregunta + nombres de columnas + filtros disponibles de la vista activa —
-   nunca los datos de SAP en sí) y se traduce la respuesta a un filtro real
-   sobre las tablas ya existentes, reutilizando los hooks
-   window.__iaChatExtraFilter / __mmApplyFilters / __bomApplyFilters /
-   __bomFiltrosExistentes ya preparados en los módulos de MM y BOM.
+   Este módulo nunca conoce ninguna API key ni manda los datos de SAP al
+   servidor: le habla a un endpoint propio en dos fases (ver api/chat-ia.js).
+
+   FASE 1 "planificar": se le manda la pregunta + qué hay cargado + las
+   columnas de la vista activa, y el modelo devuelve qué HERRAMIENTAS hay que
+   ejecutar (buscar un material, traer sus listas, construir su árbol...).
+   Esas herramientas se ejecutan AQUÍ, contra los datos reales que ya están en
+   memoria del navegador (nunca se los mandamos al servidor).
+
+   FASE 2 "responder": se le mandan las OBSERVACIONES (el resultado real de
+   esas herramientas) y el modelo redacta la respuesta final. La aplicación
+   dibuja las tarjetas de datos debajo de ese texto — el chat no es un
+   traductor de preguntas a filtros, es un asistente que puede razonar sobre
+   todo el Maestro y las Listas de Materiales.
+
+   Reutiliza los mismos puntos de entrada que ya usan el resto de módulos
+   (window.__arbolAPI, window.__bomFindListsContainingMaterial,
+   window.__mmGetAllRows, window.__bomOpenListByKey...) — nunca una copia
+   propia de esa lógica.
    ============================================================ */
 (function(){
 
@@ -7983,19 +8183,26 @@ function formatFechaHoraCorta(d){
   var overlay = document.getElementById('iaChatOverlay');
   var panel = document.getElementById('iaChatPanel');
   var closeBtn = document.getElementById('iaChatCloseBtn');
+  var newBtn = document.getElementById('iaChatNewBtn');
   var configBtn = document.getElementById('iaChatConfigBtn');
   var configBox = document.getElementById('iaChatConfigBox');
   var endpointInput = document.getElementById('iaChatEndpointInput');
   var endpointSaveBtn = document.getElementById('iaChatEndpointSave');
   var messagesBox = document.getElementById('iaChatMessages');
+  var emptyBox = document.getElementById('iaChatEmpty');
+  var greetingEl = document.getElementById('iaChatGreeting');
+  var startersBox = document.getElementById('iaChatStarters');
   var input = document.getElementById('iaChatInput');
   var sendBtn = document.getElementById('iaChatSendBtn');
-  var vistaLabel = document.getElementById('iaChatVistaLabel');
+  var acBox = document.getElementById('iaChatAutocomplete');
+
+  var historial = []; // [{ rol:'usuario'|'asistente', texto }] — se manda recortado al servidor
 
   function esc(v){
     if(v===null||v===undefined) return '';
     return String(v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
   }
+  function escAttr(v){ return esc(v).replace(/"/g,'&quot;'); }
 
   /* ---------- Vista activa: MM o BOM ---------- */
   function vistaActiva(){
@@ -8018,45 +8225,53 @@ function formatFechaHoraCorta(d){
     }
     return window.__bomGetColumns ? window.__bomGetColumns() : [];
   }
-
   function filtrosDeVistaActual(){
     return vistaActiva()==='mm' ? [] : FILTROS_EXISTENTES_BOM;
   }
 
   /* ---------- Apertura / cierre del panel ---------- */
   function abrirPanel(){
-    vistaLabel.textContent = LABELS_VISTA[vistaActiva()];
+    if(!historial.length) mostrarEstadoVacio(); // refresca el saludo si aún no se hizo ninguna pregunta
     panel.classList.add('open');
     setTimeout(function(){ input.focus(); }, 200);
   }
   function cerrarPanel(){
     panel.classList.remove('open');
+    cerrarAutocomplete();
   }
-  // El botón flotante alterna: en una ventana flotante se espera que el mismo botón
-  // que la abre también la baje.
   fab.addEventListener('click', function(){
     if(panel.classList.contains('open')) cerrarPanel(); else abrirPanel();
   });
   closeBtn.addEventListener('click', cerrarPanel);
-  document.addEventListener('keydown', function(e){ if(e.key==='Escape' && panel.classList.contains('open')) cerrarPanel(); });
+  document.addEventListener('keydown', function(e){ if(e.key==='Escape' && panel.classList.contains('open') && !acBox.classList.contains('open')) cerrarPanel(); });
 
   /* Se minimiza al hacer clic en cualquier otro sitio, como los chats de redes sociales.
      Va en fase de captura para que un clic sobre un control de la tabla que detenga la
      propagación lo cierre igual, y se excluye el botón flotante porque ese ya alterna
-     por su cuenta (si no, abrir y cerrar se pisarían en el mismo clic). */
+     por su cuenta. */
   document.addEventListener('mousedown', function(e){
     if(!panel.classList.contains('open')) return;
     if(panel.contains(e.target) || fab.contains(e.target)) return;
     cerrarPanel();
   }, true);
 
+  newBtn.addEventListener('click', function(){
+    historial = [];
+    Array.prototype.slice.call(messagesBox.children).forEach(function(child){
+      if(child !== emptyBox) child.remove();
+    });
+    window.__iaChatExtraFilter = null;
+    if(vistaActiva()==='mm' && window.__mmApplyFilters) window.__mmApplyFilters();
+    if(vistaActiva()==='bom' && window.__bomApplyFilters) window.__bomApplyFilters();
+    mostrarEstadoVacio();
+    input.focus();
+  });
+
   /* ---------- Configuración del endpoint (guardada solo en este navegador) ---------- */
   /* El endpoint por defecto es el que manda. Una URL guardada en este navegador solo se
      respeta si es http(s) y apunta a una ruta real: un valor antiguo como el origen del
      sitio ("https://…vercel.app/") hacía que el POST cayera sobre un archivo estático y
-     Vercel respondiera 405 Method Not Allowed, con el chat roto sin explicación visible.
-     Ese caso se purga solo, así que un navegador con el valor viejo se repara en la
-     primera pregunta sin que nadie tenga que tocar la configuración. */
+     Vercel respondiera 405. Ese caso se purga solo. */
   function getEndpointUrl(){
     var guardada = (localStorage.getItem(LS_KEY_ENDPOINT) || '').trim();
     if(!guardada) return ENDPOINT_POR_DEFECTO;
@@ -8077,10 +8292,47 @@ function formatFechaHoraCorta(d){
     if(!url){ alert('Ingresa la URL de tu endpoint (ej. https://tu-proyecto.vercel.app/api/chat-ia).'); return; }
     localStorage.setItem(LS_KEY_ENDPOINT, url);
     configBox.style.display = 'none';
-    agregarMensajeIA('Listo — endpoint guardado en este navegador. Ya puedes hacer preguntas.');
+    agregarMensajeIASimple('Listo — endpoint guardado en este navegador. Ya puedes hacer preguntas.');
   });
 
-  /* ---------- Mensajes en el panel ---------- */
+  /* ---------- Estado inicial: saludo + arranques sugeridos ---------- */
+  var STARTERS = [
+    { icon:'search', texto:'Ayúdame a buscar un material por su nombre' },
+    { icon:'layers', texto:'¿Qué listas activas tiene este material?' },
+    { icon:'git', texto:'Muéstrame el árbol de fabricación de un producto' },
+    { icon:'alert', texto:'¿Qué materiales tienen bloqueo Z3?' }
+  ];
+  var ICONOS_STARTER = {
+    search: '<path d="M11 19a8 8 0 1 0 0-16 8 8 0 0 0 0 16Z"/><path d="m21 21-4.3-4.3"/>',
+    layers: '<path d="m12 2 9 5-9 5-9-5 9-5Z"/><path d="m3 12 9 5 9-5"/><path d="m3 17 9 5 9-5"/>',
+    git: '<circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="12" r="3"/><path d="M6 9v6"/><path d="M9 6h4a3 3 0 0 1 3 3v0"/>',
+    alert: '<path d="M10.3 3.6 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.6a2 2 0 0 0-3.4 0Z"/><path d="M12 9v4"/><path d="M12 17h.01"/>'
+  };
+  function renderStarters(){
+    startersBox.innerHTML = STARTERS.map(function(s){
+      return '<button type="button" class="ia-chat-starter" data-ask="'+escAttr(s.texto)+'">'+
+        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">'+ICONOS_STARTER[s.icon]+'</svg>'+
+        '<span>'+esc(s.texto)+'</span>'+
+      '</button>';
+    }).join('');
+  }
+  function saludoSegunHora(){
+    var h = new Date().getHours();
+    if(h < 12) return 'Buenos días';
+    if(h < 19) return 'Buenas tardes';
+    return 'Buenas noches';
+  }
+  function mostrarEstadoVacio(){
+    greetingEl.textContent = saludoSegunHora();
+    emptyBox.style.display = '';
+  }
+  function ocultarEstadoVacio(){
+    emptyBox.style.display = 'none';
+  }
+  renderStarters();
+  mostrarEstadoVacio();
+
+  /* ---------- Mensajes simples (usuario / error / aviso de configuración) ---------- */
   function agregarMensajeUsuario(texto){
     var div = document.createElement('div');
     div.className = 'ia-chat-msg ia-chat-msg-user';
@@ -8088,16 +8340,6 @@ function formatFechaHoraCorta(d){
     messagesBox.appendChild(div);
     messagesBox.scrollTop = messagesBox.scrollHeight;
   }
-
-  function agregarMensajeIA(html){
-    var div = document.createElement('div');
-    div.className = 'ia-chat-msg ia-chat-msg-ia';
-    div.innerHTML = html;
-    messagesBox.appendChild(div);
-    messagesBox.scrollTop = messagesBox.scrollHeight;
-    return div;
-  }
-
   function agregarMensajeError(texto){
     var div = document.createElement('div');
     div.className = 'ia-chat-msg ia-chat-msg-error';
@@ -8105,55 +8347,134 @@ function formatFechaHoraCorta(d){
     messagesBox.appendChild(div);
     messagesBox.scrollTop = messagesBox.scrollHeight;
   }
-
-  function agregarIndicadorCargando(){
+  function agregarMensajeIASimple(texto){
     var div = document.createElement('div');
     div.className = 'ia-chat-msg ia-chat-msg-ia';
-    div.innerHTML = '<div class="ia-chat-loading"><span></span><span></span><span></span></div>';
+    div.innerHTML = '<p>'+esc(texto)+'</p>';
+    messagesBox.appendChild(div);
+    messagesBox.scrollTop = messagesBox.scrollHeight;
+  }
+  function agregarPlaceholderPensando(){
+    var div = document.createElement('div');
+    div.className = 'ia-chat-msg ia-chat-msg-ia';
+    div.innerHTML = '<p class="ia-chat-shimmer" data-shimmer-text>Pensando…</p>';
     messagesBox.appendChild(div);
     messagesBox.scrollTop = messagesBox.scrollHeight;
     return div;
   }
+  function actualizarPlaceholderTexto(placeholder, texto){
+    var p = placeholder.querySelector('[data-shimmer-text]');
+    if(p) p.textContent = texto;
+    messagesBox.scrollTop = messagesBox.scrollHeight;
+  }
 
-  /* ---------- Traducción de condiciones a un predicado real ---------- */
+  /* ---------- Formato de texto (negrita/código/viñetas) + aparición palabra por palabra ---------- */
+  function renderInline(texto){
+    var t = esc(texto);
+    t = t.replace(/`([^`\n]+)`/g, '<code>$1</code>');
+    t = t.replace(/\*\*([^*\n]+)\*\*/g, '<strong>$1</strong>');
+    return t;
+  }
+  function renderMarkdownLite(texto){
+    var lineas = String(texto||'').split(/\n+/).map(function(l){ return l.trim(); }).filter(Boolean);
+    var html = '', listaAbierta = false;
+    lineas.forEach(function(linea){
+      if(/^[-•]\s+/.test(linea)){
+        if(!listaAbierta){ html += '<ul>'; listaAbierta = true; }
+        html += '<li>'+renderInline(linea.replace(/^[-•]\s+/, ''))+'</li>';
+      } else {
+        if(listaAbierta){ html += '</ul>'; listaAbierta = false; }
+        html += '<p>'+renderInline(linea)+'</p>';
+      }
+    });
+    if(listaAbierta) html += '</ul>';
+    return html;
+  }
+  /* Envuelve cada palabra de los nodos de texto en un span con una animación escalonada,
+     dando el efecto de una respuesta que se termina de escribir — sin necesitar streaming
+     real del servidor. Las tarjetas de datos y los botones NO se animan así (serían ruido,
+     no información), por eso solo se llama sobre los <p>/<li> del cuerpo del mensaje. */
+  function animarPalabras(contenedor){
+    var walker = document.createTreeWalker(contenedor, NodeFilter.SHOW_TEXT, null);
+    var nodos = [], n;
+    while((n = walker.nextNode())) nodos.push(n);
+    var contador = 0;
+    var MAX_ESCALON = 26; // pasado este punto ya no vale la pena seguir demorando palabras
+    nodos.forEach(function(nodo){
+      var texto = nodo.nodeValue;
+      if(!texto || !texto.trim()) return;
+      var frag = document.createDocumentFragment();
+      var partes = texto.match(/\S+\s*|\s+/g) || [];
+      partes.forEach(function(parte){
+        if(!parte.trim()){ frag.appendChild(document.createTextNode(parte)); return; }
+        var span = document.createElement('span');
+        span.className = 'ia-w';
+        span.style.animationDelay = (Math.min(contador, MAX_ESCALON) * 16) + 'ms';
+        span.textContent = parte;
+        frag.appendChild(span);
+        contador++;
+      });
+      nodo.parentNode.replaceChild(frag, nodo);
+    });
+  }
 
-  /* Convierte un valor de celda (string, fecha dd/mm/aaaa o similar) a un objeto Date, o
-     null si no se puede interpretar — usado por los operadores de fecha. */
-  /* Las dos vistas guardan la fecha en formatos DISTINTOS: el BOM en DD/MM/AAAA
-     ("28/12/2022") y el Maestro en M/D/AA ("7/26/26"). Asumir DD/MM para todo hacía que
-     "7/26/26" se leyera como día 7 del mes 26; Date desborda ese mes y devolvía febrero
-     de 2028, una fecha FUTURA que pasaba cualquier comparación de "últimos N días". Así
-     entraban miles de filas antiguas y el mismo filtro daba idéntico resultado para 7 o
-     para 14 días.
+  function sugerenciasHtmlDe(sugerencias){
+    if(!Array.isArray(sugerencias) || !sugerencias.length) return '';
+    return '<div class="ia-chat-sugerencias">'+sugerencias.map(function(s){
+      return '<button type="button" class="ia-chat-sugerencia-btn" data-ask="'+escAttr(s)+'">'+esc(s)+'</button>';
+    }).join('')+'</div>';
+  }
 
-     Se decide por el componente que no puede ser un mes. Si ambos son <= 12 el dato es
-     genuinamente ambiguo y se mantiene DD/MM, que es la convención local. El control de
-     desbordamiento al final es la red de seguridad: si la combinación elegida no existe
-     en el calendario se devuelve null (no hay fecha) en vez de una fecha desplazada que
-     falsearía el filtro en silencio. */
-  /* fmt indica cómo leer "a/b/aa": 'dmy' (día primero) o 'mdy' (mes primero). Se pasa
-     explícitamente porque el formato es una propiedad de la COLUMNA, no del valor
-     suelto: "3/12/26" es legítimo en ambos y no hay forma de resolverlo mirándolo solo.
-     Cuando no se indica nada se asume 'dmy', la convención local, que es lo correcto
-     para una fecha tecleada por la persona en la pregunta.
+  /* Arma y anima el mensaje final: razonamiento plegado, texto de respuesta, tarjetas de
+     datos debajo (las dibuja la aplicación, no el modelo) y sugerencias de continuación. */
+  function renderRespuestaFinal(data, htmlCards){
+    var div = document.createElement('div');
+    div.className = 'ia-chat-msg ia-chat-msg-ia';
 
-     El control de desbordamiento del final es la red de seguridad que faltaba: sin él,
-     leer "7/26/26" como día 7 del mes 26 devolvía febrero de 2028 — una fecha futura
-     que pasaba cualquier comparación de "últimos N días" y falseaba el filtro en
-     silencio. Ahora una combinación que no existe en el calendario devuelve null. */
+    var thinkHtml = '';
+    if(data.razonamiento){
+      thinkHtml = '<div class="ia-chat-think">'+
+        '<button type="button" class="ia-chat-think-toggle"><svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M9 18l6-6-6-6"/></svg>Cómo llegué a esto</button>'+
+        '<div class="ia-chat-think-body"><p>'+renderInline(data.razonamiento)+'</p></div>'+
+      '</div>';
+    }
+    var cuerpoHtml = renderMarkdownLite(data.mensaje || 'No encontré una respuesta clara — reformula la pregunta.');
+    var tarjetasHtml = (htmlCards||[]).join('');
+    var sugerenciasHtml = sugerenciasHtmlDe(data.sugerencias);
+    var copyBtnHtml = '<button type="button" class="ia-chat-copy" data-copy-msg title="Copiar respuesta"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg></button>';
+
+    div.innerHTML = copyBtnHtml + thinkHtml + cuerpoHtml + tarjetasHtml + sugerenciasHtml;
+    div.setAttribute('data-raw-text', data.mensaje || '');
+    messagesBox.appendChild(div);
+
+    // Solo el cuerpo de la respuesta (y el razonamiento plegado) se anima palabra por
+    // palabra — las tarjetas de datos viven en sus propios <div class="ia-card">, fuera de
+    // este selector, así que quedan fuera de la animación.
+    Array.prototype.forEach.call(
+      div.querySelectorAll('.ia-chat-think-body p, .ia-chat-msg-ia > p, .ia-chat-msg-ia > ul'),
+      function(nodo){ animarPalabras(nodo); }
+    );
+    messagesBox.scrollTop = messagesBox.scrollHeight;
+  }
+
+  /* ============================================================
+     Traducción de condiciones a un predicado real (filtrar_tabla / contar_filas)
+
+     Esta parte es la misma lógica de fechas/números que ya se validó contra datos
+     reales de SAP en varias correcciones — no se toca la interpretación, solo cómo
+     se invoca desde el nuevo catálogo de herramientas.
+     ============================================================ */
   function celdaAFecha(v, fmt){
     if(!v) return null;
     var s = String(v).trim();
-
-    /* Los exports de SAP traen algunas fechas como NÚMERO DE SERIE de Excel: en la
-       vista de Listas de Materiales "Creado el" vale 44923, no "28/12/2022" — la tabla
-       lo formatea al pintarlo, pero el valor crudo es numérico. Sin este caso, String(44923)
-       no casa con el patrón de fecha y se caía a new Date("44923"), que JavaScript lee
-       como el AÑO 44923. Esa fecha absurda pasaba cualquier comparación de "últimos N
-       días", así que TODAS las filas del BOM coincidían con cualquier filtro de fecha. */
+    /* Los exports de SAP traen algunas fechas como NÚMERO DE SERIE de Excel (ej. la
+       columna "Creado el" del BOM vale 44923, no "28/12/2022"). Sin este caso,
+       String(44923) no casa con el patrón de fecha y se caía a new Date("44923"), que
+       JavaScript lee como el AÑO 44923 — una fecha que pasa cualquier comparación de
+       "últimos N días". */
     if(typeof v === 'number' || /^\d+(\.\d+)?$/.test(s)){
       var serie = parseFloat(s);
-      if(!(serie >= 1 && serie <= 2958465)) return null;   // fuera del rango del sistema 1900 de Excel
+      if(!(serie >= 1 && serie <= 2958465)) return null; // fuera del rango del sistema 1900 de Excel
       var ms = Date.UTC(1899, 11, 30) + Math.round(serie) * 86400000;
       var dser = new Date(ms);
       if(isNaN(dser.getTime())) return null;
@@ -8177,10 +8498,8 @@ function formatFechaHoraCorta(d){
   }
 
   /* Deduce si una columna de fechas viene en D/M o en M/D recorriendo sus valores hasta
-     encontrar uno decisivo (un componente > 12 no puede ser un mes). Hace falta porque
-     las dos vistas usan formatos distintos — el BOM "28/12/2022", el Maestro "7/26/26" —
-     y los valores ambiguos como "3/12/26" sólo se pueden resolver por el conjunto de la
-     columna, nunca fila a fila. */
+     encontrar uno decisivo — el BOM guarda "28/12/2022", el Maestro "7/26/26", y un valor
+     ambiguo como "3/12/26" solo se puede resolver por el conjunto de la columna. */
   function detectarFormatoFecha(columna){
     var valores = [];
     if(vistaActiva()==='mm'){
@@ -8200,10 +8519,6 @@ function formatFechaHoraCorta(d){
     }
     return 'dmy';
   }
-
-  /* El formato de fecha se resuelve UNA vez por condición, no dentro del predicado: es
-     una propiedad de los datos de la columna, y detectarlo por fila supondría recorrer
-     la tabla entera por cada fila. */
   function prepararCondiciones(condiciones){
     return (condiciones||[]).map(function(c){
       if(!c) return c;
@@ -8215,33 +8530,20 @@ function formatFechaHoraCorta(d){
       return c2;
     });
   }
-
   function celdaANumero(v){
     if(v===null||v===undefined||v==='') return null;
     var n = parseFloat(String(v).replace(/,/g,''));
     return isNaN(n) ? null : n;
   }
-
-  /* Evalúa UNA condición {columna, operador, valor} contra una fila (objeto {col:valor}).
-     rowArr es la fila cruda por posición (solo disponible en BOM), necesaria para poder
-     invocar los filtros especiales ya existentes (window.__bomFiltrosExistentes). */
   function evaluarCondicion(cond, rowObj, rowArr){
     var operador = cond.operador;
-
     if(operador === 'filtro_existente'){
       var fn = window.__bomFiltrosExistentes && window.__bomFiltrosExistentes[cond.valor];
-      if(!fn){
-        // Filtro que la IA nombró pero que no existe en este vocabulario — no se puede
-        // evaluar con certeza, así que no se descarta la fila por esto (falla abierto,
-        // nunca oculta datos por un nombre de filtro mal reconocido).
-        return true;
-      }
+      if(!fn) return true; // filtro que no existe: no se descarta la fila por un nombre mal reconocido
       return !!fn(rowArr || rowObj);
     }
-
     var valorCelda = rowObj[cond.columna];
     if(valorCelda===undefined) return true; // columna no existe en esta vista: no se filtra por ella
-
     switch(operador){
       case 'igual':
         return String(valorCelda||'').trim().toLowerCase() === String(cond.valor||'').trim().toLowerCase();
@@ -8272,9 +8574,6 @@ function formatFechaHoraCorta(d){
         if(!fecha1) return false;
         var dias = celdaANumero(cond.valor) || 0;
         var limite = new Date(); limite.setHours(0,0,0,0); limite.setDate(limite.getDate()-dias);
-        // El tope superior no es cosmético: sin él cualquier fecha futura pasaba el
-        // filtro, así que un dato mal tecleado en SAP (o mal interpretado aquí) se
-        // colaba en TODAS las consultas de "últimos N días".
         var hoyFin = new Date(); hoyFin.setHours(23,59,59,999);
         return fecha1 >= limite && fecha1 <= hoyFin;
       }
@@ -8290,9 +8589,6 @@ function formatFechaHoraCorta(d){
         return true; // operador no reconocido: no se descarta la fila por él
     }
   }
-
-  /* Todas las condiciones deben cumplirse (AND) — consistente con cómo ya combinan sus
-     propios filtros ambas vistas. */
   function activarFiltroIA(condiciones){
     if(!condiciones || condiciones.length===0){
       window.__iaChatExtraFilter = null;
@@ -8312,13 +8608,7 @@ function formatFechaHoraCorta(d){
     if(vistaActiva()==='mm' && window.__mmApplyFilters) window.__mmApplyFilters();
     if(vistaActiva()==='bom' && window.__bomApplyFilters) window.__bomApplyFilters();
   }
-
-  /* Cuenta cuántas filas de la vista actual cumplen las condiciones, SIN cambiar el
-     filtro visible — usado para "tipo":"pregunta_sobre_resultados" (ej. "¿tiene todas
-     actualizadas?"), donde se responde con un conteo en vez de filtrar la tabla. */
   function contarCoincidencias(condicionesCrudas){
-    // Mismo tratamiento que en activarFiltroIA: sin esto el conteo usaría el formato de
-    // fecha por defecto y no coincidiría con lo que muestra la tabla.
     var condiciones = prepararCondiciones(condicionesCrudas);
     var filas, columnas;
     if(vistaActiva()==='mm'){
@@ -8341,78 +8631,9 @@ function formatFechaHoraCorta(d){
     });
     return coinciden + '/' + total;
   }
-
-  /* ---------- Envío de la pregunta al endpoint ---------- */
-  async function enviarPregunta(pregunta){
-    var url = getEndpointUrl();
-    if(!url){
-      agregarMensajeError('Primero configura la URL de tu endpoint con el ícono de engranaje, arriba.');
-      configBox.style.display = 'block';
-      return;
-    }
-
-    agregarMensajeUsuario(pregunta);
-    var cargando = agregarIndicadorCargando();
-    sendBtn.disabled = true;
-
-    try{
-      var resp = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          pregunta: pregunta,
-          vista: LABELS_VISTA[vistaActiva()],
-          columnas: columnasDeVistaActual(),
-          filtrosExistentes: filtrosDeVistaActual()
-        })
-      });
-
-      var data = await resp.json().catch(function(){ return null; });
-      cargando.remove();
-
-      if(!resp.ok || !data){
-        agregarMensajeError((data && data.error) ? data.error : ('El servidor respondió con error ('+resp.status+').'));
-        return;
-      }
-      if(data.error){
-        agregarMensajeError(data.error);
-        return;
-      }
-
-      renderRespuestaIA(data);
-    } catch(err){
-      cargando.remove();
-      agregarMensajeError('No se pudo contactar al endpoint. Revisa la URL configurada y tu conexión.');
-    } finally {
-      sendBtn.disabled = false;
-    }
-  }
-
-  /* El texto lo escribe el modelo, así que se escapa SIEMPRE. Encima se permite
-     un único gesto de formato: *palabra* -> <em>, que ya tiene estilo propio en
-     el panel (.ia-chat-msg-ia em). Así la IA puede enfatizar sin abrir un hueco
-     de inyección de HTML. */
-  function textoIA(txt){
-    return esc(txt).split(/\n+/).map(function(linea){
-      return '<p>'+linea.replace(/\*([^*\n]+)\*/g, '<em>$1</em>')+'</p>';
-    }).join('');
-  }
-
-  /* Las sugerencias se envían TAL CUAL como siguiente pregunta al hacer clic, por
-     eso el prompt le pide al modelo que las escriba en primera persona. */
-  function sugerenciasHtmlDe(data){
-    if(!Array.isArray(data.sugerencias) || !data.sugerencias.length) return '';
-    return '<div class="ia-chat-sugerencias">'+data.sugerencias.map(function(s){
-      return '<button type="button" class="ia-chat-sugerencia-btn">'+esc(s)+'</button>';
-    }).join('')+'</div>';
-  }
-
-  /* Una condición que nombra una columna inexistente en la vista activa era el fallo más
-     traicionero del chat: evaluarCondicion la deja pasar (return true, para no ocultar
-     datos por un nombre mal reconocido), así que el filtro "se aplicaba" sin recortar
-     nada y la tabla seguía mostrando el total — parecía que la IA respondía pero no
-     filtraba. Se valida ANTES de aplicar, contra la misma lista de columnas que se le
-     envió al modelo: si nombra algo que no está en ella, se lo inventó. */
+  /* Una condición que nombra una columna o un filtro_existente inexistente se descarta
+     ANTES de aplicar nada — si no, evaluarCondicion la deja pasar (para no ocultar datos
+     por un nombre mal reconocido) y el filtro "se aplica" sin recortar nada. */
   function condicionesInvalidas(condiciones){
     var disponibles = columnasDeVistaActual();
     var filtrosOk = filtrosDeVistaActual().map(function(f){ return f.nombre; });
@@ -8428,62 +8649,620 @@ function formatFechaHoraCorta(d){
     return malas;
   }
 
-  function avisoColumnasInvalidas(malas){
-    return textoIA('Me referí a '+malas.join(' y ')+', que no existe'+(malas.length>1?'n':'')+
-      ' en *'+LABELS_VISTA[vistaActiva()]+'*. Preferí no filtrar antes que darte un resultado falso — '+
-      'reformula la pregunta con una columna de esta pestaña y lo intento de nuevo.');
+  /* ============================================================
+     Tarjetas de resultado (una por tipo de herramienta)
+     ============================================================ */
+  function tarjetaSinResultados(referencia){
+    return '<div class="ia-card"><div class="ia-card-foot"><span class="ia-card-note">No encontré nada para "'+esc(referencia)+'" en los datos cargados.</span></div></div>';
+  }
+  function campoRow(label, value){
+    if(value===null||value===undefined||value==='') return '';
+    return '<tr><td style="color:var(--ink-faint);white-space:nowrap;">'+esc(label)+'</td><td>'+esc(value)+'</td></tr>';
   }
 
-  function renderRespuestaIA(data){
-    var razonamientoHtml = data.razonamiento ?
-      '<div class="ia-chat-razonamiento"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a7 7 0 0 0-4 12.7V17a2 2 0 0 0 2 2h4a2 2 0 0 0 2-2v-2.3A7 7 0 0 0 12 2Z"/><path d="M9 21h6"/></svg><span>'+esc(data.razonamiento)+'</span></div>' : '';
-    // Las sugerencias se ofrecen en CUALQUIER respuesta, no solo cuando la IA no
-    // entiende: tras aplicar un filtro también tiene sentido proponer el siguiente paso.
-    var sugerenciasHtml = sugerenciasHtmlDe(data);
-    var cuerpo;
+  function tarjetaBusqueda(obs){
+    var filas = obs.resultados.map(function(r){
+      return '<button type="button" class="ia-row" data-ask="'+escAttr('Cuéntame del material '+r.material)+'">'+
+        '<div class="ia-row-top"><span class="ia-row-code">'+esc(r.material)+'</span><span class="ia-row-desc">'+esc(r.descripcion||'Sin descripción')+'</span></div>'+
+        '<div class="ia-row-meta">'+(r.tipo?'<span>'+esc(r.tipo)+'</span>':'')+(r.estado?'<span class="ia-tag warn">'+esc(r.estado)+'</span>':'')+'</div>'+
+      '</button>';
+    }).join('');
+    return '<div class="ia-card"><div class="ia-card-head"><span class="ia-card-title">Materiales encontrados</span><span class="ia-card-count">'+obs.total+'</span></div>'+
+      '<div class="ia-card-body">'+filas+'</div></div>';
+  }
 
-    if(data.tipo === 'filtro' && Array.isArray(data.condiciones) && data.condiciones.length){
-      var malasF = condicionesInvalidas(data.condiciones);
-      if(malasF.length){
-        cuerpo = avisoColumnasInvalidas(malasF);
-      } else {
-        activarFiltroIA(data.condiciones);
-        var recuento = vistaActiva()==='mm' ? (window.__mmGetFilteredRows?window.__mmGetFilteredRows().length:'—') : (window.__bomGetFilteredRows?window.__bomGetFilteredRows().length:'—');
-        // El conteo lo pone la aplicación, no la IA: el prompt le prohíbe expresamente
-        // adelantar cifras para que no se contradiga con la tabla real.
-        cuerpo = textoIA(data.mensaje || 'Filtro aplicado sobre la tabla.')+
-          '<span class="ia-chat-resultado-badge">'+recuento+' resultado(s)</span>';
+  function tarjetaFicha(obs){
+    if(!obs.encontrado){
+      return '<div class="ia-card"><div class="ia-card-foot"><span class="ia-card-note">No encontré '+esc(obs.materialBuscado||'')+' en el Maestro ni en Listas de Materiales cargadas.</span></div></div>';
+    }
+    if(obs.soloEnListas){
+      return '<div class="ia-card"><div class="ia-card-head"><span class="ia-card-title mono">'+esc(obs.material)+'</span></div>'+
+        '<div class="ia-card-foot"><span class="ia-card-note">'+esc(obs.campos.descripcion||'Sin descripción')+' — no está cargado en el Maestro, solo aparece en Listas de Materiales.</span></div></div>';
+    }
+    var c = obs.campos;
+    var estadoTag = c.estado && c.estado!=='Sin bloqueo' ? '<span class="ia-tag bad">'+esc(c.estado)+'</span>' : '<span class="ia-tag ok">Sin bloqueo</span>';
+    var filas = campoRow('Tipo', c.tipo) + campoRow('Unidad', c.unidad) + campoRow('Inspección', c.inspeccion) +
+      campoRow('Categoría 3', c.categoria3) + campoRow('Código antiguo', c.codigoAntiguo) +
+      campoRow('Creado por', [c.creadoPor, c.fechaCreacion].filter(Boolean).join(' · ')) +
+      campoRow('Últ. modificación', [c.modificadoPor, c.ultimaModificacion].filter(Boolean).join(' · '));
+    return '<div class="ia-card"><div class="ia-card-head"><span class="ia-card-title mono">'+esc(obs.material)+'</span>'+estadoTag+'</div>'+
+      '<div style="padding:9px 11px;font-size:12.8px;color:var(--ink);font-weight:600;">'+esc(c.descripcion||'Sin descripción')+'</div>'+
+      '<div class="ia-card-body"><table class="ia-mini-table">'+filas+'</table></div>'+
+      '<div class="ia-card-foot"><button type="button" class="ia-card-link" data-open-material="'+escAttr(obs.material)+'">Abrir ficha completa →</button></div></div>';
+  }
+
+  function tarjetaListas(obs){
+    var filas = obs.listas.map(function(l){
+      var estadoCls = String(l.estado||'').toLowerCase()==='inactivo' ? 'bad' : 'ok';
+      return '<button type="button" class="ia-row" data-open-lista data-mat="'+escAttr(obs.material)+'" data-alt="'+escAttr(l.alt)+'">'+
+        '<div class="ia-row-top"><span class="ia-row-code">Alt. '+esc(l.alt)+'</span><span class="ia-row-desc">'+esc(l.etapa||'—')+'</span></div>'+
+        '<div class="ia-row-meta"><span class="ia-tag '+estadoCls+'">'+esc(l.estado||'—')+'</span>'+(l.centro?'<span>'+esc(l.centro)+'</span>':'')+(l.vfabReales?'<span>'+l.vfabReales+' VFab</span>':'')+'</div>'+
+      '</button>';
+    }).join('');
+    return '<div class="ia-card"><div class="ia-card-head"><span class="ia-card-title">Listas de '+esc(obs.material)+'</span><span class="ia-card-count">'+obs.total+'</span></div>'+
+      '<div class="ia-card-body">'+filas+'</div></div>';
+  }
+
+  function tarjetaDondeSeUsa(obs){
+    var filas = obs.resultados.map(function(r){
+      var estadoCls = String(r.estado||'').toLowerCase()==='inactivo' ? 'bad' : 'ok';
+      return '<button type="button" class="ia-row" data-open-lista data-mat="'+escAttr(r.material)+'" data-alt="'+escAttr(r.alt)+'">'+
+        '<div class="ia-row-top"><span class="ia-row-code">'+esc(r.material)+'</span><span class="ia-row-desc">alt. '+esc(r.alt)+' · pos. '+esc(r.posicion||'—')+'</span></div>'+
+        '<div class="ia-row-meta"><span class="ia-tag '+estadoCls+'">'+esc(r.estado||'—')+'</span>'+(r.centro?'<span>'+esc(r.centro)+'</span>':'')+'</div>'+
+      '</button>';
+    }).join('');
+    var nota = obs.truncado ? ('<div class="ia-card-foot"><span class="ia-card-note">Mostrando 15 de '+obs.total+'.</span></div>') : '';
+    return '<div class="ia-card"><div class="ia-card-head"><span class="ia-card-title">Listas que usan '+esc(obs.material)+'</span><span class="ia-card-count">'+obs.total+'</span></div>'+
+      '<div class="ia-card-body">'+filas+'</div>'+nota+'</div>';
+  }
+
+  function tarjetaComponentes(obs){
+    if(!obs.encontrada) return tarjetaSinResultados(obs.material+' alt. '+obs.alt);
+    var filas = obs.componentes.map(function(c){
+      var bloqueoTag = c.bloqueo ? '<span class="ia-tag bad">'+esc(c.bloqueo)+'</span>' : '';
+      return '<tr data-ask="'+escAttr('Cuéntame del material '+c.componente)+'">'+
+        '<td class="mono">'+esc(c.pos||'—')+'</td>'+
+        '<td class="mono">'+esc(c.componente||'—')+'</td>'+
+        '<td>'+esc(c.denominacion||'')+'</td>'+
+        '<td>'+(c.cantidad!==undefined && c.cantidad!==''?esc(c.cantidad):'—')+' '+esc(c.um||'')+'</td>'+
+        '<td>'+bloqueoTag+'</td>'+
+      '</tr>';
+    }).join('');
+    var nota = obs.truncado ? ('<div class="ia-card-foot"><span class="ia-card-note">Mostrando 25 de '+obs.total+' posiciones.</span></div>') : '';
+    return '<div class="ia-card"><div class="ia-card-head"><span class="ia-card-title">Componentes · '+esc(obs.material)+' alt. '+esc(obs.alt)+'</span><span class="ia-card-count">'+obs.total+'</span></div>'+
+      '<div class="ia-card-body"><table class="ia-mini-table"><thead><tr><th>Pos.</th><th>Componente</th><th>Denominación</th><th>Cant.</th><th></th></tr></thead><tbody>'+filas+'</tbody></table></div>'+nota+'</div>';
+  }
+
+  function tarjetaVersiones(obs){
+    var filas = obs.versiones.map(function(v){
+      return '<tr data-ask="'+escAttr('Muéstrame el árbol de '+obs.material+' alternativa '+v.alt)+'">'+
+        '<td class="mono">'+esc(v.alt)+'</td>'+
+        '<td class="mono">'+esc(v.version)+'</td>'+
+        '<td>'+esc(v.centro||'—')+'</td>'+
+        '<td>'+(v.bloqueada?'<span class="ia-tag bad">Bloqueada</span>':'<span class="ia-tag ok">Activa</span>')+'</td>'+
+      '</tr>';
+    }).join('');
+    return '<div class="ia-card"><div class="ia-card-head"><span class="ia-card-title">Versiones de fabricación · '+esc(obs.material)+'</span><span class="ia-card-count">'+obs.total+'</span></div>'+
+      '<div class="ia-card-body"><table class="ia-mini-table"><thead><tr><th>Alt.</th><th>Versión</th><th>Centro</th><th>Estado</th></tr></thead><tbody>'+filas+'</tbody></table></div></div>';
+  }
+
+  function tarjetaOpcionesAlt(material, opciones, nota){
+    var filas = opciones.map(function(o){
+      return '<button type="button" class="ia-row" data-ask="'+escAttr('Muéstrame el árbol de '+material+' alternativa '+o.alt)+'">'+
+        '<div class="ia-row-top"><span class="ia-row-code">Alt. '+esc(o.alt)+'</span><span class="ia-row-desc">'+esc(o.etapa||'')+'</span></div>'+
+        '<div class="ia-row-meta">'+(o.estado?'<span class="ia-tag">'+esc(o.estado)+'</span>':'')+(o.centro?'<span>'+esc(o.centro)+'</span>':'')+'</div>'+
+      '</button>';
+    }).join('');
+    return '<div class="ia-card"><div class="ia-card-head"><span class="ia-card-title">'+esc(material)+' — alternativas</span><span class="ia-card-count">'+opciones.length+'</span></div>'+
+      '<div class="ia-card-body">'+filas+'</div>'+
+      '<div class="ia-card-foot"><span class="ia-card-note">'+esc(nota||'')+'</span></div></div>';
+  }
+
+  function tarjetaOpcionesProducto(opciones){
+    var filas = opciones.map(function(o){
+      return '<button type="button" class="ia-row" data-ask="'+escAttr('Muéstrame el árbol de '+o.materialFinal+' alternativa '+o.altFinal)+'">'+
+        '<div class="ia-row-top"><span class="ia-row-code">'+esc(o.materialFinal)+'</span><span class="ia-row-desc">'+esc(o.descripcion||'')+'</span></div>'+
+        '<div class="ia-row-meta"><span class="ia-tag">Alt. '+esc(o.altFinal)+'</span></div>'+
+      '</button>';
+    }).join('');
+    return '<div class="ia-card"><div class="ia-card-head"><span class="ia-card-title">Productos terminados posibles</span><span class="ia-card-count">'+opciones.length+'</span></div>'+
+      '<div class="ia-card-body">'+filas+'</div></div>';
+  }
+
+  function etiquetaVersion(n){
+    if(!n.version) return '<span class="ia-tag warn">sin VFab</span>';
+    var cls = n.vfabBloqueada ? 'bad' : (n.versionEsReal ? 'ok' : 'warn');
+    var txt = esc(n.version) + (n.versionEsReal ? '' : ' (estimada)') + (n.vfabBloqueada ? ' · bloqueada' : '');
+    return '<span class="ia-tag '+cls+'">'+txt+'</span>';
+  }
+  function tarjetaArbol(obs){
+    var nodosHtml = obs.nodos.map(function(n){
+      var warnHtml = (n.advertencias||[]).map(function(w){ return '<div class="ia-tree-warn">'+esc(w)+'</div>'; }).join('');
+      return '<div class="ia-tree-node" data-ask="'+escAttr('Cuéntame del material '+n.material)+'" style="cursor:pointer;">'+
+        '<div class="ia-tree-etapa">'+esc(n.etapa||'—')+'</div>'+
+        '<div class="ia-tree-mat"><b>'+esc(n.material)+'</b> · alt. '+esc(n.alt)+'</div>'+
+        '<div class="ia-tree-meta">'+etiquetaVersion(n)+(n.estado?'<span class="ia-tag">'+esc(n.estado)+'</span>':'')+'</div>'+
+        warnHtml+
+      '</div>';
+    }).join('');
+    var combTxt = obs.totalCombinaciones>1 ? ('<span class="ia-card-count">combinación '+(obs.combinacion+1)+' de '+obs.totalCombinaciones+'</span>') : '';
+    return '<div class="ia-card"><div class="ia-card-head"><span class="ia-card-title">Árbol · '+esc(obs.materialFinal)+' alt. '+esc(obs.altFinal)+'</span>'+combTxt+'</div>'+
+      '<div class="ia-tree">'+nodosHtml+'</div>'+
+      '<div class="ia-card-foot"><button type="button" class="ia-card-link" data-open-tree data-mat="'+escAttr(obs.materialFinal)+'" data-alt="'+escAttr(obs.altFinal)+'">Abrir en Árbol del producto →</button></div></div>';
+  }
+
+  /* ============================================================
+     Herramientas — cada una ejecuta contra los datos ya cargados y devuelve
+     { observacion, html } — observacion va al modelo (fase "responder"),
+     html se dibuja debajo del mensaje final.
+     ============================================================ */
+  function toolBuscarMaterial(args){
+    var q = String(args && args.texto || '').trim();
+    if(!q) return { observacion:{ tipo:'buscar_material', consulta:q, total:0, resultados:[] } };
+    var qNorm = q.toLowerCase();
+    var mmRows = window.__mmGetAllRows ? window.__mmGetAllRows() : [];
+    var vistos = {}, resultados = [];
+    for(var i=0;i<mmRows.length && resultados.length<8;i++){
+      var r = mmRows[i];
+      var codigo = String(r['Material']||'').trim();
+      var desc = String(r['Texto Material']||r['Denom.estándar']||'');
+      if(!codigo || vistos[codigo]) continue;
+      if(codigo.toLowerCase().indexOf(qNorm)===-1 && desc.toLowerCase().indexOf(qNorm)===-1) continue;
+      vistos[codigo] = true;
+      resultados.push({ material:codigo, descripcion:desc, tipo:r['Denominación tipo material']||'', estado:String(r['Estado mat.todos ce']||'').trim(), fuente:'maestro' });
+    }
+    // Respaldo: si el Maestro no da resultados (o no está cargado), se busca también en
+    // Listas de Materiales, para no dejar sin respuesta una consulta con solo el BOM cargado.
+    if(resultados.length < 8 && window.__arbolAPI && window.BOM_ROWS && window.BOM_ROWS.length){
+      var bomIdx = window.__arbolAPI.buildBomIndex();
+      var claves = Object.keys(bomIdx.byKey);
+      for(var j=0;j<claves.length && resultados.length<8;j++){
+        var entry = bomIdx.byKey[claves[j]];
+        if(vistos[entry.material]) continue;
+        var descB = String(entry.descripcion||'');
+        if(entry.material.toLowerCase().indexOf(qNorm)===-1 && descB.toLowerCase().indexOf(qNorm)===-1) continue;
+        vistos[entry.material] = true;
+        resultados.push({ material:entry.material, descripcion:descB, tipo:'', estado:entry.estado||'', fuente:'listas' });
       }
-    } else if(data.tipo === 'pregunta_sobre_resultados' && Array.isArray(data.condiciones) && data.condiciones.length){
-      var malasP = condicionesInvalidas(data.condiciones);
-      if(malasP.length){
-        cuerpo = avisoColumnasInvalidas(malasP);
-      } else {
-        var conteo = contarCoincidencias(data.condiciones);
-        cuerpo = textoIA(data.mensaje || 'De las filas actualmente visibles:')+
-          '<span class="ia-chat-resultado-badge">'+esc(conteo)+' coinciden</span>';
+    }
+    var obs = { tipo:'buscar_material', consulta:q, total:resultados.length, resultados:resultados };
+    return { observacion: obs, html: resultados.length ? tarjetaBusqueda(obs) : tarjetaSinResultados(q) };
+  }
+
+  function toolFichaMaterial(args){
+    var api = window.__arbolAPI || {};
+    var codigo = String(args && args.material || '').trim();
+    if(!codigo) return { observacion:{ tipo:'ficha_material', encontrado:false, materialBuscado:'' } };
+    var mat = api.normMat ? api.normMat(codigo) : codigo;
+    var rows = window.__mmGetAllRows ? window.__mmGetAllRows() : [];
+    var row = rows.filter(function(r){ return String(r['Material']||'').trim() === mat; })[0];
+    if(!row){
+      var bomIdx = api.buildBomIndex ? api.buildBomIndex() : null;
+      var altsEnBom = bomIdx ? (bomIdx.altsByMaterial[mat]||[]) : [];
+      if(!altsEnBom.length) return { observacion:{ tipo:'ficha_material', encontrado:false, materialBuscado: mat } };
+      var obsBom = { tipo:'ficha_material', encontrado:true, soloEnListas:true, material: mat, campos:{ descripcion: altsEnBom[0].descripcion || '' } };
+      return { observacion: obsBom, html: tarjetaFicha(obsBom) };
+    }
+    var estado = String(row['Estado mat.todos ce']||'').trim();
+    var cat3 = window.MM_CAT3_MAP ? window.MM_CAT3_MAP[mat] : null;
+    var oldCode = window.MM_OLDCODE_MAP ? window.MM_OLDCODE_MAP[mat] : null;
+    var campos = {
+      descripcion: row['Texto Material'] || row['Denom.estándar'] || '',
+      tipo: row['Denominación tipo material'] || row['Tipo material'] || '',
+      unidad: row['Unidad de medida base'] || '',
+      estado: estado || 'Sin bloqueo',
+      inspeccion: row['Texto de inspección'] || '',
+      categoria3: cat3 ? (cat3.reformulado || cat3.nombreCat3Original) : null,
+      codigoAntiguo: oldCode || null,
+      creadoPor: row['Nombre creador'] || '',
+      fechaCreacion: row['Fecha creación material'] || '',
+      modificadoPor: row['Nombre de modificador'] || '',
+      ultimaModificacion: row['Última modificación'] || ''
+    };
+    var obs = { tipo:'ficha_material', encontrado:true, material: mat, campos: campos };
+    return { observacion: obs, html: tarjetaFicha(obs) };
+  }
+
+  function toolListasDeMaterial(args){
+    var api = window.__arbolAPI;
+    if(!api) return { observacion:{ tipo:'listas_de_material', total:0, listas:[] } };
+    var mat = api.normMat(args && args.material);
+    if(!mat) return { observacion:{ tipo:'listas_de_material', total:0, listas:[] } };
+    var bomIdx = api.buildBomIndex();
+    var vfabIdx = api.buildVfabIndex();
+    var candidatas = bomIdx.altsByMaterial[mat] || [];
+    var listas = candidatas.map(function(entry){
+      var vfabs = vfabIdx.byKey[api.keyOf(entry.material, entry.alt)] || [];
+      return { alt: entry.alt, etapa: entry.etapa, estado: entry.estado, centro: entry.centro, listaTecnica: entry.listaTecnica, vfabReales: vfabs.length };
+    });
+    var obs = { tipo:'listas_de_material', material:mat, total:listas.length, listas:listas };
+    return { observacion: obs, html: listas.length ? tarjetaListas(obs) : tarjetaSinResultados(mat) };
+  }
+
+  function toolComponentesDeLista(args){
+    var api = window.__arbolAPI;
+    if(!api) return { observacion:{ tipo:'componentes_de_lista', encontrada:false } };
+    var mat = api.normMat(args && args.material);
+    var alt = api.normAlt(args && args.alt);
+    if(!mat) return { observacion:{ tipo:'componentes_de_lista', encontrada:false } };
+    var bomIdx = api.buildBomIndex();
+    var bomEntry = bomIdx.byKey[api.keyOf(mat, alt)];
+    if(!bomEntry) return { observacion:{ tipo:'componentes_de_lista', encontrada:false, material:mat, alt:alt }, html: tarjetaSinResultados(mat+' alt. '+alt) };
+    var comps = api.buildAllCompsIndex().componentesDe(mat, alt, bomEntry.listaTecnica) || [];
+    var truncado = comps.length > 25;
+    var visibles = comps.slice(0, 25).map(function(c){
+      return { pos:c.pos, componente:c.componente, denominacion:c.denominacion, cantidad:c.cantidad, um:c.um, bloqueo: api.estadoZDelMaterial(c.componente) };
+    });
+    var obs = { tipo:'componentes_de_lista', encontrada:true, material:mat, alt:alt, etapa:bomEntry.etapa, total: comps.length, truncado: truncado, componentes: visibles };
+    return { observacion: obs, html: tarjetaComponentes(obs) };
+  }
+
+  function toolDondeSeUsa(args){
+    var api = window.__arbolAPI;
+    var mat = api ? api.normMat(args && args.material) : String(args && args.material||'').trim();
+    if(!mat || !window.__bomFindListsContainingMaterial) return { observacion:{ tipo:'donde_se_usa', material:mat, total:0, resultados:[] } };
+    var todos = window.__bomFindListsContainingMaterial(mat) || [];
+    var soloActivas = !!(args && args.solo_activas);
+    var filtrados = soloActivas ? todos.filter(function(r){ return String(r.estado||'').trim().toLowerCase()==='activo'; }) : todos;
+    var truncado = filtrados.length > 15;
+    var visibles = filtrados.slice(0, 15);
+    var obs = {
+      tipo:'donde_se_usa', material:mat, soloActivas: soloActivas, total: filtrados.length, truncado: truncado,
+      resultados: visibles.map(function(r){ return { material:r.material, alt:r.alt, estado:r.estado, centro:r.centro, posicion:r.posicion }; })
+    };
+    return { observacion: obs, html: filtrados.length ? tarjetaDondeSeUsa(obs) : tarjetaSinResultados(mat) };
+  }
+
+  function toolVersionesFabricacion(args){
+    var api = window.__arbolAPI;
+    if(!api) return { observacion:{ tipo:'versiones_fabricacion', total:0, versiones:[] } };
+    var mat = api.normMat(args && args.material);
+    if(!mat) return { observacion:{ tipo:'versiones_fabricacion', total:0, versiones:[] } };
+    var vfabIdx = api.buildVfabIndex();
+    var altArg = (args && args.alt!==undefined && args.alt!==null && String(args.alt).trim()!=='') ? api.normAlt(args.alt) : null;
+    var versiones = [];
+    Object.keys(vfabIdx.byKey).forEach(function(key){
+      var partes = key.split('||');
+      if(partes[0] !== mat) return;
+      if(altArg && partes[1] !== altArg) return;
+      (vfabIdx.byKey[key]||[]).forEach(function(v){ versiones.push({ alt: partes[1], version: v.version, centro: v.centro, bloqueada: v.bloqueada }); });
+    });
+    var obs = { tipo:'versiones_fabricacion', material:mat, alt:altArg, total:versiones.length, versiones:versiones };
+    return { observacion: obs, html: versiones.length ? tarjetaVersiones(obs) : tarjetaSinResultados(mat) };
+  }
+
+  function toolArbolProducto(args){
+    var api = window.__arbolAPI;
+    if(!api || !window.BOM_ROWS || !window.BOM_ROWS.length || !window.BOM_COMP_ROWS || !window.BOM_COMP_ROWS.length){
+      return { observacion:{ tipo:'arbol_producto', estado:'sin_datos' } };
+    }
+    var mat = api.normMat(args && args.material);
+    if(!mat) return { observacion:{ tipo:'arbol_producto', estado:'no_encontrado', material:'' } };
+    var bomIdx = api.buildBomIndex();
+    var altsCandidatas = bomIdx.altsByMaterial[mat] || [];
+    if(!altsCandidatas.length) return { observacion:{ tipo:'arbol_producto', estado:'no_encontrado', material: mat } };
+
+    var altArg = (args && args.alt!==undefined && args.alt!==null && String(args.alt).trim()!=='') ? api.normAlt(args.alt) : null;
+    var altN, entryAlt;
+    if(altArg){
+      entryAlt = altsCandidatas.filter(function(a){ return a.alt === altArg; })[0];
+      if(!entryAlt){
+        var opcionesNoExiste = altsCandidatas.map(function(a){ return { alt:a.alt, etapa:a.etapa, estado:a.estado }; });
+        return { observacion:{ tipo:'arbol_producto', estado:'alt_no_existe', material: mat, altPedida: altArg, opciones: opcionesNoExiste },
+          html: tarjetaOpcionesAlt(mat, opcionesNoExiste, 'La alternativa '+altArg+' no existe para este material.') };
       }
-    } else if(data.tipo === 'conversacion'){
-      cuerpo = textoIA(data.mensaje || '¿Sobre qué te gustaría filtrar esta tabla?');
+      altN = altArg;
     } else {
-      cuerpo = textoIA(data.mensaje || ('No estoy seguro de cómo filtrar con esa pregunta. '+
-        (data.sugerencias && data.sugerencias.length ? 'Prueba con:' : '¿Puedes reformularla?')));
+      var altsUnicas = {};
+      altsCandidatas.forEach(function(a){ altsUnicas[a.alt] = a; });
+      var listaAlts = Object.keys(altsUnicas).map(function(k){ return altsUnicas[k]; });
+      if(listaAlts.length === 1){
+        entryAlt = listaAlts[0]; altN = entryAlt.alt;
+      } else {
+        var opciones = listaAlts.map(function(a){ return { alt:a.alt, etapa:a.etapa, estado:a.estado, centro:a.centro }; });
+        return { observacion:{ tipo:'arbol_producto', estado:'ambiguo_alternativa', material: mat, opciones: opciones },
+          html: tarjetaOpcionesAlt(mat, opciones, 'Este material tiene varias alternativas.') };
+      }
     }
 
-    var div = agregarMensajeIA(cuerpo + sugerenciasHtml + razonamientoHtml);
-    Array.prototype.forEach.call(div.querySelectorAll('.ia-chat-sugerencia-btn'), function(btn){
-      btn.addEventListener('click', function(){ enviarPregunta(btn.textContent); });
+    var materialFinal = mat, altFinal = altN;
+    if(!api.esEtapaAcondicionado(entryAlt.etapa)){
+      var destinos = api.encontrarProductosTerminados(mat, altN);
+      if(!destinos.length){
+        return { observacion:{ tipo:'arbol_producto', estado:'sin_producto_terminado', material: mat, alt: altN, etapa: entryAlt.etapa } };
+      }
+      if(destinos.length > 1){
+        var opcionesDestino = destinos.map(function(d){
+          var descFinal = (bomIdx.byKey[api.keyOf(d.materialFinal, d.altFinal)]||{}).descripcion || '';
+          return { materialFinal: d.materialFinal, altFinal: d.altFinal, descripcion: descFinal };
+        });
+        return { observacion:{ tipo:'arbol_producto', estado:'multiples_productos', material: mat, alt: altN, opciones: opcionesDestino },
+          html: tarjetaOpcionesProducto(opcionesDestino) };
+      }
+      materialFinal = destinos[0].materialFinal;
+      altFinal = destinos[0].altFinal;
+    }
+
+    var resultado = api.construirTodosLosArboles(materialFinal, altFinal, {});
+    var arboles = resultado.arboles || [];
+    if(!arboles.length){
+      return { observacion:{ tipo:'arbol_producto', estado:'sin_arbol', material: materialFinal, alt: altFinal } };
+    }
+    var idxComb = (args && typeof args.combinacion === 'number' && args.combinacion>=0 && args.combinacion<arboles.length) ? args.combinacion : 0;
+    var nodosObs = arboles[idxComb].map(function(n){
+      return {
+        etapa: n.etapa, material: n.material, alt: n.alt, version: n.version, versionEsReal: n.versionEsReal,
+        vfabBloqueada: n.vfabBloqueada, estado: n.estado, esFabricacion: n.esFabricacion, advertencias: (n.advertencias||[]).slice(0,3)
+      };
     });
+    var obsArbol = {
+      tipo:'arbol_producto', estado:'ok', materialFinal: materialFinal, altFinal: altFinal,
+      combinacion: idxComb, totalCombinaciones: arboles.length, seRecorto: !!resultado.seRecorto, nodos: nodosObs
+    };
+    return { observacion: obsArbol, html: tarjetaArbol(obsArbol) };
   }
 
+  function toolFiltrarTabla(args){
+    var condiciones = (args && args.condiciones) || [];
+    var malas = condicionesInvalidas(condiciones);
+    if(malas.length) return { observacion:{ tipo:'filtrar_tabla', aplicado:false, error:'columnas_invalidas', detalle: malas } };
+    activarFiltroIA(condiciones);
+    var vista = vistaActiva();
+    var recuento = vista==='mm' ? (window.__mmGetFilteredRows?window.__mmGetFilteredRows().length:null) : (window.__bomGetFilteredRows?window.__bomGetFilteredRows().length:null);
+    var obs = { tipo:'filtrar_tabla', aplicado:true, vista: LABELS_VISTA[vista], filasVisibles: recuento };
+    return { observacion: obs, html: '<div class="ia-chat-resultado-badge">'+(recuento===null?'filtro aplicado':recuento+' resultado(s)')+'</div>' };
+  }
+  function toolContarFilas(args){
+    var condiciones = (args && args.condiciones) || [];
+    var malas = condicionesInvalidas(condiciones);
+    if(malas.length) return { observacion:{ tipo:'contar_filas', error:'columnas_invalidas', detalle: malas } };
+    var conteo = contarCoincidencias(condiciones);
+    var partes = String(conteo).split('/');
+    var obs = { tipo:'contar_filas', coinciden: partes[0], total: partes[1] };
+    return { observacion: obs, html: '<div class="ia-chat-resultado-badge">'+esc(conteo)+' coinciden</div>' };
+  }
+
+  var EJECUTORES = {
+    buscar_material: toolBuscarMaterial,
+    ficha_material: toolFichaMaterial,
+    listas_de_material: toolListasDeMaterial,
+    componentes_de_lista: toolComponentesDeLista,
+    donde_se_usa: toolDondeSeUsa,
+    versiones_fabricacion: toolVersionesFabricacion,
+    arbol_producto: toolArbolProducto,
+    filtrar_tabla: toolFiltrarTabla,
+    contar_filas: toolContarFilas
+  };
+
+  function ejecutarAcciones(acciones){
+    var observaciones = [], htmlCards = [];
+    (acciones||[]).forEach(function(accion){
+      var fn = EJECUTORES[accion.herramienta];
+      if(!fn) return;
+      var resultado;
+      try{ resultado = fn(accion.argumentos || {}); }
+      catch(e){ resultado = { observacion:{ tipo:accion.herramienta, error:'fallo_interno' } }; }
+      if(resultado && resultado.observacion){
+        resultado.observacion.herramienta = accion.herramienta;
+        observaciones.push(resultado.observacion);
+      }
+      if(resultado && resultado.html) htmlCards.push(resultado.html);
+    });
+    return { observaciones: observaciones, htmlCards: htmlCards };
+  }
+
+  function construirContexto(){
+    var mmRows = window.__mmGetAllRows ? window.__mmGetAllRows() : [];
+    var bomRows = window.BOM_ROWS || [];
+    var compRows = window.BOM_COMP_ROWS || [];
+    var vfabRows = window.BOM_VFAB_ROWS || [];
+    var vista = vistaActiva();
+    var filasVisibles = vista==='mm'
+      ? (window.__mmGetFilteredRows ? window.__mmGetFilteredRows().length : undefined)
+      : (window.__bomGetFilteredRows ? window.__bomGetFilteredRows().length : undefined);
+    return {
+      mmCargado: mmRows.length>0, mmFilas: mmRows.length,
+      bomCargado: bomRows.length>0, bomFilas: bomRows.length,
+      compCargados: compRows.length>0, vfabCargadas: vfabRows.length>0,
+      filasVisibles: filasVisibles, filtroIaActivo: !!window.__iaChatExtraFilter
+    };
+  }
+
+  /* ---------- Orquestación de las dos fases ---------- */
+  async function llamarEndpoint(payload){
+    var resp = await fetch(getEndpointUrl(), {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
+    });
+    var data = await resp.json().catch(function(){ return null; });
+    if(!resp.ok || !data){
+      return { error: (data && data.error) ? data.error : ('El servidor respondió con error ('+resp.status+').') };
+    }
+    return data;
+  }
+
+  async function enviarPregunta(pregunta){
+    ocultarEstadoVacio();
+    agregarMensajeUsuario(pregunta);
+    var historialPrevio = historial.slice();
+    historial.push({ rol:'usuario', texto: pregunta });
+    input.value = '';
+    ajustarAlturaInput();
+    cerrarAutocomplete();
+
+    var placeholder = agregarPlaceholderPensando();
+    sendBtn.disabled = true;
+    try{
+      var planResp = await llamarEndpoint({
+        fase:'planificar', pregunta: pregunta, vista: LABELS_VISTA[vistaActiva()],
+        columnas: columnasDeVistaActual(), filtrosExistentes: filtrosDeVistaActual(),
+        historial: historialPrevio, contexto: construirContexto()
+      });
+      if(planResp.error){ placeholder.remove(); agregarMensajeError(planResp.error); return; }
+
+      var acciones = planResp.acciones || [];
+      if(!acciones.length){
+        var textoDirecto = planResp.mensaje || '¿Sobre qué te gustaría que te ayude?';
+        placeholder.remove();
+        renderRespuestaFinal({ mensaje: textoDirecto, razonamiento: planResp.razonamiento, sugerencias: planResp.sugerencias }, []);
+        historial.push({ rol:'asistente', texto: textoDirecto });
+        return;
+      }
+
+      if(planResp.razonamiento) actualizarPlaceholderTexto(placeholder, planResp.razonamiento);
+      var ejec = ejecutarAcciones(acciones);
+
+      var respFinal = await llamarEndpoint({
+        fase:'responder', pregunta: pregunta, vista: LABELS_VISTA[vistaActiva()],
+        historial: historialPrevio, contexto: construirContexto(), observaciones: ejec.observaciones
+      });
+      placeholder.remove();
+      if(respFinal.error){ agregarMensajeError(respFinal.error); return; }
+
+      var razonCombinado = [planResp.razonamiento, respFinal.razonamiento].filter(Boolean).join(' ');
+      var textoFinal = respFinal.mensaje || 'Aquí tienes lo que encontré.';
+      renderRespuestaFinal({ mensaje: textoFinal, razonamiento: razonCombinado, sugerencias: respFinal.sugerencias }, ejec.htmlCards);
+      historial.push({ rol:'asistente', texto: textoFinal });
+    }catch(err){
+      placeholder.remove();
+      agregarMensajeError('No se pudo contactar al endpoint. Revisa la URL configurada (ícono de engranaje) y tu conexión.');
+    }finally{
+      sendBtn.disabled = false;
+    }
+  }
+
+  /* ---------- Delegación de clics dentro del historial de mensajes ---------- */
+  messagesBox.addEventListener('click', function(e){
+    var askEl = e.target.closest('[data-ask]');
+    if(askEl){ enviarPregunta(askEl.getAttribute('data-ask')); return; }
+
+    var openMat = e.target.closest('[data-open-material]');
+    if(openMat){
+      var code = openMat.getAttribute('data-open-material');
+      if(window.__mmOpenMaterial) window.__mmOpenMaterial(code);
+      cerrarPanel();
+      return;
+    }
+    var openLista = e.target.closest('[data-open-lista]');
+    if(openLista){
+      if(window.__bomOpenListByKey) window.__bomOpenListByKey(openLista.getAttribute('data-mat'), openLista.getAttribute('data-alt'));
+      cerrarPanel();
+      return;
+    }
+    var openTree = e.target.closest('[data-open-tree]');
+    if(openTree){
+      document.querySelectorAll('.filter-panel.open').forEach(function(p){ p.classList.remove('open'); });
+      if(window.__activateSuiteTab) window.__activateSuiteTab('arbol');
+      if(window.__arbolAPI && window.__arbolAPI.construirYMostrarArbol){
+        window.__arbolAPI.construirYMostrarArbol(openTree.getAttribute('data-mat'), openTree.getAttribute('data-alt'), {});
+      }
+      cerrarPanel();
+      return;
+    }
+    var copyBtn = e.target.closest('[data-copy-msg]');
+    if(copyBtn){
+      var msgEl = copyBtn.closest('.ia-chat-msg-ia');
+      var texto = msgEl ? msgEl.getAttribute('data-raw-text') : '';
+      if(texto && navigator.clipboard) navigator.clipboard.writeText(texto).catch(function(){});
+      return;
+    }
+    var thinkToggle = e.target.closest('.ia-chat-think-toggle');
+    if(thinkToggle){
+      var bloque = thinkToggle.closest('.ia-chat-think');
+      if(bloque) bloque.classList.toggle('abierto');
+      return;
+    }
+  });
+
+  /* ---------- Autocompletado de materiales al escribir (estilo "@mención") ---------- */
+  var acResultadosActuales = [];
+  var acIndiceActivo = -1;
+
+  function tokenActualDeInput(){
+    var val = input.value;
+    var pos = input.selectionStart===null ? val.length : input.selectionStart;
+    var antes = val.slice(0, pos);
+    var m = antes.match(/([A-Za-zÀ-ÿ0-9._-]{2,})$/);
+    return m ? { texto: m[1], inicio: pos - m[1].length, fin: pos } : null;
+  }
+  function buscarMaterialesLocal(q, limite){
+    var qNorm = q.toLowerCase();
+    var vistos = {}, out = [];
+    var mmRows = window.__mmGetAllRows ? window.__mmGetAllRows() : [];
+    for(var i=0;i<mmRows.length && out.length<limite;i++){
+      var r = mmRows[i];
+      var codigo = String(r['Material']||'').trim();
+      var desc = String(r['Texto Material']||r['Denom.estándar']||'');
+      if(!codigo || vistos[codigo]) continue;
+      if(codigo.toLowerCase().indexOf(qNorm)===-1 && desc.toLowerCase().indexOf(qNorm)===-1) continue;
+      vistos[codigo] = true;
+      out.push({ codigo:codigo, texto:desc });
+    }
+    return out;
+  }
+  function cerrarAutocomplete(){
+    acBox.classList.remove('open');
+    acBox.innerHTML = '';
+    acResultadosActuales = [];
+    acIndiceActivo = -1;
+  }
+  function pintarAutocomplete(){
+    acBox.innerHTML = '<div class="ia-chat-ac-head">Materiales</div>' + acResultadosActuales.map(function(r, i){
+      return '<button type="button" class="ia-chat-ac-item'+(i===acIndiceActivo?' activo':'')+'" data-ac-index="'+i+'">'+
+        '<span class="ac-code">'+esc(r.codigo)+'</span><span class="ac-text">'+esc(r.texto||'')+'</span><span class="ac-hint">Tab</span>'+
+      '</button>';
+    }).join('');
+    acBox.classList.add('open');
+  }
+  function actualizarAutocomplete(){
+    var tok = tokenActualDeInput();
+    if(!tok || tok.texto.length < 2){ cerrarAutocomplete(); return; }
+    var resultados = buscarMaterialesLocal(tok.texto, 6);
+    if(!resultados.length){ cerrarAutocomplete(); return; }
+    acResultadosActuales = resultados.map(function(r){ return { codigo:r.codigo, texto:r.texto, rango: tok }; });
+    acIndiceActivo = 0;
+    pintarAutocomplete();
+  }
+  function elegirAutocomplete(i){
+    var r = acResultadosActuales[i];
+    if(!r) return;
+    var val = input.value;
+    var nuevo = val.slice(0, r.rango.inicio) + r.codigo + val.slice(r.rango.fin);
+    input.value = nuevo;
+    var cursor = r.rango.inicio + r.codigo.length;
+    input.setSelectionRange(cursor, cursor);
+    cerrarAutocomplete();
+    input.focus();
+    ajustarAlturaInput();
+  }
+  acBox.addEventListener('click', function(e){
+    var item = e.target.closest('[data-ac-index]');
+    if(item) elegirAutocomplete(parseInt(item.getAttribute('data-ac-index'),10));
+  });
+
+  /* ---------- Composer: autoajuste de altura, autocompletado y envío ---------- */
+  function ajustarAlturaInput(){
+    input.style.height = 'auto';
+    input.style.height = Math.min(input.scrollHeight, 120) + 'px';
+  }
   function manejarEnvio(){
     var texto = input.value.trim();
     if(!texto) return;
-    input.value = '';
     enviarPregunta(texto);
   }
+  input.addEventListener('input', function(){
+    ajustarAlturaInput();
+    actualizarAutocomplete();
+  });
+  input.addEventListener('keydown', function(e){
+    if(acBox.classList.contains('open')){
+      if(e.key==='ArrowDown'){ e.preventDefault(); acIndiceActivo = Math.min(acIndiceActivo+1, acResultadosActuales.length-1); pintarAutocomplete(); return; }
+      if(e.key==='ArrowUp'){ e.preventDefault(); acIndiceActivo = Math.max(acIndiceActivo-1, 0); pintarAutocomplete(); return; }
+      if(e.key==='Tab' || (e.key==='Enter' && acIndiceActivo>=0)){ e.preventDefault(); elegirAutocomplete(acIndiceActivo); return; }
+      if(e.key==='Escape'){ cerrarAutocomplete(); return; }
+    }
+    if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); manejarEnvio(); }
+  });
   sendBtn.addEventListener('click', manejarEnvio);
-  input.addEventListener('keydown', function(e){ if(e.key==='Enter') manejarEnvio(); });
 
 })();
 </script>

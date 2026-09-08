@@ -100,6 +100,10 @@ const HERRAMIENTAS = [
 
 const NOMBRES_HERRAMIENTAS = HERRAMIENTAS.map((h) => h.nombre);
 const MAX_ACCIONES = 3;
+// Último escalón de exigencia: sin ningún parámetro opcional, el JSON se pide solo en el
+// texto del prompt. Es el modo con el que funcionaba antes y sirve de red para cualquier
+// modelo que no admita responseSchema ni thinkingConfig.
+const NIVEL_MINIMO_TEXTO = 3;
 
 /* Esquemas de salida (subconjunto de OpenAPI 3.0 que acepta Gemini vía
    generationConfig.responseSchema). Sin esto, "responseMimeType: application/json"
@@ -272,12 +276,43 @@ module.exports = async (req, res) => {
         .filter((m) => (m.supportedGenerationMethods || []).includes('generateContent'))
         .map((m) => String(m.name || '').replace(/^models\//, ''));
       const existe = disponibles.includes(GEMINI_MODEL);
+
+      /* Que el modelo exista no basta: hay que saber QUÉ parámetros admite. Se prueba una
+         generación mínima en cada escalón y se informa del primero que responde, que es
+         justo lo que el chat acabará usando. */
+      const NOMBRES_NIVEL = [
+        'sin razonamiento interno + esquema estricto + salida JSON',
+        'esquema estricto + salida JSON',
+        'salida JSON',
+        'solo texto (el JSON se pide en el prompt)'
+      ];
+      const pruebas = [];
+      let nivelQueFunciona = null;
+      if (existe) {
+        const base = { temperature: 0, maxOutputTokens: 256, responseMimeType: 'application/json', responseSchema: RESPUESTA_SCHEMA };
+        for (let n = 0; n <= NIVEL_MINIMO_TEXTO; n++) {
+          const prueba = await llamarGemini({
+            apiKey: apiKeys[0],
+            prompt: 'Responde solo con este JSON: {"mensaje":"ok"}',
+            config: base,
+            nivel: n
+          });
+          pruebas.push({ nivel: n, modo: NOMBRES_NIVEL[n], resultado: prueba.tipo, status: prueba.status || null,
+            detalle: prueba.detalle ? String(prueba.detalle).slice(0, 200) : null });
+          if (prueba.tipo === 'ok') { nivelQueFunciona = n; break; }
+        }
+      }
+
       res.status(200).json({
         modeloConfigurado: GEMINI_MODEL,
         elModeloExiste: existe,
-        veredicto: existe
-          ? 'El modelo configurado existe y esta key puede usarlo. Si el chat falla, el problema es de cuota o de red, no del modelo.'
-          : `El modelo "${GEMINI_MODEL}" NO está en la lista que ve esta key. Cambia GEMINI_MODEL en Vercel por uno de "modelosDisponibles".`,
+        veredicto: !existe
+          ? `El modelo "${GEMINI_MODEL}" NO está en la lista que ve esta key. Cambia GEMINI_MODEL en Vercel por uno de "modelosDisponibles".`
+          : (nivelQueFunciona === null
+              ? 'El modelo existe pero no respondió en ninguno de los modos probados. Mira "pruebas" para ver qué contestó Google en cada uno.'
+              : `El modelo funciona en el modo "${NOMBRES_NIVEL[nivelQueFunciona]}". El chat usará ese automáticamente.`),
+        modoQueFunciona: nivelQueFunciona === null ? null : NOMBRES_NIVEL[nivelQueFunciona],
+        pruebas,
         keysConfiguradas: apiKeys.length,
         modelosDisponibles: disponibles
       });
@@ -335,7 +370,8 @@ module.exports = async (req, res) => {
        es transitorio y cambiar de key no ayuda (es el modelo, no la cuenta).
      - respuesta cortada a mitad (MAX_TOKENS)      -> se REINTENTA con el DOBLE de
        presupuesto de salida.
-     - el modelo no acepta thinkingConfig (400)    -> se REINTENTA sin ese campo.
+     - parámetro que el modelo no admite (400)     -> se REINTENTA con menos exigencias
+       (ver NIVELES abajo).
 
      El corte es por TIEMPO, no por un número fijo de llamadas: con seis keys, un tope de
      tres intentos dejaba la mitad sin probar y aun así el mensaje final decía que habían
@@ -344,22 +380,30 @@ module.exports = async (req, res) => {
      la función (20 s en vercel.json). */
   const LIMITE_MS = 14000;
   const arranque = Date.now();
-  const MAX_LLAMADAS = apiKeys.length + 3;   // margen para los reintentos que no gastan key
+  const MAX_LLAMADAS = apiKeys.length + NIVEL_MINIMO_TEXTO + 2;
   const quedaTiempo = () => (Date.now() - arranque) < LIMITE_MS;
   let llamadas = 0;
   let idxKey = 0;
   let keysProbadas = 0;
-  // Se pide desactivar el razonamiento interno del modelo: esos tokens se cobran
-  // contra maxOutputTokens y son la causa habitual de que la respuesta se corte
-  // ANTES de llegar a escribir el JSON. Si el modelo no admite el campo, el primer
-  // 400 lo detecta y se reintenta sin él.
-  let sinPensamiento = true;
+  /* NIVELES de exigencia. Google responde a un parámetro que su modelo no admite con un
+     400 "Request contains an invalid argument" a secas, sin decir CUÁL: no hay forma de
+     saber por el texto si sobra thinkingConfig, responseSchema o los dos. Así que en vez
+     de adivinar se van soltando de uno en uno, de más a menos exigente, y se reintenta:
+
+       0 - sin razonamiento interno + esquema estricto + salida JSON
+       1 - esquema estricto + salida JSON        (el modelo no admite thinkingConfig)
+       2 - salida JSON                           (tampoco admite responseSchema)
+       3 - nada: el JSON se pide solo en el texto del prompt
+
+     El nivel 3 es el que funcionaba antes de añadir estas mejoras, así que siempre queda
+     un camino que responde; extraerJSON ya tolera que ahí venga envuelto en markdown. */
+  let nivel = 0;
   let ultimoError = null;
 
   while (llamadas < MAX_LLAMADAS && idxKey < apiKeys.length && quedaTiempo()) {
     llamadas++;
     if (idxKey + 1 > keysProbadas) keysProbadas = idxKey + 1;
-    const r = await llamarGemini({ apiKey: apiKeys[idxKey], prompt, config, sinPensamiento });
+    const r = await llamarGemini({ apiKey: apiKeys[idxKey], prompt, config, nivel });
 
     if (r.tipo === 'ok') {
       res.status(200).json(sanear(r.interpretacion, fase));
@@ -380,8 +424,12 @@ module.exports = async (req, res) => {
     }
 
     // r.tipo === 'http'
-    if (sinPensamiento && esErrorDePensamiento(r.status, r.detalle)) {
-      sinPensamiento = false;
+    // Un 400 que no señala a la key es casi siempre un parámetro que este modelo no
+    // admite: se baja un escalón de exigencia y se reintenta con la misma key, en vez de
+    // dar el error por definitivo (que es lo que dejaba el chat inutilizable entero).
+    if (r.status === 400 && !debeRotarKey(r.status, r.detalle) && nivel < NIVEL_MINIMO_TEXTO) {
+      nivel++;
+      ultimoError = { status: r.status, detalle: r.detalle };
       continue;
     }
     if (debeRotarKey(r.status, r.detalle)) {
@@ -447,12 +495,21 @@ function esperar(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+/* Quita del generationConfig lo que el modelo haya rechazado, según el escalón en el que
+   vaya el bucle de intentos (ver NIVELES). El prompt siempre pide el JSON por escrito, así
+   que incluso en el último escalón la respuesta sigue siendo interpretable. */
+function configDeNivel(config, nivel) {
+  const c = { ...config };
+  if (nivel <= 0) c.thinkingConfig = { thinkingBudget: 0 };
+  if (nivel >= 2) delete c.responseSchema;
+  if (nivel >= 3) delete c.responseMimeType;
+  return c;
+}
+
 /* Una sola llamada a Gemini, con el resultado ya clasificado para que el bucle de
    arriba decida qué hacer sin volver a mirar el cuerpo de la respuesta. */
-async function llamarGemini({ apiKey, prompt, config, sinPensamiento }) {
-  const generationConfig = sinPensamiento
-    ? { ...config, thinkingConfig: { thinkingBudget: 0 } }
-    : config;
+async function llamarGemini({ apiKey, prompt, config, nivel }) {
+  const generationConfig = configDeNivel(config, nivel || 0);
 
   let respuesta;
   try {

@@ -7,9 +7,69 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-<script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
+<link rel="preconnect" href="https://wjlryrqkcnvjlrdibzol.supabase.co" crossorigin>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+/* Las dos librerías de Excel pesan ~2 MB juntas y solo hacen falta al importar o exportar
+   un archivo. Traerlas en el arranque retrasaba la primera pantalla y, en un móvil con
+   datos, competía por el ancho de banda justo contra las consultas que sí importan para
+   poder usar la aplicación. Se cargan la primera vez que se necesitan, y además se van
+   trayendo solas cuando el navegador queda ocioso, así que en la práctica ya están listas
+   cuando alguien pulsa exportar.
+
+   El ORDEN importa: xlsx-js-style se carga después de xlsx porque extiende la misma
+   global XLSX con el soporte de estilos (fill, font, border y comentarios de celda) que
+   usan los exportadores; al revés, la versión sin estilos sería la que quedara vigente. */
+window.__cargarXLSX = (function(){
+  var FUENTES = [
+    'https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js',
+    'https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js'
+  ];
+  var promesa = null;
+  function inyectar(src){
+    return new Promise(function(resolve, reject){
+      var s = document.createElement('script');
+      s.src = src;
+      s.async = false;
+      s.onload = resolve;
+      s.onerror = function(){ reject(new Error('No se pudo cargar ' + src)); };
+      document.head.appendChild(s);
+    });
+  }
+  return function(){
+    // Si ya está cargada (por la precarga en reposo, o porque se usó antes) no se vuelve
+    // a inyectar nada: se resuelve al momento.
+    if(window.XLSX && window.XLSX.utils) return Promise.resolve();
+    if(promesa) return promesa;
+    promesa = FUENTES.reduce(function(cadena, src){
+      return cadena.then(function(){ return inyectar(src); });
+    }, Promise.resolve());
+    // Un fallo de red no debe dejar la promesa rechazada para siempre: se descarta para
+    // que el siguiente intento del usuario vuelva a probar.
+    promesa.catch(function(){ promesa = null; });
+    return promesa;
+  };
+})();
+
+/* Aviso único y claro si las librerías no llegan, en vez de un error de consola que la
+   persona no ve. Devuelve true solo si XLSX quedó utilizable. */
+window.__conXLSX = async function(){
+  try{
+    await window.__cargarXLSX();
+    return !!(window.XLSX && window.XLSX.utils);
+  }catch(e){
+    alert('No se pudieron cargar las librerías de Excel. Revisa tu conexión e inténtalo de nuevo.');
+    return false;
+  }
+};
+
+// Precarga silenciosa: no compite con la primera pantalla ni con la carga de datos.
+(function(){
+  var arrancar = function(){ window.__cargarXLSX().catch(function(){}); };
+  if(window.requestIdleCallback) window.requestIdleCallback(arrancar, { timeout: 8000 });
+  else window.addEventListener('load', function(){ setTimeout(arrancar, 2500); });
+})();
+</script>
 <style>
   :root{
     --bg:#F1F4F4;
@@ -519,14 +579,47 @@
     header.top{padding:22px 16px 18px;}
     header.top.top-collapsed h1.title{ font-size:15.5px; }
     .toolbar{padding:12px 16px;}
-    main.view-main{padding:16px 16px 40px;}
+    /* El hueco inferior deja sitio a los dos botones flotantes (chat y auditoría), que
+       si no se comen la paginación justo cuando hace falta pulsarla. */
+    main.view-main{padding:16px 16px 96px;}
     .status-cell{flex:1 1 45%;}
     .toolbar-divider{display:none;}
     .field-grid{ grid-template-columns:1fr; }
     table{ min-width:900px; }
-    .suite-bar{ padding:14px 16px 0; }
-    .suite-tab{ font-size:12.5px; padding:9px 10px 11px; }
+
+    /* Las cuatro pestañas no caben en la pantalla de un móvil: al no poder encogerse
+       estiraban el ANCHO DE LA PÁGINA, y entonces el gesto de desplazar la tabla movía
+       la página entera — con lo que la columna fija de Material se iba de la pantalla y
+       se perdía la referencia de qué fila era cada una. Ahora la tira de pestañas tiene
+       su propio desplazamiento horizontal y la página vuelve a caber en el ancho real. */
+    .suite-bar{ padding:12px 0 0; }
+    .suite-eyebrow{ padding:0 16px; margin-bottom:10px; font-size:9.5px; letter-spacing:.12em; }
+    .suite-tabs{
+      overflow-x:auto; -webkit-overflow-scrolling:touch; scroll-snap-type:x proximity;
+      padding:0 16px; scrollbar-width:none;
+    }
+    .suite-tabs::-webkit-scrollbar{ display:none; }
+    .suite-tab{ font-size:12.5px; padding:9px 10px 11px; flex:0 0 auto; scroll-snap-align:start; }
     .suite-tab .tab-badge{ font-size:9px; padding:1px 5px; }
+
+    /* Con dos columnas fijas (Material + Descripción) no quedaba pantalla para el resto:
+       sumaban casi los 400px del móvil y el desplazamiento horizontal no descubría nada.
+       Se deja fija solo la de Material, que es la referencia que hay que conservar. */
+    thead th.col-desc, tbody td.col-desc{
+      position:static; left:auto; box-shadow:none; min-width:150px; max-width:210px;
+    }
+    /* Al quedarse sola, la columna de Material hereda la sombra que marca el borde por
+       donde se desliza el resto — sin ella el texto que pasa por debajo parece pegado. */
+    thead th.col-material, tbody td.col-material{ max-width:104px; box-shadow:2px 0 4px rgba(0,0,0,0.06); }
+    tbody td{ padding:9px 10px; }
+    /* Las descripciones largas estiraban las filas a tres y cuatro líneas, dejando ver
+       apenas cuatro registros por pantalla. En móvil se recortan a una sola línea: las
+       filas quedan a la misma altura, caben casi el triple, y el texto completo sigue a
+       un toque de distancia en la ficha de detalle. (Recortar con -webkit-line-clamp no
+       sirve aquí: obliga a cambiar el display de la celda y eso rompe la rejilla de la
+       tabla, descuadrando las filas.) */
+    tbody td.wrap{ white-space:nowrap; text-overflow:ellipsis; overflow:hidden; }
+    .table-wrap{ max-height:70vh; }
 
     .search-box{ flex:1 1 100%; min-width:0; max-width:100%; }
     .btn, .filter-btn{ padding:10px 13px; font-size:13.5px; }
@@ -1705,18 +1798,74 @@ function formatFechaHoraCorta(d){
     console.error('Error inicializando Supabase', e);
   }
 
-  window.__sbFetchAll = async function(table, selectCols){
-    if(!window.__sb) return [];
-    var pageSize = 1000;
+  /* Supabase devuelve como mucho 1.000 filas por consulta, así que las tablas grandes hay
+     que traerlas por páginas. Pedirlas EN CADENA (una, esperar, la siguiente) es lo que
+     hacía que el arranque tardara tanto: con ~47.000 componentes son 48 viajes de ida y
+     vuelta seguidos, y en un móvil con datos cada viaje cuesta cientos de milisegundos.
+
+     Ahora se pregunta primero cuántas filas hay y se piden todas las páginas a la vez, de
+     CONCURRENCIA en CONCURRENCIA (varias en vuelo, no todas de golpe, para no toparse con
+     el límite de conexiones simultáneas del navegador ni con el rate limit de Supabase).
+     Si el conteo o alguna página falla se vuelve al recorrido secuencial de siempre, que
+     es más lento pero está probado — nunca se devuelven datos incompletos. */
+  var SB_PAGE_SIZE = 1000;
+  var SB_CONCURRENCIA = 4;
+
+  async function sbFetchSecuencial(table, selectCols){
     var from = 0;
     var all = [];
     while(true){
-      var res = await window.__sb.from(table).select(selectCols).order('id', {ascending:true}).range(from, from + pageSize - 1);
+      var res = await window.__sb.from(table).select(selectCols).order('id', {ascending:true}).range(from, from + SB_PAGE_SIZE - 1);
       if(res.error){ console.error('Supabase select error ('+table+')', res.error); break; }
       var batch = res.data || [];
       all = all.concat(batch);
-      if(batch.length < pageSize) break;
-      from += pageSize;
+      if(batch.length < SB_PAGE_SIZE) break;
+      from += SB_PAGE_SIZE;
+    }
+    return all;
+  }
+
+  window.__sbFetchAll = async function(table, selectCols){
+    if(!window.__sb) return [];
+
+    var total = null;
+    try{
+      var head = await window.__sb.from(table).select('id', { count:'exact', head:true });
+      if(!head.error && typeof head.count === 'number') total = head.count;
+    }catch(e){ /* sin conteo se usa el camino secuencial */ }
+
+    if(total === null) return sbFetchSecuencial(table, selectCols);
+    if(total === 0) return [];
+
+    var totalPaginas = Math.ceil(total / SB_PAGE_SIZE);
+    var porPagina = new Array(totalPaginas);
+    var siguiente = 0;
+    var fallo = null;
+
+    async function trabajador(){
+      while(siguiente < totalPaginas && !fallo){
+        var idx = siguiente++;
+        var desde = idx * SB_PAGE_SIZE;
+        try{
+          var res = await window.__sb.from(table).select(selectCols).order('id', {ascending:true}).range(desde, desde + SB_PAGE_SIZE - 1);
+          if(res.error){ fallo = res.error; return; }
+          porPagina[idx] = res.data || [];
+        }catch(e){ fallo = e; return; }
+      }
+    }
+
+    var hilos = [];
+    for(var h = 0; h < Math.min(SB_CONCURRENCIA, totalPaginas); h++) hilos.push(trabajador());
+    await Promise.all(hilos);
+
+    if(fallo){
+      console.error('Supabase select error ('+table+'), se reintenta en secuencial', fallo);
+      return sbFetchSecuencial(table, selectCols);
+    }
+
+    var all = [];
+    for(var p = 0; p < totalPaginas; p++){
+      if(porPagina[p]) all = all.concat(porPagina[p]);
     }
     return all;
   };
@@ -2121,7 +2270,8 @@ function formatFechaHoraCorta(d){
     applyFilters();
   });
 
-  $('mmExportXlsx').addEventListener('click', function(){
+  $('mmExportXlsx').addEventListener('click', async function(){
+    if(!await window.__conXLSX()) return;
     if(state.rows.length === 0){
       alert('No hay datos para exportar. Carga un archivo Excel primero.');
       return;
@@ -2142,7 +2292,8 @@ function formatFechaHoraCorta(d){
 
   function showError(msg){ dzError.textContent = msg; dzError.style.display = 'block'; }
 
-  function handleFile(file){
+  async function handleFile(file){
+    if(!await window.__conXLSX()) return;
     dzError.style.display = 'none';
     var reader = new FileReader();
     reader.onload = async function(e){
@@ -3471,6 +3622,7 @@ function formatFechaHoraCorta(d){
   document.getElementById('bomFileInput').addEventListener('change', async (e)=>{
     const file = e.target.files[0];
     if(!file) return;
+    if(!await window.__conXLSX()) return;
 
     try {
       const data = await file.arrayBuffer();
@@ -3539,6 +3691,7 @@ function formatFechaHoraCorta(d){
   document.getElementById('bomComponentesFileInput').addEventListener('change', async (e)=>{
     const file = e.target.files[0];
     if(!file) return;
+    if(!await window.__conXLSX()) return;
 
     try {
       const data = await file.arrayBuffer();
@@ -3636,6 +3789,7 @@ function formatFechaHoraCorta(d){
   document.getElementById('bomVfabFileInput').addEventListener('change', async (e)=>{
     const file = e.target.files[0];
     if(!file) return;
+    if(!await window.__conXLSX()) return;
 
     try {
       const data = await file.arrayBuffer();
@@ -5329,7 +5483,8 @@ function formatFechaHoraCorta(d){
     return { hallazgos: hallazgos, sinApi: false, totalAcondicionados: acondicionados.length, totalArboles: arbolesRevisados };
   }
 
-  document.getElementById('bomExportDetallado').addEventListener('click', ()=>{
+  document.getElementById('bomExportDetallado').addEventListener('click', async ()=>{
+    if(!await window.__conXLSX()) return;
     if(ROWS.length === 0) {
       alert('No hay datos para exportar. Carga un archivo Excel primero.');
       return;
@@ -5730,6 +5885,7 @@ function formatFechaHoraCorta(d){
   });
 
   document.getElementById('bomExportAuditoria').addEventListener('click', async ()=>{
+    if(!await window.__conXLSX()) return;
     if(COMP_ROWS.length === 0){
       alert('No hay Componentes cargados. Carga el archivo de Componentes primero.');
       return;
@@ -6035,9 +6191,14 @@ function formatFechaHoraCorta(d){
 
   (async function initFromSupabase(){
     if(window.__globalLoading) window.__globalLoading.begin();
-    const bomLoaded = await loadBomFromSupabase();
-    const compLoaded = await loadComponentesFromSupabase();
-    const vfabLoaded = await loadVfabFromSupabase();
+    // Las tres cargas son independientes entre sí (listas, componentes y versiones de
+    // fabricación viven en tablas distintas), así que se piden a la vez en vez de una
+    // detrás de otra: el arranque pasa a costar lo que tarde la más lenta, no la suma.
+    const [bomLoaded, compLoaded, vfabLoaded] = await Promise.all([
+      loadBomFromSupabase(),
+      loadComponentesFromSupabase(),
+      loadVfabFromSupabase()
+    ]);
     if(bomLoaded || compLoaded || vfabLoaded){
       updateAll();
       if(window.__globalLoading) window.__globalLoading.markFound();
@@ -7946,7 +8107,8 @@ function formatFechaHoraCorta(d){
 
   /* ---------- Exportación a Excel ---------- */
   /* ---------- Exportación a Excel (formato "EXPLOSIÓN" a nivel de componente) ---------- */
-  exportBtn.addEventListener('click', function(){
+  exportBtn.addEventListener('click', async function(){
+    if(!await window.__conXLSX()) return;
     if(resultadosExplosion.length === 0){
       alert('No hay resultados para exportar.');
       return;

@@ -267,8 +267,25 @@ module.exports = async (req, res) => {
       res.status(500).json({ error: 'No hay ninguna API key de Gemini configurada en este despliegue.' });
       return;
     }
+    // Presupuesto propio del diagnóstico: encadena bastantes llamadas (listar modelos +
+    // hasta 4 niveles × varias keys + un barrido de todas las keys), y sin un tope
+    // explícito eso es justo lo que lo hacía correr hasta que Vercel mataba la función de
+    // golpe con un 504 en vez de devolver el informe parcial que ya tenía reunido. Mismo
+    // margen que el flujo principal: solo se autoriza un intento más si incluso colgándose
+    // entero seguiría cabiendo (ver el comentario largo junto a quedaTiempo, más abajo).
+    const LIMITE_DIAG_MS = 9000;
+    const inicioDiag = Date.now();
+    const quedaTiempoDiag = () => (Date.now() - inicioDiag + TIMEOUT_LLAMADA_MS) <= LIMITE_DIAG_MS;
+
     try {
-      const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${apiKeys[0]}&pageSize=200`);
+      const controladorLista = new AbortController();
+      const corteLista = setTimeout(() => controladorLista.abort(), TIMEOUT_LLAMADA_MS);
+      let r;
+      try {
+        r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${apiKeys[0]}&pageSize=200`, { signal: controladorLista.signal });
+      } finally {
+        clearTimeout(corteLista);
+      }
       const cuerpoLista = await r.json().catch(() => null);
       if (!r.ok) {
         res.status(502).json({
@@ -313,6 +330,7 @@ module.exports = async (req, res) => {
         if (ultima.status !== 429) return ultima;   // 429 = es la key, no el modo
         for (let k = 0; k < apiKeys.length; k++) {
           if (k === keyViva) continue;
+          if (!quedaTiempoDiag()) return ultima;   // se acaba el presupuesto: se corta aquí, no se cuelga
           ultima = await pruebaMinima(apiKeys[k], n);
           if (ultima.status !== 429) { keyViva = k; return ultima; }
         }
@@ -321,8 +339,10 @@ module.exports = async (req, res) => {
 
       const pruebas = [];
       let nivelQueFunciona = null;
+      let seAcabóElTiempo = false;
       if (existe) {
         for (let n = 0; n <= NIVEL_MINIMO_TEXTO; n++) {
+          if (!quedaTiempoDiag()) { seAcabóElTiempo = true; break; }
           const prueba = await probarNivel(n);
           pruebas.push({ nivel: n, modo: NOMBRES_NIVEL[n], resultado: prueba.tipo, status: prueba.status || null,
             detalle: prueba.detalle ? String(prueba.detalle).slice(0, 200) : null });
@@ -333,11 +353,18 @@ module.exports = async (req, res) => {
       /* Estado de CADA key, no solo de la primera. Probar solo la primera lleva a
          conclusiones falsas: si esa tiene la cuota agotada, todo el diagnóstico sale en
          429 aunque las otras cinco estén perfectamente vivas. Nunca se devuelve una key,
-         solo su posición y el veredicto. */
+         solo su posición y el veredicto. Si el presupuesto se acaba a mitad del barrido,
+         las que faltan quedan marcadas como "no probada" en vez de desaparecer sin
+         explicación del informe. */
       const nivelParaProbar = nivelQueFunciona === null ? NIVEL_MINIMO_TEXTO : nivelQueFunciona;
       const estadoKeys = [];
       let vivas = 0;
       for (let k = 0; k < apiKeys.length; k++) {
+        if (!quedaTiempoDiag()) {
+          seAcabóElTiempo = true;
+          estadoKeys.push({ key: 'GEMINI_API_KEY_' + (k + 1), estado: 'no probada (se acabó el tiempo del diagnóstico)' });
+          continue;
+        }
         const p = await pruebaMinima(apiKeys[k], nivelParaProbar);
         let estado;
         if (p.tipo === 'ok' || p.tipo === 'truncado') { estado = 'operativa'; vivas++; }
@@ -353,9 +380,12 @@ module.exports = async (req, res) => {
         veredicto: !existe
           ? `El modelo "${GEMINI_MODEL}" NO está en la lista que ve esta key. Cambia GEMINI_MODEL en Vercel por uno de "modelosDisponibles".`
           : (nivelQueFunciona === null
-              ? 'El modelo existe pero no respondió en ninguno de los modos probados. Mira "pruebas" para ver qué contestó Google en cada uno.'
+              ? (seAcabóElTiempo
+                  ? 'Se acabó el tiempo del diagnóstico antes de terminar de probar. Vuelve a intentarlo — con las respuestas más lentas de esta vez ya descartadas, suele bastar.'
+                  : 'El modelo existe pero no respondió en ninguno de los modos probados. Mira "pruebas" para ver qué contestó Google en cada uno.')
               : `El modelo funciona en el modo "${NOMBRES_NIVEL[nivelQueFunciona]}". El chat usará ese automáticamente.`),
         modoQueFunciona: nivelQueFunciona === null ? null : NOMBRES_NIVEL[nivelQueFunciona],
+        seAcabóElTiempo,
         pruebas,
         keysConfiguradas: apiKeys.length,
         keysOperativas: vivas,
@@ -368,7 +398,13 @@ module.exports = async (req, res) => {
       });
       return;
     } catch (e) {
-      res.status(502).json({ error: 'No se pudo contactar con la API de Gemini para el diagnóstico.', detalle: String((e && e.message) || e) });
+      const esTimeout = e && e.name === 'AbortError';
+      res.status(502).json({
+        error: esTimeout
+          ? `Google no respondió al listar los modelos en ${TIMEOUT_LLAMADA_MS/1000}s. Puede ser un problema pasajero de red — inténtalo de nuevo.`
+          : 'No se pudo contactar con la API de Gemini para el diagnóstico.',
+        detalle: String((e && e.message) || e)
+      });
       return;
     }
   }
@@ -426,12 +462,26 @@ module.exports = async (req, res) => {
      El corte es por TIEMPO, no por un número fijo de llamadas: con seis keys, un tope de
      tres intentos dejaba la mitad sin probar y aun así el mensaje final decía que habían
      fallado las seis. Un fallo de cuota se resuelve en milisegundos, así que dentro del
-     presupuesto caben todas las keys; lo que hay que evitar es pasarse del maxDuration de
-     la función (20 s en vercel.json). */
-  const LIMITE_MS = 14000;
+     presupuesto caben todas las keys; lo que hay que evitar es pasarse del límite real de
+     la función.
+
+     vercel.json declara maxDuration:20, pero ESO SOLO SE RESPETA en un plan de pago de
+     Vercel — en el plan gratuito (Hobby) el límite real es 10 s pase lo que declare la
+     config, y no hay forma de saber desde aquí en qué plan corre este despliegue. Se deja
+     margen bajo el peor caso, no bajo el mejor.
+
+     "Queda tiempo" NO basta con mirar el reloj sin más: cada llamada individual puede
+     tardar hasta TIMEOUT_LLAMADA_MS en colgarse antes de que el propio timeout la corte
+     (ver llamarGemini), así que solo se autoriza un intento MÁS si incluso en el peor caso
+     — que esa llamada se cuelgue entera — el total seguiría cabiendo dentro de LIMITE_MS.
+     Sin ese margen, dos llamadas colgadas seguidas sumaban 2×TIMEOUT_LLAMADA_MS y volvían
+     a pasarse del límite real (se midió: 12 s con solo el reloj, contra el suelo de 10 s
+     del plan gratuito) — el propio mecanismo pensado para evitar el 504 lo seguía
+     provocando. Con esta cuenta, el peor caso real queda en un único TIMEOUT_LLAMADA_MS. */
+  const LIMITE_MS = 9000;
   const arranque = Date.now();
   const MAX_LLAMADAS = apiKeys.length + NIVEL_MINIMO_TEXTO + 2;
-  const quedaTiempo = () => (Date.now() - arranque) < LIMITE_MS;
+  const quedaTiempo = () => (Date.now() - arranque + TIMEOUT_LLAMADA_MS) <= LIMITE_MS;
   let llamadas = 0;
   let idxKey = 0;
   let keysProbadas = 0;
@@ -557,12 +607,20 @@ function configDeNivel(config, nivel) {
   return c;
 }
 
+// Tope por LLAMADA INDIVIDUAL a Gemini. Sin esto, una sola respuesta lenta (o que se
+// cuelga) se comía todo el presupuesto de la función sin que el bucle de reintentos
+// llegara siquiera a enterarse — Vercel terminaba matando la función entera de golpe
+// (504, sin ningún JSON de error propio) en vez de que este código reaccionara a tiempo.
+const TIMEOUT_LLAMADA_MS = 5000;
+
 /* Una sola llamada a Gemini, con el resultado ya clasificado para que el bucle de
    arriba decida qué hacer sin volver a mirar el cuerpo de la respuesta. */
 async function llamarGemini({ apiKey, prompt, config, nivel }) {
   const generationConfig = configDeNivel(config, nivel || 0);
 
   let respuesta;
+  const controlador = new AbortController();
+  const corte = setTimeout(() => controlador.abort(), TIMEOUT_LLAMADA_MS);
   try {
     respuesta = await fetch(`${GEMINI_URL}?key=${apiKey}`, {
       method: 'POST',
@@ -570,10 +628,16 @@ async function llamarGemini({ apiKey, prompt, config, nivel }) {
       body: JSON.stringify({
         contents: [{ role: 'user', parts: [{ text: prompt }] }],
         generationConfig
-      })
+      }),
+      signal: controlador.signal
     });
   } catch (err) {
-    return { tipo: 'red', detalle: String((err && err.message) || err) };
+    // Un abort por timeout llega aquí como cualquier otro fallo de red: se trata igual
+    // (se reintenta con la siguiente key o se reintenta el nivel), sin lógica aparte.
+    const esTimeout = err && err.name === 'AbortError';
+    return { tipo: 'red', detalle: esTimeout ? `Sin respuesta de Gemini en ${TIMEOUT_LLAMADA_MS/1000}s.` : String((err && err.message) || err) };
+  } finally {
+    clearTimeout(corte);
   }
 
   if (!respuesta.ok) {

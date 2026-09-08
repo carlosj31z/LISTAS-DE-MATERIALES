@@ -9748,6 +9748,320 @@ function formatFechaHoraCorta(d){
     return data;
   }
 
+  /* ============================================================
+     CHATBOT LOCAL — reconoce en el navegador las preguntas TÍPICAS que la
+     aplicación YA CONTEMPLA (buscar, ficha, listas, componentes, dónde se
+     usa, versiones de fabricación, árbol, cambiar de pestaña, los filtros ya
+     nombrados) dichas en español natural y poco técnico, y las resuelve AQUÍ
+     MISMO — al instante, sin llamar a Gemini, sin gastar cuota ni depender
+     de que el servicio esté arriba. Solo cuando NINGÚN patrón reconoce la
+     pregunta con confianza se cae al flujo de IA en dos fases de siempre
+     (ver el inicio de enviarPregunta, más abajo).
+
+     Nunca duplica lógica: ejecuta las mismas funciones de EJECUTORES que ya
+     usa el plan de la IA. Lo único propio de este bloque es RECONOCER la
+     intención (con patrones deliberadamente conservadores: ante la duda,
+     ok:null / return null, y que lo resuelva la IA) y redactar un mensaje
+     fijo en vez de uno generado. Devuelve siempre { mensaje, htmlCards } o
+     null — nunca lanza, enviarPregunta lo trata como "no hubo match" ante
+     cualquier error inesperado. */
+  function normalizarTexto(s){
+    // Se quitan tildes letra por letra (nunca normalize('NFD') + rango de marcas
+    // combinantes: ese rango de puntos Unicode es demasiado fácil de escribir mal a
+    // ciegas) para que "arbol"/"árbol", "codigo"/"código", "esta"/"está" casen igual
+    // sin importar cómo haya tildado la persona.
+    return String(s||'').toLowerCase()
+      .replace(/á/g,'a').replace(/é/g,'e').replace(/í/g,'i').replace(/ó/g,'o').replace(/ú/g,'u')
+      .replace(/ü/g,'u').replace(/ñ/g,'n')
+      .replace(/\s+/g,' ').trim();
+  }
+
+  var RE_CODIGO = /\b\d{5,15}\b/;
+  function extraerCodigo(t){ var m = t.match(RE_CODIGO); return m ? m[0] : null; }
+  function extraerAlt(t){ var m = t.match(/\balt(?:ernativa|\.)?\s*(\d{1,3})\b/); return m ? m[1] : null; }
+
+  // Frases de relleno típicas de una pregunta en lenguaje natural, de la más específica a
+  // la más genérica: se van quitando en este orden (nunca al revés, porque quitar "de"
+  // primero destruiría "de fabricacion"/"del producto" antes de poder reconocerlas enteras).
+  var FRASES_RELLENO = [
+    'de fabricacion', 'del producto terminado', 'del producto', 'de producto',
+    'el producto', 'un producto', 'producto',
+    'de materiales', 'de la lista de materiales', 'la lista de materiales',
+    'de la lista', 'la lista', 'lista de',
+    'del material', 'de material', 'el material', 'un material', 'material',
+    'del componente', 'de componente', 'el componente', 'componente',
+    'activas', 'activa', 'inactivas', 'inactiva',
+    'por favor', 'porfavor',
+    // Coletillas de los arranques sugeridos ("busca un material por su nombre") y
+    // frases equivalentes: sin esto, lo que queda tras quitar "material" no es un
+    // nombre real sino "por su nombre" — que SÍ pasa el filtro de longitud/genéricos
+    // por accidente y termina buscándose como si fuera el nombre de un producto.
+    'por su nombre', 'por su codigo', 'por su descripcion', 'por nombre', 'por codigo',
+    'su nombre', 'su codigo', 'su descripcion',
+    'del', 'de', 'la', 'el', 'un', 'una'
+  ];
+  function limpiarReferencia(s){
+    var t = ' ' + s + ' ';
+    FRASES_RELLENO.forEach(function(frase){
+      var buscado = ' ' + frase + ' ';
+      while(t.indexOf(buscado) !== -1) t = t.replace(buscado, ' ');
+    });
+    return t.replace(/\s+/g,' ').trim();
+  }
+
+  var REFERENCIAS_GENERICAS = ['este material','este producto','ese material','ese producto','el material','el producto','un material','un producto','dicho material','dicho producto','material','producto',''];
+  function esReferenciaGenerica(ref){
+    return REFERENCIAS_GENERICAS.indexOf(ref) !== -1;
+  }
+
+  /* Dado el resto de la frase tras quitarle el disparador que ya identificó la intención,
+     decide a qué MATERIAL se refiere:
+       ok:true     -> resuelto a un código exacto (venía explícito, o hubo un único match
+                      por nombre vía buscar_material — la MISMA función, nunca una copia).
+       ok:'ambiguo'-> varios materiales coinciden con el nombre: se muestra la tarjeta de
+                      elegir uno, igual que ya hace la IA en ese caso.
+       ok:false    -> se intentó de verdad (nombre/código concretos) y no hay ningún match.
+       ok:null     -> la referencia es demasiado genérica ("este material") o demasiado
+                      larga/compleja para ser un nombre — probablemente la frase pedía otra
+                      cosa (análisis, comparación) y este patrón no debía haber disparado:
+                      NO se reconoce el intento, se deja caer a la IA. */
+  function resolverReferencia(fragmento){
+    var limpio = (fragmento||'').trim();
+    if(!limpio || esReferenciaGenerica(limpio)) return { ok:null };
+    if(limpio.length > 45 || limpio.split(' ').length > 6) return { ok:null };
+    var codigo = extraerCodigo(limpio);
+    if(codigo) return { ok:true, material: codigo };
+    var res = toolBuscarMaterial({ texto: limpio });
+    var candidatos = res.observacion.resultados || [];
+    if(candidatos.length === 1) return { ok:true, material: candidatos[0].material };
+    if(candidatos.length > 1) return { ok:'ambiguo', nombre: limpio, resultadoBusqueda: res };
+    return { ok:false, referencia: limpio };
+  }
+
+  function respuestaDeTool(herramienta, argumentos){
+    var fn = EJECUTORES[herramienta];
+    if(!fn) return null;
+    var resultado;
+    try{ resultado = fn(argumentos || {}); }catch(e){ return null; }
+    if(!resultado || !resultado.observacion) return null;
+    return { mensaje: mensajeLocalDe(herramienta, resultado.observacion), htmlCards: resultado.html ? [resultado.html] : [] };
+  }
+
+  function manejarIntentoConMaterial(herramienta, fragmento, argumentosExtra){
+    var resolucion = resolverReferencia(fragmento);
+    if(resolucion.ok === null) return null;
+    if(resolucion.ok === 'ambiguo'){
+      return {
+        mensaje: 'Hay varios materiales que coinciden con "'+resolucion.nombre+'". ¿Cuál te interesa?',
+        htmlCards: resolucion.resultadoBusqueda.html ? [resolucion.resultadoBusqueda.html] : []
+      };
+    }
+    if(!resolucion.ok){
+      return { mensaje: 'No encontré "'+resolucion.referencia+'" en los datos cargados.', htmlCards: [] };
+    }
+    var argumentos = { material: resolucion.material };
+    if(argumentosExtra) for(var k in argumentosExtra) argumentos[k] = argumentosExtra[k];
+    return respuestaDeTool(herramienta, argumentos);
+  }
+
+  /* Redacta un mensaje fijo (nunca generado) a partir de la MISMA observación que ya
+     arma cada herramienta para la IA — mismo tono que VOZ (directo, tuteo, sin relleno). */
+  function mensajeLocalDe(herramienta, obs){
+    switch(herramienta){
+      case 'buscar_material':
+        if(!obs.total) return 'No encontré nada para "'+obs.consulta+'" en los datos cargados.';
+        return (obs.total===1 ? 'Encontré 1 material' : 'Encontré '+obs.total+' materiales') + ' para "'+obs.consulta+'":';
+      case 'ficha_material':
+        if(!obs.encontrado) return 'No encontré '+(obs.materialBuscado||'ese material')+' ni en el Maestro ni en Listas de Materiales cargadas.';
+        if(obs.soloEnListas) return '`'+obs.material+'` no está en el Maestro, pero aparece en Listas de Materiales:';
+        return 'Esto es lo que tengo de `'+obs.material+'`:';
+      case 'listas_de_material':
+        if(!obs.total) return 'No encontré listas de materiales para `'+obs.material+'`.';
+        return '`'+obs.material+'` tiene '+obs.total+' lista'+(obs.total===1?'':'s')+' de materiales:';
+      case 'componentes_de_lista':
+        if(!obs.encontrada) return 'No encontré la lista `'+obs.material+'` alternativa '+obs.alt+'.';
+        return 'Estos son los componentes de `'+obs.material+'` alternativa '+obs.alt+':';
+      case 'donde_se_usa':
+        if(!obs.total) return '`'+obs.material+'` no aparece como componente en ninguna lista cargada.';
+        return '`'+obs.material+'` aparece como componente en '+obs.total+' lista'+(obs.total===1?'':'s')+':';
+      case 'versiones_fabricacion':
+        if(!obs.total) return 'No encontré versiones de fabricación registradas para `'+obs.material+'`.';
+        return 'Estas son las versiones de fabricación reales de `'+obs.material+'`:';
+      case 'arbol_producto':
+        switch(obs.estado){
+          case 'sin_datos': return 'Para construir el árbol necesito que primero cargues Listas de Materiales y sus Componentes.';
+          case 'no_encontrado': return 'No encontré el material `'+(obs.material||'')+'`.';
+          case 'alt_no_existe': return 'La alternativa '+obs.altPedida+' no existe para `'+obs.material+'`. Elige una de estas:';
+          case 'ambiguo_alternativa': return '`'+obs.material+'` tiene varias alternativas. ¿Cuál te interesa?';
+          case 'sin_producto_terminado': return 'No pude llegar a un producto terminado desde `'+obs.material+'` alternativa '+obs.alt+'.';
+          case 'multiples_productos': return '`'+obs.material+'` puede terminar en varios productos distintos. ¿Cuál te interesa?';
+          case 'sin_arbol': return 'No pude construir el árbol de `'+obs.materialFinal+'` alternativa '+obs.altFinal+' con los datos cargados.';
+          case 'ok': return 'Este es el árbol de fabricación de `'+obs.materialFinal+'` alternativa '+obs.altFinal+(obs.totalCombinaciones>1?' (hay '+obs.totalCombinaciones+' combinaciones posibles, te muestro la primera)':'')+':';
+          default: return 'No pude construir el árbol con esos datos.';
+        }
+      case 'cambiar_pestana':
+        return obs.cambiada ? ('Listo, ahora estás en '+obs.pestana+'.') : 'No reconozco esa pestaña.';
+      case 'filtrar_tabla':
+        return obs.aplicado ? ('Apliqué el filtro en '+obs.vista+'.') : 'No pude aplicar ese filtro.';
+      default:
+        return 'Listo.';
+    }
+  }
+
+  /* ---------- Cambiar de pestaña: requiere un verbo de navegación explícito al
+     principio, para no confundirse con "muéstrame el árbol de..." (que también nombra
+     una pestaña pero pide otra cosa). ---------- */
+  var ALIAS_PESTANA = [
+    { id:'bom', frases:['listas de materiales','listas de material','explorador bom'] },
+    { id:'mm', frases:['maestro de materiales','maestro'] },
+    { id:'arbol', frases:['arbol del producto'] },
+    { id:'explosion', frases:['explosion masiva','explosion'] }
+  ];
+  function detectarPestanaEnTexto(t){
+    for(var i=0;i<ALIAS_PESTANA.length;i++){
+      for(var j=0;j<ALIAS_PESTANA[i].frases.length;j++){
+        if(t.indexOf(ALIAS_PESTANA[i].frases[j]) !== -1) return ALIAS_PESTANA[i].id;
+      }
+    }
+    return null;
+  }
+  var RE_VERBO_NAV = /^(?:ve|vamos|anda|andamos|cambia(?:te)?|muevete|abre|entra(?:mos)?|ir)\s+a(?:l)?\s+/;
+  function intentoCambiarPestana(t){
+    if(!RE_VERBO_NAV.test(t)) return null;
+    return detectarPestanaEnTexto(t.replace(RE_VERBO_NAV, ''));
+  }
+
+  /* ---------- Filtros ya nombrados de Listas de Materiales: vocabulario fijo y chico,
+     se reconoce aparte de los disparadores de material (no necesitan ninguno). Si hace
+     falta, cambia de pestaña primero — mismo criterio que la regla 6 del prompt de la IA. ---------- */
+  var FILTROS_NOMBRADOS_LOCAL = [
+    { frases:['pendientes de hv.1','pendientes de hv1','pendiente de hv.1','pendiente hv.1','pendiente hv1','pendientes hv.1'], nombre:'Pend. Hv.1' },
+    { frases:['actualizadas de hv.1','actualizado hv.1','actualizada hv.1','ya actualizadas hv.1','actualizadas hv.1'], nombre:'Actual. Hv.1' },
+    { frases:['pendientes de conciliacion','pendiente de conciliacion','pendientes conciliacion'], nombre:'Pend. conciliación' },
+    { frases:['vfab bloqueada','version de fabricacion bloqueada','versiones de fabricacion bloqueadas','con vfab bloqueada','vfab bloqueadas'], nombre:'VFab bloqueada' }
+  ];
+  function intentoFiltroNombrado(t){
+    for(var i=0;i<FILTROS_NOMBRADOS_LOCAL.length;i++){
+      var f = FILTROS_NOMBRADOS_LOCAL[i];
+      for(var j=0;j<f.frases.length;j++){
+        if(t.indexOf(f.frases[j]) === -1) continue;
+        var cambios = [];
+        if(vistaActiva() !== 'bom'){
+          var rCambio = respuestaDeTool('cambiar_pestana', { pestana:'bom' });
+          if(rCambio) cambios = rCambio.htmlCards;
+        }
+        var rFiltro = respuestaDeTool('filtrar_tabla', { condiciones:[{ operador:'filtro_existente', valor:f.nombre }] });
+        if(!rFiltro) return null;
+        return { mensaje: 'Apliqué el filtro "'+f.nombre+'" en Listas de Materiales.', htmlCards: cambios.concat(rFiltro.htmlCards) };
+      }
+    }
+    return null;
+  }
+
+  /* ---------- Disparadores por herramienta: si el texto contiene la frase como palabra
+     completa, todo lo que sigue a su última aparición (limpio de relleno) es la
+     referencia. Se ordenan de más a menos específicos ANTES de probarlos, para que
+     "componentes de la lista" gane sobre el simple "componentes" cuando ambos calzan. ---------- */
+  var DISPARADORES = [
+    { frase:'cadena de fabricacion de', herramienta:'arbol_producto' },
+    { frase:'arbol de fabricacion de', herramienta:'arbol_producto' },
+    { frase:'arbol de fabricacion', herramienta:'arbol_producto' },
+    { frase:'cadena de fabricacion', herramienta:'arbol_producto' },
+    { frase:'arbol de', herramienta:'arbol_producto' },
+    { frase:'arbol', herramienta:'arbol_producto' },
+
+    { frase:'versiones de fabricacion de', herramienta:'versiones_fabricacion' },
+    { frase:'version de fabricacion de', herramienta:'versiones_fabricacion' },
+    { frase:'versiones de fabricacion', herramienta:'versiones_fabricacion' },
+    { frase:'vfab de', herramienta:'versiones_fabricacion' },
+    { frase:'vfab', herramienta:'versiones_fabricacion' },
+
+    { frase:'componentes de la lista de', herramienta:'componentes_de_lista' },
+    { frase:'componentes de la lista', herramienta:'componentes_de_lista' },
+    { frase:'que lleva', herramienta:'componentes_de_lista' },
+    { frase:'componentes de', herramienta:'componentes_de_lista' },
+    { frase:'componentes', herramienta:'componentes_de_lista' },
+
+    { frase:'en que productos se usa', herramienta:'donde_se_usa' },
+    { frase:'en que listas esta', herramienta:'donde_se_usa' },
+    { frase:'en que listas aparece', herramienta:'donde_se_usa' },
+    { frase:'donde se usa', herramienta:'donde_se_usa' },
+    { frase:'en que se usa', herramienta:'donde_se_usa' },
+    { frase:'donde aparece', herramienta:'donde_se_usa' },
+
+    { frase:'listas de materiales de', herramienta:'listas_de_material' },
+    { frase:'listas activas tiene', herramienta:'listas_de_material' },
+    { frase:'listas activas de', herramienta:'listas_de_material' },
+    { frase:'que listas tiene', herramienta:'listas_de_material' },
+    { frase:'alternativas de', herramienta:'listas_de_material' },
+    { frase:'listas de', herramienta:'listas_de_material' },
+
+    { frase:'informacion de', herramienta:'ficha_material' },
+    { frase:'informacion del', herramienta:'ficha_material' },
+    { frase:'cuentame sobre', herramienta:'ficha_material' },
+    { frase:'cuentame del', herramienta:'ficha_material' },
+    { frase:'cuentame de', herramienta:'ficha_material' },
+    { frase:'detalle del', herramienta:'ficha_material' },
+    { frase:'detalle de', herramienta:'ficha_material' },
+    { frase:'dime sobre', herramienta:'ficha_material' },
+    { frase:'dime del', herramienta:'ficha_material' },
+    { frase:'dime de', herramienta:'ficha_material' },
+    { frase:'datos del', herramienta:'ficha_material' },
+    { frase:'datos de', herramienta:'ficha_material' },
+    { frase:'ficha del', herramienta:'ficha_material' },
+    { frase:'ficha de', herramienta:'ficha_material' },
+    { frase:'info del', herramienta:'ficha_material' },
+    { frase:'info de', herramienta:'ficha_material' },
+
+    { frase:'encontrar', herramienta:'buscar_material' },
+    { frase:'encuentra', herramienta:'buscar_material' },
+    { frase:'buscar', herramienta:'buscar_material' },
+    { frase:'busca', herramienta:'buscar_material' }
+  ].sort(function(a,b){ return b.frase.length - a.frase.length; });
+
+  function encontrarDisparador(t){
+    for(var i=0;i<DISPARADORES.length;i++){
+      var frase = DISPARADORES[i].frase;
+      var re = new RegExp('\\b' + frase.replace(/\s+/g,'\\s+') + '\\b');
+      var m = t.match(re);
+      if(m) return { herramienta: DISPARADORES[i].herramienta, indexFin: m.index + m[0].length };
+    }
+    return null;
+  }
+
+  function intentarChatbotLocal(textoOriginal){
+    var t = normalizarTexto(textoOriginal);
+    if(!t) return null;
+
+    // El mensaje es SOLO un código: la interacción más simple posible (pegar o teclear
+    // un código de material a secas) -> ficha directa.
+    if(/^\d{5,15}$/.test(t)) return manejarIntentoConMaterial('ficha_material', t, null);
+
+    var pestana = intentoCambiarPestana(t);
+    if(pestana) return respuestaDeTool('cambiar_pestana', { pestana: pestana });
+
+    var filtro = intentoFiltroNombrado(t);
+    if(filtro) return filtro;
+
+    var encontrado = encontrarDisparador(t);
+    if(!encontrado) return null;
+
+    var resto = t.slice(encontrado.indexFin);
+    var alt = extraerAlt(resto);
+    if(alt) resto = resto.replace(/\balt(?:ernativa|\.)?\s*\d{1,3}\b/, ' ');
+    var referencia = limpiarReferencia(resto);
+
+    var argumentosExtra = null;
+    if(alt && (encontrado.herramienta==='componentes_de_lista' || encontrado.herramienta==='versiones_fabricacion' || encontrado.herramienta==='arbol_producto')){
+      argumentosExtra = { alt: alt };
+    }
+    if(encontrado.herramienta === 'donde_se_usa'){
+      argumentosExtra = { solo_activas: /\bactivas?\b/.test(t) };
+    }
+
+    return manejarIntentoConMaterial(encontrado.herramienta, referencia, argumentosExtra);
+  }
+
   async function enviarPregunta(pregunta){
     ocultarEstadoVacio();
     agregarMensajeUsuario(pregunta);
@@ -9756,6 +10070,18 @@ function formatFechaHoraCorta(d){
     input.value = '';
     ajustarAlturaInput();
     cerrarAutocomplete();
+
+    // Chatbot local primero: si la pregunta es una de las operaciones YA CONTEMPLADAS
+    // por la aplicación dicha en lenguaje natural, se resuelve aquí mismo al instante,
+    // sin gastar una llamada a Gemini. Solo si no hay match claro se sigue con el flujo
+    // de IA en dos fases de siempre, exactamente como antes.
+    var local = null;
+    try{ local = intentarChatbotLocal(pregunta); }catch(e){ local = null; }
+    if(local){
+      renderRespuestaFinal({ mensaje: local.mensaje, sugerencias: local.sugerencias }, local.htmlCards || []);
+      historial.push({ rol:'asistente', texto: local.mensaje });
+      return;
+    }
 
     var placeholder = agregarPlaceholderPensando();
     sendBtn.disabled = true;

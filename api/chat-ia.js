@@ -298,14 +298,23 @@ module.exports = async (req, res) => {
         apiKey, prompt: 'Responde solo con este JSON: {"mensaje":"ok"}', config: base, nivel: n
       });
 
-      /* Cada modo se prueba rotando de key mientras salga "cuota agotada". Probándolo solo
-         con la primera, una key sin cuota hacía concluir que el modelo no funciona en
-         ningún modo — cuando lo que pasaba era que esa key concreta estaba agotada. */
+      /* Cada modo se prueba rotando de key mientras salga "cuota agotada". El primer
+         intento de esto se quedaba en las primeras 3 keys nada más — un límite arbitrario
+         que, con exactamente esas 3 agotadas y las operativas más adelante en la lista,
+         hacía concluir "no funciona en ningún modo" siendo falso: nunca llegaba a
+         probar las que sí respondían.
+
+         Ahora recorre TODAS las keys configuradas, pero empieza por la última que dio
+         señales de vida (keyViva) en vez de reiniciar en la 1 en cada nivel — así el
+         propio diagnóstico no quema de más la cuota que está intentando diagnosticar. */
+      let keyViva = 0;
       async function probarNivel(n) {
-        let ultima = null;
-        for (let k = 0; k < Math.min(apiKeys.length, 3); k++) {
+        let ultima = await pruebaMinima(apiKeys[keyViva], n);
+        if (ultima.status !== 429) return ultima;   // 429 = es la key, no el modo
+        for (let k = 0; k < apiKeys.length; k++) {
+          if (k === keyViva) continue;
           ultima = await pruebaMinima(apiKeys[k], n);
-          if (ultima.status !== 429) return ultima;   // 429 = es la key, no el modo
+          if (ultima.status !== 429) { keyViva = k; return ultima; }
         }
         return ultima;
       }

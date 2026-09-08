@@ -82,6 +82,11 @@ const HERRAMIENTAS = [
     desc: 'Reconstruye la cadena Acondicionado -> Envase -> Fabricación de un producto y la dibuja en el chat. Si el material tiene varias alternativas y no se indica "alt", devuelve las opciones para que preguntes cuál.'
   },
   {
+    nombre: 'cambiar_pestana',
+    args: '{ "pestana": "mm | bom | arbol | explosion" }',
+    desc: 'Cambia la pestaña que se ve en pantalla (mm = Maestro de Materiales, bom = Listas de Materiales, arbol = Árbol del producto, explosion = Explosión masiva). Úsala ANTES de filtrar_tabla cuando lo que piden vive en otra pestaña: filtrar_tabla siempre actúa sobre la que esté abierta.'
+  },
+  {
     nombre: 'filtrar_tabla',
     args: '{ "condiciones": [ { "columna": "...", "operador": "...", "valor": "..." } ] }',
     desc: 'Recorta la tabla que la persona tiene delante en la pestaña activa. Úsala cuando quiere VER un subconjunto en pantalla, no cuando quiere que le cuentes algo.'
@@ -114,6 +119,7 @@ const ARGUMENTOS_SCHEMA = {
     alt: { type: 'STRING' },
     combinacion: { type: 'INTEGER' },
     solo_activas: { type: 'BOOLEAN' },
+    pestana: { type: 'STRING', enum: ['mm', 'bom', 'arbol', 'explosion'] },
     condiciones: {
       type: 'ARRAY',
       items: {
@@ -199,9 +205,26 @@ function debeRotarKey(status, detalleTexto) {
   if (status === 429) return true;
   if (status === 400 || status === 403) {
     const t = (detalleTexto || '').toLowerCase();
+    if (esErrorDePensamiento(status, detalleTexto)) return false; // no es la key, es el parámetro
     return t.includes('api key') || t.includes('api_key') || t.includes('permission') || t.includes('invalid');
   }
   return false;
+}
+
+/* Sobrecarga o fallo pasajero del servicio (el 503 "model is overloaded" que
+   devuelve Gemini en horas punta). No tiene que ver con la key: cambiarla no
+   ayuda, lo que ayuda es reintentar un momento después. */
+function esErrorTransitorio(status) {
+  return status === 500 || status === 502 || status === 503 || status === 504;
+}
+
+/* El modelo rechaza thinkingConfig (no todos admiten desactivar el razonamiento
+   interno, y alguno exige un presupuesto mínimo). Se reconoce para reintentar sin
+   ese campo en vez de tratarlo como una key inválida. */
+function esErrorDePensamiento(status, detalleTexto) {
+  if (status !== 400) return false;
+  const t = (detalleTexto || '').toLowerCase();
+  return t.includes('thinking') || t.includes('thinking_budget') || t.includes('thinkingbudget');
 }
 
 module.exports = async (req, res) => {
@@ -226,7 +249,7 @@ module.exports = async (req, res) => {
 
   const cuerpo = req.body || {};
   const fase = cuerpo.fase === 'responder' ? 'responder' : 'planificar';
-  const { pregunta, vista, columnas, filtrosExistentes, historial, contexto, observaciones } = cuerpo;
+  const { pregunta, vista, columnas, columnasPorVista, filtrosExistentes, historial, contexto, observaciones } = cuerpo;
 
   if (!pregunta || typeof pregunta !== 'string' || !pregunta.trim()) {
     res.status(400).json({ error: 'Falta el campo "pregunta" en el cuerpo de la solicitud.' });
@@ -242,98 +265,153 @@ module.exports = async (req, res) => {
 
   const prompt = fase === 'responder'
     ? construirPromptRespuesta({ pregunta, vista, historial, contexto, observaciones })
-    : construirPromptPlan({ pregunta, vista, columnas, filtrosExistentes, historial, contexto });
+    : construirPromptPlan({ pregunta, vista, columnas, columnasPorVista, filtrosExistentes, historial, contexto });
 
   // Planificar es una decisión mecánica (qué herramienta y con qué argumentos):
   // temperatura casi nula. Redactar es lo contrario — algo de temperatura evita
-  // que todas las respuestas suenen calcadas — y necesita más espacio de salida.
-  const generationConfig = fase === 'responder'
-    ? { temperature: 0.45, maxOutputTokens: 2048, responseMimeType: 'application/json', responseSchema: RESPUESTA_SCHEMA }
-    : { temperature: 0.1, maxOutputTokens: 1536, responseMimeType: 'application/json', responseSchema: PLAN_SCHEMA };
+  // que todas las respuestas suenen calcadas.
+  let config = fase === 'responder'
+    ? { temperature: 0.45, maxOutputTokens: 4096, responseMimeType: 'application/json', responseSchema: RESPUESTA_SCHEMA }
+    : { temperature: 0.1, maxOutputTokens: 3072, responseMimeType: 'application/json', responseSchema: PLAN_SCHEMA };
 
+  /* Bucle de intentos. Tres cosas distintas pueden salir mal y cada una se corrige
+     de una forma diferente, por eso no basta con "probar la siguiente key":
+
+     - key agotada/inválida (429, 400/403 de key)  -> se pasa a la SIGUIENTE key.
+     - Gemini sobrecargado (500/502/503/504)       -> se REINTENTA tras una pausa;
+       es transitorio y cambiar de key no ayuda (es el modelo, no la cuenta).
+     - respuesta cortada a mitad (MAX_TOKENS)      -> se REINTENTA con el DOBLE de
+       presupuesto de salida.
+     - el modelo no acepta thinkingConfig (400)    -> se REINTENTA sin ese campo.
+
+     El total está acotado a MAX_LLAMADAS para no acercarse al maxDuration de la
+     función (20 s en vercel.json). */
+  const MAX_LLAMADAS = 3;
+  let llamadas = 0;
+  let idxKey = 0;
+  // Se pide desactivar el razonamiento interno del modelo: esos tokens se cobran
+  // contra maxOutputTokens y son la causa habitual de que la respuesta se corte
+  // ANTES de llegar a escribir el JSON. Si el modelo no admite el campo, el primer
+  // 400 lo detecta y se reintenta sin él.
+  let sinPensamiento = true;
   let ultimoError = null;
-  for (let i = 0; i < apiKeys.length; i++) {
-    const apiKey = apiKeys[i];
-    try {
-      const respuestaGemini = await fetch(`${GEMINI_URL}?key=${apiKey}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{ role: 'user', parts: [{ text: prompt }] }],
-          generationConfig
-        })
-      });
 
-      if (!respuestaGemini.ok) {
-        const detalle = await respuestaGemini.text().catch(() => '');
-        if (debeRotarKey(respuestaGemini.status, detalle)) {
-          // Se agota o falla esta key por cuota/validez: se guarda el detalle y se
-          // prueba la siguiente — el error solo se reporta si TODAS las keys fallan
-          // (ver el bloque final, después del for).
-          ultimoError = { status: respuestaGemini.status, detalle };
-          continue;
-        }
-        // Error que NO se relaciona con cuál key se usó (ej. prompt rechazado,
-        // parámetros inválidos): fallaría igual con cualquier otra key, así que se
-        // reporta de inmediato en vez de malgastar las keys restantes.
-        res.status(502).json({
-          error: `Gemini respondió con error (${respuestaGemini.status}).`,
-          detalle,
-          keysIntentadas: i + 1
-        });
-        return;
-      }
+  while (llamadas < MAX_LLAMADAS && idxKey < apiKeys.length) {
+    llamadas++;
+    const r = await llamarGemini({ apiKey: apiKeys[idxKey], prompt, config, sinPensamiento });
 
-      const data = await respuestaGemini.json();
-      const candidato = data?.candidates?.[0];
-      const textoJson = candidato?.content?.parts?.[0]?.text;
-      if (!textoJson) {
-        // Sin texto y finishReason lo explica (ej. bloqueado por el filtro de
-        // seguridad de Gemini, "SAFETY"): se lo decimos a la persona en vez de un
-        // "no devolvió contenido" genérico que no orienta a nada.
-        const motivo = candidato?.finishReason;
-        res.status(502).json({
-          error: motivo && motivo !== 'STOP'
-            ? `Gemini no generó respuesta (motivo: ${motivo}). Reformula la pregunta e inténtalo de nuevo.`
-            : 'Gemini no devolvió contenido interpretable.'
-        });
-        return;
-      }
-
-      const interpretacion = extraerJSON(textoJson);
-      if (!interpretacion) {
-        // La causa más común es un corte por límite de longitud a mitad del JSON
-        // (finishReason "MAX_TOKENS"): se distingue para que el mensaje oriente a
-        // reformular más corto en vez de sonar a una falla aleatoria del servidor.
-        const cortado = candidato?.finishReason === 'MAX_TOKENS';
-        res.status(502).json({
-          error: cortado
-            ? 'La respuesta de Gemini se cortó por longitud antes de terminar. Prueba con una pregunta más acotada.'
-            : 'La respuesta de Gemini no fue un JSON válido.',
-          detalle: cortado ? undefined : textoJson.slice(0, 500)
-        });
-        return;
-      }
-
-      res.status(200).json(sanear(interpretacion, fase));
+    if (r.tipo === 'ok') {
+      res.status(200).json(sanear(r.interpretacion, fase));
       return;
-    } catch (err) {
-      // Error de red/conexión (no de Gemini en sí): se guarda y se prueba la
-      // siguiente key — el reporte final ocurre en el bloque después del bucle si
-      // se agotan todas.
-      ultimoError = { detalle: String((err && err.message) || err) };
+    }
+
+    if (r.tipo === 'truncado') {
+      // Se quedó sin espacio de salida: se duplica el presupuesto y se reintenta.
+      ultimoError = { detalle: 'La respuesta se cortó por longitud (MAX_TOKENS).' };
+      config = { ...config, maxOutputTokens: config.maxOutputTokens * 2 };
       continue;
     }
+
+    if (r.tipo === 'red') {
+      ultimoError = { detalle: r.detalle };
+      idxKey++;
+      continue;
+    }
+
+    // r.tipo === 'http'
+    if (sinPensamiento && esErrorDePensamiento(r.status, r.detalle)) {
+      sinPensamiento = false;
+      continue;
+    }
+    if (debeRotarKey(r.status, r.detalle)) {
+      ultimoError = { status: r.status, detalle: r.detalle };
+      idxKey++;
+      continue;
+    }
+    if (esErrorTransitorio(r.status)) {
+      ultimoError = { status: r.status, detalle: r.detalle, transitorio: true };
+      await esperar(700);
+      continue;
+    }
+    // Error definitivo (prompt rechazado, parámetros inválidos): fallaría igual
+    // con cualquier otra key, así que se reporta ya en vez de gastar intentos.
+    res.status(502).json({
+      error: `Gemini respondió con error (${r.status}).`,
+      detalle: r.detalle,
+      llamadas
+    });
+    return;
   }
 
-  // Si se llegó aquí, todas las keys configuradas fallaron (por cuota, validez, o
-  // error de red en cada intento).
+  // Se agotaron los intentos. El mensaje distingue el caso transitorio (vale la
+  // pena reintentar tal cual) del de cuota agotada (hay que tocar las keys).
+  if (ultimoError && ultimoError.transitorio) {
+    res.status(503).json({
+      error: 'Gemini está sobrecargado ahora mismo y no respondió tras varios intentos. Vuelve a enviar la pregunta en unos segundos.',
+      detalle: ultimoError.detalle,
+      llamadas
+    });
+    return;
+  }
   res.status(503).json({
     error: `Se agotaron o fallaron las ${apiKeys.length} API key(s) de Gemini configuradas. Agrega una nueva key o espera a que se restablezca la cuota.`,
     detalle: ultimoError && ultimoError.detalle,
-    keysIntentadas: apiKeys.length
+    llamadas
   });
 };
+
+
+function esperar(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/* Una sola llamada a Gemini, con el resultado ya clasificado para que el bucle de
+   arriba decida qué hacer sin volver a mirar el cuerpo de la respuesta. */
+async function llamarGemini({ apiKey, prompt, config, sinPensamiento }) {
+  const generationConfig = sinPensamiento
+    ? { ...config, thinkingConfig: { thinkingBudget: 0 } }
+    : config;
+
+  let respuesta;
+  try {
+    respuesta = await fetch(`${GEMINI_URL}?key=${apiKey}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ role: 'user', parts: [{ text: prompt }] }],
+        generationConfig
+      })
+    });
+  } catch (err) {
+    return { tipo: 'red', detalle: String((err && err.message) || err) };
+  }
+
+  if (!respuesta.ok) {
+    const detalle = await respuesta.text().catch(() => '');
+    return { tipo: 'http', status: respuesta.status, detalle };
+  }
+
+  const data = await respuesta.json().catch(() => null);
+  const candidato = data?.candidates?.[0];
+  const texto = candidato?.content?.parts?.[0]?.text;
+  const motivo = candidato?.finishReason;
+
+  if (!texto) {
+    // Sin texto por haberse quedado sin presupuesto (el modelo gastó la salida
+    // razonando): es recuperable subiendo el límite, igual que un JSON cortado.
+    if (motivo === 'MAX_TOKENS') return { tipo: 'truncado' };
+    return { tipo: 'http', status: 502, detalle: motivo && motivo !== 'STOP'
+      ? `Gemini no generó respuesta (motivo: ${motivo}).`
+      : 'Gemini no devolvió contenido interpretable.' };
+  }
+
+  const interpretacion = extraerJSON(texto);
+  if (!interpretacion) {
+    if (motivo === 'MAX_TOKENS') return { tipo: 'truncado' };
+    return { tipo: 'http', status: 502, detalle: 'La respuesta de Gemini no fue un JSON válido: ' + texto.slice(0, 300) };
+  }
+  return { tipo: 'ok', interpretacion };
+}
 
 
 /* Intenta interpretar el texto del modelo como JSON, tolerando lo que
@@ -457,11 +535,23 @@ const VOZ = `CÓMO HABLAS
 - Cuando la persona te pide algo que necesita precisar (un producto con varias listas, una descripción que casa con varios materiales), haces UNA pregunta concreta con las opciones reales delante, no una pregunta abierta.`;
 
 /* FASE 1 — decide qué consultar. */
-function construirPromptPlan({ pregunta, vista, columnas, filtrosExistentes, historial, contexto }) {
-  const listaColumnas = (columnas || []).map((c) => `- "${c}"`).join('\n');
+function construirPromptPlan({ pregunta, vista, columnas, columnasPorVista, filtrosExistentes, historial, contexto }) {
+  // Se listan las columnas de LAS DOS pestañas con tabla, no solo la abierta: sin
+  // esto el modelo no puede proponer un filtro en la otra pestaña (que es justo lo
+  // que hace falta cuando preguntan por listas estando en el Maestro) y termina
+  // filtrando la tabla equivocada o inventando nombres de columna.
+  const porVista = (columnasPorVista && typeof columnasPorVista === 'object') ? columnasPorVista : {};
+  const bloqueDeColumnas = (etiqueta, clave, cols) => {
+    const lista = (cols || []).map((c) => `  - "${c}"`).join('\n') || '  (no hay datos cargados en esta pestaña)';
+    return `Pestaña "${etiqueta}" (pestana: "${clave}")${vista === etiqueta ? '  <- ABIERTA AHORA' : ''}:\n${lista}`;
+  };
+  const listaColumnas = [
+    bloqueDeColumnas('Maestro de Materiales', 'mm', porVista['Maestro de Materiales'] || (vista === 'Maestro de Materiales' ? columnas : [])),
+    bloqueDeColumnas('Listas de Materiales', 'bom', porVista['Listas de Materiales'] || (vista === 'Listas de Materiales' ? columnas : []))
+  ].join('\n\n');
   const listaFiltros = (Array.isArray(filtrosExistentes) ? filtrosExistentes : [])
     .map((f) => `- "${f.nombre}": ${f.descripcion}`)
-    .join('\n') || '(ninguno para esta vista)';
+    .join('\n') || '(ninguno)';
   const catalogo = HERRAMIENTAS
     .map((h) => `- ${h.nombre} ${h.args}\n  ${h.desc}`)
     .join('\n');
@@ -477,10 +567,10 @@ ${bloqueContexto(contexto)}
 
 PESTAÑA ABIERTA AHORA: ${vista || '(desconocida)'}
 
-COLUMNAS DE LA TABLA DE ESA PESTAÑA (nombres EXACTOS, solo válidos para filtrar_tabla y contar_filas):
+COLUMNAS DE CADA PESTAÑA (nombres EXACTOS; filtrar_tabla y contar_filas solo pueden usar las de la pestaña que esté ABIERTA en ese momento):
 ${listaColumnas}
 
-FILTROS ESPECIALES QUE YA EXISTEN EN LA APLICACIÓN (para el operador "filtro_existente", con "valor" = el nombre exacto):
+FILTROS ESPECIALES QUE YA EXISTEN EN LA APLICACIÓN — solo en la pestaña "Listas de Materiales" (para el operador "filtro_existente", con "valor" = el nombre exacto):
 ${listaFiltros}
 
 CONVERSACIÓN HASTA AHORA
@@ -499,9 +589,13 @@ REGLAS PARA ELEGIR
 2. Nunca inventes un código de material. Si la persona nombra el producto con palabras, la primera acción es buscar_material con esas palabras. Si el código ya salió antes en la conversación, reutilízalo.
 3. Para "en qué listas está este material" usa donde_se_usa, NO filtrar_tabla: la tabla de listas no busca por componente.
 4. Para el árbol de fabricación usa arbol_producto. Si no sabes la alternativa, llámala igual sin "alt": te devolverá las opciones reales para que preguntes cuál.
-5. Usa filtrar_tabla solo cuando la persona quiere VER un subconjunto en la tabla de la pestaña abierta, y únicamente con columnas de la lista de arriba.
-6. Si el mensaje no necesita datos (un saludo, "¿qué puedes hacer?", una pregunta sobre cómo funciona algo que ya sabes por el contexto de negocio), devuelve "acciones": [] y escribe tú la respuesta completa en "mensaje".
-7. Si hace falta algo que no está cargado (te piden componentes y no hay componentes cargados), devuelve "acciones": [] y dilo en "mensaje".
+5. Usa filtrar_tabla cuando la persona quiere VER un subconjunto en pantalla, con las columnas EXACTAS de la pestaña donde va a caer el filtro.
+6. LA PESTAÑA IMPORTA. filtrar_tabla y contar_filas actúan sobre la que esté abierta. Si lo que piden vive en la otra, tú la cambias: primero cambiar_pestana y después filtrar_tabla, en la misma respuesta y en ese orden. Nunca le pidas a la persona que se cambie de pestaña ella misma, y nunca filtres en la pestaña equivocada "porque es la que está abierta".
+   - Hablan de LISTAS, listas de materiales, BOM, alternativas, versiones de fabricación, componentes, utilización -> pestaña "bom".
+   - Hablan de MATERIALES sueltos, su ficha, tipo de material, estado/bloqueo Z, texto de inspección, categoría 3 -> pestaña "mm".
+   - Ejemplo: están en el Maestro y piden "las listas creadas los últimos 7 días" -> cambiar_pestana a "bom" y filtrar_tabla con "Creado el" y ultimos_dias 7. Filtrar eso en el Maestro sería responder otra cosa.
+7. Si el mensaje no necesita datos (un saludo, "¿qué puedes hacer?", una pregunta sobre cómo funciona algo que ya sabes por el contexto de negocio), devuelve "acciones": [] y escribe tú la respuesta completa en "mensaje".
+8. Si hace falta algo que no está cargado (te piden componentes y no hay componentes cargados), devuelve "acciones": [] y dilo en "mensaje".
 
 Responde ÚNICAMENTE con un objeto JSON, sin markdown y sin texto alrededor:
 {

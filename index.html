@@ -8228,6 +8228,21 @@ function formatFechaHoraCorta(d){
   function filtrosDeVistaActual(){
     return vistaActiva()==='mm' ? [] : FILTROS_EXISTENTES_BOM;
   }
+  /* Columnas de LAS DOS pestañas con tabla. El asistente puede cambiar de pestaña por
+     su cuenta (herramienta cambiar_pestana), así que necesita conocer también las
+     columnas de la que no está abierta — si no, al pedirle "las listas creadas esta
+     semana" desde el Maestro no tendría con qué armar el filtro en Listas. */
+  function columnasDeAmbasVistas(){
+    return {
+      'Maestro de Materiales': window.__mmGetColumns ? window.__mmGetColumns() : [],
+      'Listas de Materiales': window.__bomGetColumns ? window.__bomGetColumns() : []
+    };
+  }
+  /* Los filtros especiales solo existen en Listas de Materiales, pero se envían siempre:
+     el modelo puede querer cambiar a esa pestaña y usarlos en la misma respuesta. */
+  function filtrosEspeciales(){
+    return FILTROS_EXISTENTES_BOM;
+  }
 
   /* ---------- Apertura / cierre del panel ---------- */
   function abrirPanel(){
@@ -9002,6 +9017,35 @@ function formatFechaHoraCorta(d){
     return { observacion: obsArbol, html: tarjetaArbol(obsArbol) };
   }
 
+  /* Cambia la pestaña visible. Se ejecuta ANTES de filtrar_tabla cuando lo que pidieron
+     vive en la otra pestaña — filtrar_tabla siempre actúa sobre la que esté abierta, y
+     activate() cambia las clases de forma síncrona, así que el filtro que venga después
+     ya cae en la pestaña correcta.
+
+     Se limpia el filtro anterior al cambiar: las condiciones se arman contra las columnas
+     de UNA vista, y arrastrarlas a la otra (donde "Creado el" también existe, por ejemplo)
+     recortaría la tabla nueva por un criterio que nadie pidió ahí. */
+  var PESTANAS = {
+    mm: { id:'mm', etiqueta:'Maestro de Materiales' },
+    bom: { id:'bom', etiqueta:'Listas de Materiales' },
+    arbol: { id:'arbol', etiqueta:'Árbol del producto' },
+    explosion: { id:'explosion', etiqueta:'Explosión masiva' }
+  };
+  function toolCambiarPestana(args){
+    var clave = String(args && args.pestana || '').trim().toLowerCase();
+    var destino = PESTANAS[clave];
+    if(!destino){
+      return { observacion:{ tipo:'cambiar_pestana', cambiada:false, error:'pestana_desconocida', pedida: clave } };
+    }
+    if(window.__iaChatExtraFilter) activarFiltroIA(null);
+    if(window.__activateSuiteTab) window.__activateSuiteTab(destino.id);
+    document.querySelectorAll('.filter-panel.open').forEach(function(p){ p.classList.remove('open'); });
+    return {
+      observacion:{ tipo:'cambiar_pestana', cambiada:true, pestana: destino.etiqueta },
+      html: '<div class="ia-chat-resultado-badge">Ahora estás en '+esc(destino.etiqueta)+'</div>'
+    };
+  }
+
   function toolFiltrarTabla(args){
     var condiciones = (args && args.condiciones) || [];
     var malas = condicionesInvalidas(condiciones);
@@ -9010,7 +9054,11 @@ function formatFechaHoraCorta(d){
     var vista = vistaActiva();
     var recuento = vista==='mm' ? (window.__mmGetFilteredRows?window.__mmGetFilteredRows().length:null) : (window.__bomGetFilteredRows?window.__bomGetFilteredRows().length:null);
     var obs = { tipo:'filtrar_tabla', aplicado:true, vista: LABELS_VISTA[vista], filasVisibles: recuento };
-    return { observacion: obs, html: '<div class="ia-chat-resultado-badge">'+(recuento===null?'filtro aplicado':recuento+' resultado(s)')+'</div>' };
+    // El botón cierra el chat: en móvil el panel flotante tapa justo la tabla que se
+    // acaba de recortar, así que "ver el resultado" es un clic, no un forcejeo.
+    var html = '<div class="ia-chat-resultado-badge">'+(recuento===null?'filtro aplicado':recuento+' resultado(s)')+'</div>'+
+      '<div class="ia-chat-sugerencias"><button type="button" class="ia-chat-sugerencia-btn" data-ver-tabla>Ver la tabla en '+esc(LABELS_VISTA[vista])+' →</button></div>';
+    return { observacion: obs, html: html };
   }
   function toolContarFilas(args){
     var condiciones = (args && args.condiciones) || [];
@@ -9030,6 +9078,7 @@ function formatFechaHoraCorta(d){
     donde_se_usa: toolDondeSeUsa,
     versiones_fabricacion: toolVersionesFabricacion,
     arbol_producto: toolArbolProducto,
+    cambiar_pestana: toolCambiarPestana,
     filtrar_tabla: toolFiltrarTabla,
     contar_filas: toolContarFilas
   };
@@ -9094,7 +9143,8 @@ function formatFechaHoraCorta(d){
     try{
       var planResp = await llamarEndpoint({
         fase:'planificar', pregunta: pregunta, vista: LABELS_VISTA[vistaActiva()],
-        columnas: columnasDeVistaActual(), filtrosExistentes: filtrosDeVistaActual(),
+        columnas: columnasDeVistaActual(), columnasPorVista: columnasDeAmbasVistas(),
+        filtrosExistentes: filtrosEspeciales(),
         historial: historialPrevio, contexto: construirContexto()
       });
       if(planResp.error){ placeholder.remove(); agregarMensajeError(planResp.error); return; }
@@ -9132,6 +9182,10 @@ function formatFechaHoraCorta(d){
 
   /* ---------- Delegación de clics dentro del historial de mensajes ---------- */
   messagesBox.addEventListener('click', function(e){
+    // Cierra el panel para dejar ver la tabla que se acaba de filtrar (en móvil el
+    // chat flotante la tapa entera).
+    if(e.target.closest('[data-ver-tabla]')){ cerrarPanel(); return; }
+
     var askEl = e.target.closest('[data-ask]');
     if(askEl){ enviarPregunta(askEl.getAttribute('data-ask')); return; }
 

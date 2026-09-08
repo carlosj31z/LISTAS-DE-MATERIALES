@@ -1175,7 +1175,16 @@ window.__conXLSX = async function(){
   .ia-row-top{ display:flex; align-items:baseline; gap:8px; }
   .ia-row-code{ font-family:var(--mono); font-size:12px; color:var(--navy-deep); font-weight:600; flex:none; }
   .ia-row-desc{ font-size:12.3px; color:var(--ink); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-  .ia-row-meta{ font-size:11.4px; color:var(--ink-faint); margin-top:2px; display:flex; gap:7px; flex-wrap:wrap; }
+  .ia-row-meta{ font-size:11.4px; color:var(--ink-faint); margin-top:2px; display:flex; align-items:center; gap:7px; flex-wrap:wrap; }
+  /* Fila de resultados de búsqueda por nombre (tarjetaBusqueda): la descripción lidera,
+     el código de material es una etiqueta secundaria en la fila de metadatos — al revés
+     de .ia-row-code/.ia-row-desc (usadas en listas/versiones/árbol, donde lo primero que
+     importa SÍ es un identificador como "Alt. 1", no un nombre de producto). */
+  .ia-row-desc-lead{ font-size:13px; font-weight:600; color:var(--ink); line-height:1.35; white-space:normal; }
+  .ia-row-code-tag{
+    font-family:var(--mono); font-size:10.5px; color:var(--ink-soft); background:var(--surface-alt);
+    padding:1px 6px; border-radius:5px; flex:none;
+  }
   .ia-tag{
     display:inline-block; padding:1px 6px; border-radius:20px; font-size:10.5px; font-weight:600;
     background:var(--surface-alt); color:var(--ink-soft);
@@ -9249,14 +9258,21 @@ function formatFechaHoraCorta(d){
   }
 
   function tarjetaBusqueda(obs){
+    // La descripción lidera (quien busca por nombre piensa en el producto, no en el
+    // código de SAP) y el código pasa a ser una etiqueta secundaria en la fila de
+    // metadatos, junto al tipo y el estado — antes el código iba primero y en negrita,
+    // que es lo que hacía sentir la lista como "puros códigos parecidos".
     var filas = obs.resultados.map(function(r){
       return '<button type="button" class="ia-row" data-ask="'+escAttr('Cuéntame del material '+r.material)+'">'+
-        '<div class="ia-row-top"><span class="ia-row-code">'+esc(r.material)+'</span><span class="ia-row-desc">'+esc(r.descripcion||'Sin descripción')+'</span></div>'+
-        '<div class="ia-row-meta">'+(r.tipo?'<span>'+esc(r.tipo)+'</span>':'')+(r.estado?'<span class="ia-tag warn">'+esc(r.estado)+'</span>':'')+'</div>'+
+        '<div class="ia-row-top"><span class="ia-row-desc-lead">'+esc(r.descripcion||'Sin descripción')+'</span></div>'+
+        '<div class="ia-row-meta"><span class="ia-row-code-tag">'+esc(r.material)+'</span>'+(r.tipo?'<span>'+esc(r.tipo)+'</span>':'')+(r.estado?'<span class="ia-tag warn">'+esc(r.estado)+'</span>':'')+'</div>'+
       '</button>';
     }).join('');
+    var nota = (obs.totalCoincidencias && obs.totalCoincidencias > obs.total)
+      ? '<div class="ia-card-foot"><span class="ia-card-note">Mostrando los '+obs.total+' más cercanos a "'+esc(obs.consulta)+'" — hay '+obs.totalCoincidencias+' en total que coinciden.</span></div>'
+      : '';
     return '<div class="ia-card"><div class="ia-card-head"><span class="ia-card-title">Materiales encontrados</span><span class="ia-card-count">'+obs.total+'</span></div>'+
-      '<div class="ia-card-body">'+filas+'</div></div>';
+      '<div class="ia-card-body">'+filas+'</div>'+nota+'</div>';
   }
 
   function tarjetaFicha(obs){
@@ -9384,36 +9400,58 @@ function formatFechaHoraCorta(d){
      { observacion, html } — observacion va al modelo (fase "responder"),
      html se dibuja debajo del mensaje final.
      ============================================================ */
+  var BUSQUEDA_MAX_RESULTADOS = 5;
+
+  /* Qué tan bueno es un match, para poder mostrar primero los más precisos y no una
+     mezcla desordenada de "contiene en cualquier parte" (que es indistinguible de
+     "se parece") con las coincidencias exactas que la persona probablemente buscaba.
+     Menor puntaje = mejor. -1 = no matchea. */
+  function puntuarMatchBusqueda(codigo, desc, qNorm){
+    var c = codigo.toLowerCase(), d = desc.toLowerCase();
+    if(c === qNorm) return 0;
+    if(d === qNorm) return 1;
+    if(d.indexOf(qNorm) === 0) return 2;
+    if(d.indexOf(qNorm) !== -1) return 3;
+    if(c.indexOf(qNorm) !== -1) return 4;
+    return -1;
+  }
+
   function toolBuscarMaterial(args){
     var q = String(args && args.texto || '').trim();
     if(!q) return { observacion:{ tipo:'buscar_material', consulta:q, total:0, resultados:[] } };
     var qNorm = q.toLowerCase();
     var mmRows = window.__mmGetAllRows ? window.__mmGetAllRows() : [];
-    var vistos = {}, resultados = [];
-    for(var i=0;i<mmRows.length && resultados.length<8;i++){
+    var vistos = {}, candidatos = [];
+    for(var i=0;i<mmRows.length;i++){
       var r = mmRows[i];
       var codigo = String(r['Material']||'').trim();
       var desc = String(r['Texto Material']||r['Denom.estándar']||'');
       if(!codigo || vistos[codigo]) continue;
-      if(codigo.toLowerCase().indexOf(qNorm)===-1 && desc.toLowerCase().indexOf(qNorm)===-1) continue;
+      var score = puntuarMatchBusqueda(codigo, desc, qNorm);
+      if(score === -1) continue;
       vistos[codigo] = true;
-      resultados.push({ material:codigo, descripcion:desc, tipo:r['Denominación tipo material']||'', estado:String(r['Estado mat.todos ce']||'').trim(), fuente:'maestro' });
+      candidatos.push({ material:codigo, descripcion:desc, tipo:r['Denominación tipo material']||'', estado:String(r['Estado mat.todos ce']||'').trim(), fuente:'maestro', score:score });
     }
-    // Respaldo: si el Maestro no da resultados (o no está cargado), se busca también en
-    // Listas de Materiales, para no dejar sin respuesta una consulta con solo el BOM cargado.
-    if(resultados.length < 8 && window.__arbolAPI && window.BOM_ROWS && window.BOM_ROWS.length){
+    // Respaldo: si el Maestro no da (suficientes) resultados, se busca también en Listas
+    // de Materiales, para no dejar sin respuesta una consulta con solo el BOM cargado.
+    if(candidatos.length < BUSQUEDA_MAX_RESULTADOS && window.__arbolAPI && window.BOM_ROWS && window.BOM_ROWS.length){
       var bomIdx = window.__arbolAPI.buildBomIndex();
       var claves = Object.keys(bomIdx.byKey);
-      for(var j=0;j<claves.length && resultados.length<8;j++){
+      for(var j=0;j<claves.length;j++){
         var entry = bomIdx.byKey[claves[j]];
         if(vistos[entry.material]) continue;
         var descB = String(entry.descripcion||'');
-        if(entry.material.toLowerCase().indexOf(qNorm)===-1 && descB.toLowerCase().indexOf(qNorm)===-1) continue;
+        var scoreB = puntuarMatchBusqueda(entry.material, descB, qNorm);
+        if(scoreB === -1) continue;
         vistos[entry.material] = true;
-        resultados.push({ material:entry.material, descripcion:descB, tipo:'', estado:entry.estado||'', fuente:'listas' });
+        candidatos.push({ material:entry.material, descripcion:descB, tipo:'', estado:entry.estado||'', fuente:'listas', score:scoreB });
       }
     }
-    var obs = { tipo:'buscar_material', consulta:q, total:resultados.length, resultados:resultados };
+    candidatos.sort(function(a,b){ return a.score - b.score; });
+    var resultados = candidatos.slice(0, BUSQUEDA_MAX_RESULTADOS).map(function(c){
+      return { material:c.material, descripcion:c.descripcion, tipo:c.tipo, estado:c.estado, fuente:c.fuente };
+    });
+    var obs = { tipo:'buscar_material', consulta:q, total:resultados.length, totalCoincidencias:candidatos.length, resultados:resultados };
     return { observacion: obs, html: resultados.length ? tarjetaBusqueda(obs) : tarjetaSinResultados(q) };
   }
 

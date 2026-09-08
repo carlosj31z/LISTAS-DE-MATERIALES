@@ -611,7 +611,20 @@ function configDeNivel(config, nivel) {
 // cuelga) se comía todo el presupuesto de la función sin que el bucle de reintentos
 // llegara siquiera a enterarse — Vercel terminaba matando la función entera de golpe
 // (504, sin ningún JSON de error propio) en vez de que este código reaccionara a tiempo.
-const TIMEOUT_LLAMADA_MS = 5000;
+//
+// El valor importa tanto como su existencia: quedaTiempo() (más abajo) solo autoriza
+// una llamada más si incluso colgándose entera seguiría cabiendo en LIMITE_MS, así que
+// el número de keys que se llegan a probar en el peor caso (todas cuelgan el máximo) es
+// floor(LIMITE_MS / TIMEOUT_LLAMADA_MS). Con 5000 eso daba EXACTAMENTE 1 — la primera
+// key que se cuelga agota el presupuesto entero y el chat reporta "se probó 1 de 6" sin
+// haber tenido oportunidad real de rotar. Bajarlo a 3000 (de sobra para un modelo flash
+// generando unos pocos cientos de tokens en condiciones normales) deja margen para 3
+// intentos completos incluso en ese peor caso (con aire de sobra frente a 9000/3=3000:
+// justo en ese borde, cualquier milisegundo real de más entre llamadas — el propio
+// setTimeout, JSON.stringify, la vuelta del event loop — tira el tercer intento fuera y
+// se queda en 2), sin tocar LIMITE_MS ni el margen de seguridad ya validado contra el
+// 504 de Vercel.
+const TIMEOUT_LLAMADA_MS = 2500;
 
 /* Una sola llamada a Gemini, con el resultado ya clasificado para que el bucle de
    arriba decida qué hacer sin volver a mirar el cuerpo de la respuesta. */

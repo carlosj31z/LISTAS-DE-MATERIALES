@@ -1016,7 +1016,8 @@ window.__conXLSX = async function(){
     background:var(--brick-soft); border:1px solid var(--brick); color:var(--brick); padding:11px 14px;
     border-radius:10px; font-size:13px;
   }
-  .ia-chat-msg-error p{ color:var(--brick); font-size:13px; }
+  /* pre-wrap para que el "Detalle:" que acompaña al error caiga en su propia línea. */
+  .ia-chat-msg-error p{ color:var(--brick); font-size:13px; white-space:pre-wrap; }
 
   /* Copiar la respuesta: aparece al pasar el ratón, como en los chats de asistente. */
   .ia-chat-copy{
@@ -9286,7 +9287,15 @@ function formatFechaHoraCorta(d){
     });
     var data = await resp.json().catch(function(){ return null; });
     if(!resp.ok || !data){
-      return { error: (data && data.error) ? data.error : ('El servidor respondió con error ('+resp.status+').') };
+      // El endpoint manda además un "detalle" con lo que dijo Google (cuota, modelo
+      // inexistente, sobrecarga...). Sin mostrarlo, todos los fallos se parecían entre sí
+      // y no había forma de saber si había que tocar las keys, el modelo o solo esperar.
+      var msg = (data && data.error) ? data.error : ('El servidor respondió con error ('+resp.status+').');
+      if(data && data.detalle){
+        var det = String(data.detalle).replace(/\s+/g, ' ').trim();
+        if(det) msg += '\n\nDetalle: ' + (det.length > 300 ? det.slice(0, 300) + '…' : det);
+      }
+      return { error: msg };
     }
     return data;
   }

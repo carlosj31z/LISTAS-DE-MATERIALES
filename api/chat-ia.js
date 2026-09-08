@@ -188,7 +188,9 @@ const BRIEFING = `CONTEXTO DEL NEGOCIO (planta farmacéutica peruana, equipo de 
    no hace falta borrarla al agregar las nuevas. Se descartan huecos/duplicados. */
 function obtenerApiKeys() {
   const keys = [];
-  for (let i = 1; i <= 5; i++) {
+  // Se leen hasta 10 numeradas (antes solo 5): una GEMINI_API_KEY_6 configurada en Vercel
+  // se quedaba sin usar sin que nada lo dijera.
+  for (let i = 1; i <= 10; i++) {
     const v = process.env[`GEMINI_API_KEY_${i}`];
     if (v && v.trim()) keys.push(v.trim());
   }
@@ -201,12 +203,19 @@ function obtenerApiKeys() {
    agotada / rate limit) y 400/403 cuando el detalle menciona la key (inválida,
    expirada, sin permiso) — el resto de errores 4xx/5xx no se relacionan con
    cuál key se usó, así que no tiene sentido rotar por ellos. */
+/* Solo se cambia de key cuando el fallo es DE LA KEY. Antes bastaba con que el detalle
+   contuviera "invalid" y eso barría demasiado: un "Invalid JSON payload" o un nombre de
+   modelo mal escrito son errores de configuración que fallan igual con las seis keys, pero
+   se contaban como keys quemadas y acababan reportados como "se agotaron tus API keys" —
+   mandando a revisar la cuota por un problema que no estaba ahí. */
 function debeRotarKey(status, detalleTexto) {
   if (status === 429) return true;
   if (status === 400 || status === 403) {
     const t = (detalleTexto || '').toLowerCase();
     if (esErrorDePensamiento(status, detalleTexto)) return false; // no es la key, es el parámetro
-    return t.includes('api key') || t.includes('api_key') || t.includes('permission') || t.includes('invalid');
+    return t.includes('api key') || t.includes('api_key') ||
+           t.includes('api key not valid') || t.includes('permission denied') ||
+           t.includes('permission_denied') || t.includes('unauthenticated');
   }
   return false;
 }
@@ -231,15 +240,59 @@ module.exports = async (req, res) => {
   // CORS básico: el HTML puede vivir en cualquier dominio/estático (incluso
   // abierto localmente), así que se permite cualquier origen para este endpoint.
   res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
   if (req.method === 'OPTIONS') { res.status(200).end(); return; }
+
+  const apiKeys = obtenerApiKeys();
+
+  /* Diagnóstico: abrir /api/chat-ia?diagnostico=1 en el navegador contesta si el modelo
+     configurado existe de verdad para estas keys, y qué modelos sí están disponibles. Es
+     la forma rápida de distinguir "se acabó la cuota" de "el nombre del modelo está mal",
+     que desde el mensaje de error del chat se confunden con facilidad.
+     No devuelve ninguna key: solo cuántas hay configuradas. */
+  if (req.method === 'GET' && req.url && req.url.indexOf('diagnostico') !== -1) {
+    if (apiKeys.length === 0) {
+      res.status(500).json({ error: 'No hay ninguna API key de Gemini configurada en este despliegue.' });
+      return;
+    }
+    try {
+      const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${apiKeys[0]}&pageSize=200`);
+      const cuerpoLista = await r.json().catch(() => null);
+      if (!r.ok) {
+        res.status(502).json({
+          modeloConfigurado: GEMINI_MODEL,
+          keysConfiguradas: apiKeys.length,
+          error: `Google respondió con error (${r.status}) al listar los modelos.`,
+          detalle: cuerpoLista && cuerpoLista.error ? cuerpoLista.error.message : null
+        });
+        return;
+      }
+      const disponibles = (cuerpoLista && cuerpoLista.models ? cuerpoLista.models : [])
+        .filter((m) => (m.supportedGenerationMethods || []).includes('generateContent'))
+        .map((m) => String(m.name || '').replace(/^models\//, ''));
+      const existe = disponibles.includes(GEMINI_MODEL);
+      res.status(200).json({
+        modeloConfigurado: GEMINI_MODEL,
+        elModeloExiste: existe,
+        veredicto: existe
+          ? 'El modelo configurado existe y esta key puede usarlo. Si el chat falla, el problema es de cuota o de red, no del modelo.'
+          : `El modelo "${GEMINI_MODEL}" NO está en la lista que ve esta key. Cambia GEMINI_MODEL en Vercel por uno de "modelosDisponibles".`,
+        keysConfiguradas: apiKeys.length,
+        modelosDisponibles: disponibles
+      });
+      return;
+    } catch (e) {
+      res.status(502).json({ error: 'No se pudo contactar con la API de Gemini para el diagnóstico.', detalle: String((e && e.message) || e) });
+      return;
+    }
+  }
+
   if (req.method !== 'POST') {
     res.status(405).json({ error: 'Método no permitido. Usa POST.' });
     return;
   }
 
-  const apiKeys = obtenerApiKeys();
   if (apiKeys.length === 0) {
     res.status(500).json({
       error: 'El servidor no tiene configurada ninguna API key de Gemini. Agrega GEMINI_API_KEY_1 (y opcionalmente _2 a _5) en Vercel → Settings → Environment Variables y vuelve a desplegar.'
@@ -284,11 +337,18 @@ module.exports = async (req, res) => {
        presupuesto de salida.
      - el modelo no acepta thinkingConfig (400)    -> se REINTENTA sin ese campo.
 
-     El total está acotado a MAX_LLAMADAS para no acercarse al maxDuration de la
-     función (20 s en vercel.json). */
-  const MAX_LLAMADAS = 3;
+     El corte es por TIEMPO, no por un número fijo de llamadas: con seis keys, un tope de
+     tres intentos dejaba la mitad sin probar y aun así el mensaje final decía que habían
+     fallado las seis. Un fallo de cuota se resuelve en milisegundos, así que dentro del
+     presupuesto caben todas las keys; lo que hay que evitar es pasarse del maxDuration de
+     la función (20 s en vercel.json). */
+  const LIMITE_MS = 14000;
+  const arranque = Date.now();
+  const MAX_LLAMADAS = apiKeys.length + 3;   // margen para los reintentos que no gastan key
+  const quedaTiempo = () => (Date.now() - arranque) < LIMITE_MS;
   let llamadas = 0;
   let idxKey = 0;
+  let keysProbadas = 0;
   // Se pide desactivar el razonamiento interno del modelo: esos tokens se cobran
   // contra maxOutputTokens y son la causa habitual de que la respuesta se corte
   // ANTES de llegar a escribir el JSON. Si el modelo no admite el campo, el primer
@@ -296,8 +356,9 @@ module.exports = async (req, res) => {
   let sinPensamiento = true;
   let ultimoError = null;
 
-  while (llamadas < MAX_LLAMADAS && idxKey < apiKeys.length) {
+  while (llamadas < MAX_LLAMADAS && idxKey < apiKeys.length && quedaTiempo()) {
     llamadas++;
+    if (idxKey + 1 > keysProbadas) keysProbadas = idxKey + 1;
     const r = await llamarGemini({ apiKey: apiKeys[idxKey], prompt, config, sinPensamiento });
 
     if (r.tipo === 'ok') {
@@ -333,11 +394,23 @@ module.exports = async (req, res) => {
       await esperar(700);
       continue;
     }
+    // El modelo configurado no existe (o esa key no tiene acceso a él). Cambiar de key no
+    // arregla nada, y decirlo con el nombre delante ahorra buscar el problema en la cuota.
+    if (r.status === 404) {
+      res.status(502).json({
+        error: `El modelo "${GEMINI_MODEL}" no existe o no está disponible para esta API key. Revisa el nombre del modelo (variable de entorno GEMINI_MODEL en Vercel).`,
+        detalle: r.detalle,
+        modelo: GEMINI_MODEL,
+        llamadas
+      });
+      return;
+    }
     // Error definitivo (prompt rechazado, parámetros inválidos): fallaría igual
     // con cualquier otra key, así que se reporta ya en vez de gastar intentos.
     res.status(502).json({
       error: `Gemini respondió con error (${r.status}).`,
       detalle: r.detalle,
+      modelo: GEMINI_MODEL,
       llamadas
     });
     return;
@@ -353,9 +426,18 @@ module.exports = async (req, res) => {
     });
     return;
   }
+  // El mensaje dice cuántas keys se probaron DE VERDAD. Antes afirmaba que habían fallado
+  // todas las configuradas aunque el tope de intentos hubiera dejado la mitad sin tocar,
+  // y eso mandaba a comprar cuota por un problema que podía ser otro.
+  const seProbaronTodas = keysProbadas >= apiKeys.length;
   res.status(503).json({
-    error: `Se agotaron o fallaron las ${apiKeys.length} API key(s) de Gemini configuradas. Agrega una nueva key o espera a que se restablezca la cuota.`,
+    error: seProbaronTodas
+      ? `Fallaron las ${apiKeys.length} API key(s) de Gemini configuradas. Si el detalle habla de cuota, espera a que se restablezca o agrega otra key; si habla de otra cosa, el problema no son las keys.`
+      : `Se probaron ${keysProbadas} de las ${apiKeys.length} API key(s) configuradas y ninguna respondió a tiempo. Vuelve a intentarlo; si se repite, revisa el detalle.`,
     detalle: ultimoError && ultimoError.detalle,
+    modelo: GEMINI_MODEL,
+    keysProbadas,
+    keysConfiguradas: apiKeys.length,
     llamadas
   });
 };

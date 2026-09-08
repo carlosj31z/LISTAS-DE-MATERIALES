@@ -9958,6 +9958,40 @@ function formatFechaHoraCorta(d){
     return null;
   }
 
+  /* ---------- "Los últimos/las últimas N días/semanas/meses": filtro de fecha por
+     recencia, uno de los más típicos y menos "IA" que hay (una condición ya prevista,
+     ultimos_dias, sobre una columna de fecha fija por vista) — se reconoce ANTES que los
+     disparadores de material porque una frase como "qué listas de materiales fueron
+     creadas..." también contiene "listas de", que si se probara primero se leería como
+     un intento de listas_de_material con una referencia sin sentido. ---------- */
+  var RE_RECENCIA = /\bultim[oa]s?\s+(\d{1,4})\s+(dias?|semanas?|meses?)\b/;
+  function intentoRecencia(t){
+    var m = t.match(RE_RECENCIA);
+    if(!m) return null;
+    var n = parseInt(m[1], 10);
+    var unidad = m[2];
+    var dias = /^mes/.test(unidad) ? n*30 : /^semana/.test(unidad) ? n*7 : n;
+
+    var esModificacion = /\b(modificad[oa]s?|actualizad[oa]s?)\b/.test(t);
+    var esBom = /\blistas?\b/.test(t) || /\bbom\b/.test(t);
+    var esMm = !esBom && /\bmateria/.test(t); // "material(es)" sin "lista(s)"
+    var vistaObjetivo = esBom ? 'bom' : (esMm ? 'mm' : vistaActiva());
+    var columna = vistaObjetivo === 'bom'
+      ? (esModificacion ? 'Modificado el' : 'Creado el')
+      : (esModificacion ? 'Última modificación' : 'Fecha creación material');
+
+    var cambios = [];
+    if(vistaActiva() !== vistaObjetivo){
+      var rCambio = respuestaDeTool('cambiar_pestana', { pestana: vistaObjetivo });
+      if(rCambio) cambios = rCambio.htmlCards;
+    }
+    var rFiltro = respuestaDeTool('filtrar_tabla', { condiciones:[{ columna: columna, operador:'ultimos_dias', valor: String(dias) }] });
+    if(!rFiltro) return null;
+    var etiquetaVista = vistaObjetivo === 'bom' ? 'Listas de Materiales' : 'Maestro de Materiales';
+    var etiquetaAccion = esModificacion ? 'modificación' : 'creación';
+    return { mensaje: 'Apliqué el filtro de '+(esModificacion?'modificados':'creados')+' en los últimos '+n+' '+unidad+' ('+etiquetaAccion+') en '+etiquetaVista+'.', htmlCards: cambios.concat(rFiltro.htmlCards) };
+  }
+
   /* ---------- Disparadores por herramienta: si el texto contiene la frase como palabra
      completa, todo lo que sigue a su última aparición (limpio de relleno) es la
      referencia. Se ordenan de más a menos específicos ANTES de probarlos, para que
@@ -10042,6 +10076,11 @@ function formatFechaHoraCorta(d){
 
     var filtro = intentoFiltroNombrado(t);
     if(filtro) return filtro;
+
+    // Antes de los disparadores de material: "las listas creadas los últimos 50 días"
+    // contiene "listas de" (disparador de listas_de_material) pero pide otra cosa.
+    var recencia = intentoRecencia(t);
+    if(recencia) return recencia;
 
     var encontrado = encontrarDisparador(t);
     if(!encontrado) return null;

@@ -96,6 +96,70 @@ const HERRAMIENTAS = [
 const NOMBRES_HERRAMIENTAS = HERRAMIENTAS.map((h) => h.nombre);
 const MAX_ACCIONES = 3;
 
+/* Esquemas de salida (subconjunto de OpenAPI 3.0 que acepta Gemini vía
+   generationConfig.responseSchema). Sin esto, "responseMimeType: application/json"
+   por sí solo no impide que el modelo divague en el razonamiento hasta cortar el
+   JSON a mitad, o que lo envuelva en texto/markdown — el error "la respuesta de
+   Gemini no fue un JSON válido" viene casi siempre de ahí. Con el schema, la API
+   fuerza la forma exacta antes de devolver nada.
+
+   "argumentos" reúne TODOS los campos posibles de TODAS las herramientas en un
+   único objeto opcional-por-campo (Gemini no soporta un objeto de forma libre) —
+   cada herramienta usa solo los suyos, el resto los deja vacíos. */
+const ARGUMENTOS_SCHEMA = {
+  type: 'OBJECT',
+  properties: {
+    texto: { type: 'STRING' },
+    material: { type: 'STRING' },
+    alt: { type: 'STRING' },
+    combinacion: { type: 'INTEGER' },
+    solo_activas: { type: 'BOOLEAN' },
+    condiciones: {
+      type: 'ARRAY',
+      items: {
+        type: 'OBJECT',
+        properties: {
+          columna: { type: 'STRING' },
+          operador: { type: 'STRING', enum: OPERADORES_VALIDOS },
+          valor: { type: 'STRING' }
+        },
+        required: ['operador', 'valor']
+      }
+    }
+  }
+};
+
+const PLAN_SCHEMA = {
+  type: 'OBJECT',
+  properties: {
+    razonamiento: { type: 'STRING' },
+    acciones: {
+      type: 'ARRAY',
+      items: {
+        type: 'OBJECT',
+        properties: {
+          herramienta: { type: 'STRING', enum: NOMBRES_HERRAMIENTAS },
+          argumentos: ARGUMENTOS_SCHEMA
+        },
+        required: ['herramienta', 'argumentos']
+      }
+    },
+    mensaje: { type: 'STRING' },
+    sugerencias: { type: 'ARRAY', items: { type: 'STRING' } }
+  },
+  required: ['razonamiento', 'acciones']
+};
+
+const RESPUESTA_SCHEMA = {
+  type: 'OBJECT',
+  properties: {
+    mensaje: { type: 'STRING' },
+    razonamiento: { type: 'STRING' },
+    sugerencias: { type: 'ARRAY', items: { type: 'STRING' } }
+  },
+  required: ['mensaje']
+};
+
 /* Conocimiento del dominio. Va en las dos fases porque es lo que le permite
    razonar de verdad (qué significa una alternativa 66, por qué una versión de
    fabricación "1204" no cuadra con una alternativa 1) en vez de limitarse a
@@ -184,8 +248,8 @@ module.exports = async (req, res) => {
   // temperatura casi nula. Redactar es lo contrario — algo de temperatura evita
   // que todas las respuestas suenen calcadas — y necesita más espacio de salida.
   const generationConfig = fase === 'responder'
-    ? { temperature: 0.45, maxOutputTokens: 1400, responseMimeType: 'application/json' }
-    : { temperature: 0.1, maxOutputTokens: 900, responseMimeType: 'application/json' };
+    ? { temperature: 0.45, maxOutputTokens: 2048, responseMimeType: 'application/json', responseSchema: RESPUESTA_SCHEMA }
+    : { temperature: 0.1, maxOutputTokens: 1536, responseMimeType: 'application/json', responseSchema: PLAN_SCHEMA };
 
   let ultimoError = null;
   for (let i = 0; i < apiKeys.length; i++) {
@@ -221,17 +285,33 @@ module.exports = async (req, res) => {
       }
 
       const data = await respuestaGemini.json();
-      const textoJson = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+      const candidato = data?.candidates?.[0];
+      const textoJson = candidato?.content?.parts?.[0]?.text;
       if (!textoJson) {
-        res.status(502).json({ error: 'Gemini no devolvió contenido interpretable.' });
+        // Sin texto y finishReason lo explica (ej. bloqueado por el filtro de
+        // seguridad de Gemini, "SAFETY"): se lo decimos a la persona en vez de un
+        // "no devolvió contenido" genérico que no orienta a nada.
+        const motivo = candidato?.finishReason;
+        res.status(502).json({
+          error: motivo && motivo !== 'STOP'
+            ? `Gemini no generó respuesta (motivo: ${motivo}). Reformula la pregunta e inténtalo de nuevo.`
+            : 'Gemini no devolvió contenido interpretable.'
+        });
         return;
       }
 
-      let interpretacion;
-      try {
-        interpretacion = JSON.parse(textoJson);
-      } catch (e) {
-        res.status(502).json({ error: 'La respuesta de Gemini no fue un JSON válido.', crudo: textoJson });
+      const interpretacion = extraerJSON(textoJson);
+      if (!interpretacion) {
+        // La causa más común es un corte por límite de longitud a mitad del JSON
+        // (finishReason "MAX_TOKENS"): se distingue para que el mensaje oriente a
+        // reformular más corto en vez de sonar a una falla aleatoria del servidor.
+        const cortado = candidato?.finishReason === 'MAX_TOKENS';
+        res.status(502).json({
+          error: cortado
+            ? 'La respuesta de Gemini se cortó por longitud antes de terminar. Prueba con una pregunta más acotada.'
+            : 'La respuesta de Gemini no fue un JSON válido.',
+          detalle: cortado ? undefined : textoJson.slice(0, 500)
+        });
         return;
       }
 
@@ -255,6 +335,27 @@ module.exports = async (req, res) => {
   });
 };
 
+
+/* Intenta interpretar el texto del modelo como JSON, tolerando lo que
+   "responseMimeType: application/json" debería evitar pero no siempre evita:
+   fences de markdown (```json ... ```) alrededor, o texto colgando antes/después
+   del objeto. Devuelve null si de verdad no hay un JSON recuperable — nunca
+   lanza, para que el llamador decida cómo reportarlo. */
+function extraerJSON(texto) {
+  try { return JSON.parse(texto); } catch (e) { /* sigue con los respaldos */ }
+
+  const sinFences = texto.replace(/^\s*```(?:json)?\s*/i, '').replace(/\s*```\s*$/, '');
+  if (sinFences !== texto) {
+    try { return JSON.parse(sinFences); } catch (e) { /* sigue con el último respaldo */ }
+  }
+
+  const inicio = texto.indexOf('{');
+  const fin = texto.lastIndexOf('}');
+  if (inicio !== -1 && fin > inicio) {
+    try { return JSON.parse(texto.slice(inicio, fin + 1)); } catch (e) { /* no hay más que intentar */ }
+  }
+  return null;
+}
 
 /* ============================================================
    Saneamiento de la respuesta del modelo

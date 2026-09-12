@@ -7,7 +7,9 @@
  * pestaña "Árbol del producto" y en el Chat de consulta (herramienta arbol_producto) —
  * nunca una copia aparte: la lógica vive en arbol-motor.js (raíz del repo, servido también
  * como archivo estático para el navegador) y este archivo solo la alimenta con los datos
- * que trae de Supabase para ESTA petición.
+ * que trae de Supabase para ESTA petición. Las funciones para hablar con Supabase
+ * (paginado, deduplicado, CORS, parseo de query) viven en ./_lib/supabase-datos.js,
+ * compartidas con cualquier otro endpoint de /api que las necesite.
  *
  * Parámetros:
  *   codigo       (obligatorio) — código de Material del producto terminado (PT), o de
@@ -23,122 +25,61 @@
  * Respuesta: el mismo objeto "observacion" que ya arma toolArbolProducto en el navegador
  * (mismos campos "estado": ok | no_encontrado | alt_no_existe | ambiguo_alternativa |
  * multiples_productos | sin_producto_terminado | sin_arbol | sin_datos), como JSON plano.
+ *
+ * Rendimiento: un consumidor externo real (otra página, fuera de este repo) reportó 503
+ * por "sin tiempo suficiente" — el presupuesto de Vercel Hobby (~10s) no alcanzaba para
+ * traer las 4 tablas necesarias (mm_bom, mm_bom_componentes, mm_vfab, mm_materiales) desde
+ * Supabase. Dos cambios lo atacan directamente: (1) las 4 tablas se traen SIEMPRE las 4 en
+ * paralelo, nunca una después de otra (antes mm_materiales se pedía recién después de que
+ * las otras tres terminaran); (2) el resultado ya deduplicado y con columnas armadas se
+ * guarda un rato corto en memoria (CACHE_TTL_MS), porque el uso real de este endpoint es un
+ * botón que alguien pulsa de vez en cuando en la otra página — no tráfico en ráfaga — así
+ * que mientras la función siga "tibia" en Vercel, la siguiente consulta no repite el viaje
+ * completo a Supabase. La frescura de esa caché es la MISMA que ya se anuncia en el header
+ * Cache-Control de la respuesta (30s) — no es una promesa nueva sobre qué tan al día están
+ * los datos, solo se aplica también del lado del servidor.
  */
 
 const crearMotorArbol = require('../arbol-motor.js');
+const { LIMITE_MS, TIMEOUT_FETCH_MS, sbFetchAll, deduplicar, aColumnasYFilas, leerQuery, manejarCorsYMetodo } = require('./_lib/supabase-datos.js');
 
-const SUPABASE_URL = 'https://wjlryrqkcnvjlrdibzol.supabase.co';
-const SUPABASE_ANON_KEY = 'sb_publishable_2Qm4zOkdHeSMOYvatAyNiA_K5crlvFc';
+const CACHE_TTL_MS = 30000;
+let cacheDatos = null; // { expira, bom, comp, vfab, mmEstadoMap } | null — vive mientras la instancia de la función siga tibia
 
-// Mismo presupuesto conservador que api/chat-ia.js (ver el comentario largo ahí): el plan
-// gratuito de Vercel corta a los ~10s pase lo que declare vercel.json, así que nunca se
-// arranca un tramo más si ya no cabría completo dentro de este límite.
-const LIMITE_MS = 9000;
-const TIMEOUT_FETCH_MS = 4000;
-const PAGE_SIZE = 1000;
-const CONCURRENCIA = 4;
-
-function sbHeaders(extra) {
-  return Object.assign({ apikey: SUPABASE_ANON_KEY, Authorization: 'Bearer ' + SUPABASE_ANON_KEY }, extra || {});
-}
-
-async function fetchConTimeout(url, opciones) {
-  const controlador = new AbortController();
-  const corte = setTimeout(() => controlador.abort(), TIMEOUT_FETCH_MS);
-  try {
-    return await fetch(url, Object.assign({}, opciones, { signal: controlador.signal }));
-  } finally {
-    clearTimeout(corte);
-  }
-}
-
-/* Trae TODAS las filas de una tabla (columna "data" jsonb, como guardan todas las cargas de
-   esta app), pidiendo varias páginas a la vez — mismo criterio que window.__sbFetchAll del
-   navegador, para no encadenar decenas de viajes de ida y vuelta uno detrás de otro. Si el
-   conteo o alguna página falla, cae a un recorrido secuencial (más lento, pero nunca deja
-   de intentarlo ni devuelve datos incompletos sin avisar). */
-async function sbFetchAll(tabla) {
-  let total = null;
-  try {
-    const resConteo = await fetchConTimeout(
-      `${SUPABASE_URL}/rest/v1/${tabla}?select=id&limit=1`,
-      { headers: sbHeaders({ Prefer: 'count=exact' }) }
-    );
-    const rango = resConteo.headers.get('content-range'); // "0-0/12345"
-    if (rango) {
-      const m = rango.match(/\/(\d+)$/);
-      if (m) total = parseInt(m[1], 10);
-    }
-  } catch (e) { /* sin conteo se usa el camino secuencial de abajo */ }
-
-  if (total === 0) return [];
-
-  if (total !== null) {
-    const totalPaginas = Math.ceil(total / PAGE_SIZE);
-    const porPagina = new Array(totalPaginas);
-    let siguiente = 0;
-    let fallo = null;
-    async function trabajador() {
-      while (siguiente < totalPaginas && !fallo) {
-        const idx = siguiente++;
-        const desde = idx * PAGE_SIZE;
-        try {
-          const r = await fetchConTimeout(
-            `${SUPABASE_URL}/rest/v1/${tabla}?select=data&order=id.asc&limit=${PAGE_SIZE}&offset=${desde}`,
-            { headers: sbHeaders() }
-          );
-          if (!r.ok) { fallo = new Error('Supabase respondió ' + r.status + ' al leer ' + tabla); return; }
-          porPagina[idx] = await r.json();
-        } catch (e) { fallo = e; return; }
-      }
-    }
-    const hilos = [];
-    for (let h = 0; h < Math.min(CONCURRENCIA, totalPaginas); h++) hilos.push(trabajador());
-    await Promise.all(hilos);
-    if (!fallo) {
-      let todas = [];
-      for (let p = 0; p < totalPaginas; p++) todas = todas.concat(porPagina[p] || []);
-      return todas.map((r) => r.data);
-    }
-    // sigue abajo con el camino secuencial si el paralelo falló
+/* Trae (o reusa de la caché en memoria) las 4 tablas ya deduplicadas y con columnas
+   armadas, listas para alimentar crearMotorArbol. Devuelve { sinDatos: true } si el BOM o
+   los Componentes vienen vacíos — ese caso nunca se cachea, porque probablemente signifique
+   que Supabase todavía no tiene datos cargados y vale la pena revisar de nuevo la próxima
+   vez, no repetir un "no hay nada" guardado por 30 segundos. */
+async function traerDatos() {
+  if (cacheDatos && cacheDatos.expira > Date.now()) {
+    return cacheDatos;
   }
 
-  let desde = 0;
-  let todas = [];
-  while (true) {
-    const r = await fetchConTimeout(
-      `${SUPABASE_URL}/rest/v1/${tabla}?select=data&order=id.asc&limit=${PAGE_SIZE}&offset=${desde}`,
-      { headers: sbHeaders() }
-    );
-    if (!r.ok) throw new Error('Supabase respondió ' + r.status + ' al leer ' + tabla);
-    const lote = await r.json();
-    todas = todas.concat(lote.map((row) => row.data));
-    if (lote.length < PAGE_SIZE) break;
-    desde += PAGE_SIZE;
+  const [bomRaw, compRaw, vfabRaw, mmRaw] = await Promise.all([
+    sbFetchAll('mm_bom'),
+    sbFetchAll('mm_bom_componentes'),
+    sbFetchAll('mm_vfab'),
+    sbFetchAll('mm_materiales').catch(() => [])
+  ]);
+
+  if (!bomRaw.length || !compRaw.length) {
+    return { sinDatos: true };
   }
-  return todas;
-}
 
-/* Deduplica un array de filas crudas (objetos {columna: valor}) por una combinación de
-   columnas, quedándose con la ÚLTIMA aparición — misma salvaguarda que ya aplican
-   loadBomFromSupabase / loadComponentesFromSupabase / loadVfabFromSupabase en el navegador,
-   por si quedaron cargas superpuestas de antes de la corrección del orden borrar->insertar. */
-function deduplicar(filas, columnasClave) {
-  const vistos = new Map();
-  const resultado = [];
-  filas.forEach((fila) => {
-    const clave = columnasClave.map((c) => String(fila[c] ?? '')).join('||');
-    if (vistos.has(clave)) resultado[vistos.get(clave)] = fila;
-    else { vistos.set(clave, resultado.length); resultado.push(fila); }
-  });
-  return resultado;
-}
+  const bomDedup = deduplicar(bomRaw, ['Material', 'Lista mat.alternat.', 'Centro-instalación']);
+  const compDedup = deduplicar(compRaw, ['Material', 'Lista mat.alternat.', 'Núm.posición', 'Posición alternativa', 'Componente']);
+  const vfabDedup = deduplicar(vfabRaw, ['Material', 'Lista mat.alternat.', 'Centro', 'Versión fabricación']);
 
-function aColumnasYFilas(filasObjeto) {
-  if (!filasObjeto.length) return { columnas: [], filas: [] };
-  const columnas = Object.keys(filasObjeto[0]);
-  const filas = filasObjeto.map((row) => columnas.map((c) => row[c] ?? ''));
-  return { columnas, filas };
+  const bom = aColumnasYFilas(bomDedup);
+  const comp = aColumnasYFilas(compDedup);
+  const vfab = aColumnasYFilas(vfabDedup);
+
+  const mmEstadoMap = {};
+  mmRaw.forEach((row) => { if (row && row['Material']) mmEstadoMap[String(row['Material'])] = row['Estado mat.todos ce']; });
+
+  cacheDatos = { expira: Date.now() + CACHE_TTL_MS, bom, comp, vfab, mmEstadoMap };
+  return cacheDatos;
 }
 
 /* Reproduce exactamente la orquestación de toolArbolProducto (ver el módulo del Chat de
@@ -208,25 +149,9 @@ function calcularArbol(motor, codigo, altPedida, combinacionPedida) {
 }
 
 module.exports = async (req, res) => {
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-  if (req.method === 'OPTIONS') { res.status(200).end(); return; }
-  if (req.method !== 'GET') {
-    res.status(405).json({ error: 'Método no permitido. Usa GET.' });
-    return;
-  }
+  if (manejarCorsYMetodo(req, res)) return;
 
-  /* No depende solo de req.query (helper de Vercel para Funciones Node.js): se parsea
-     también directo de req.url, que es la única vía que este mismo proyecto ya tiene
-     CONFIRMADA en producción (ver el chequeo de "?diagnostico=1" en api/chat-ia.js, que lee
-     req.url directamente). Si req.query no viniera poblado por algún motivo del entorno,
-     esta vía igual encuentra los parámetros — y si sí viene poblado, ambas coinciden. */
-  let queryDeUrl = {};
-  try {
-    queryDeUrl = Object.fromEntries(new URL(req.url, 'http://localhost').searchParams);
-  } catch (e) { /* req.url ausente o no parseable: se sigue solo con req.query */ }
-  const query = Object.assign({}, queryDeUrl, req.query || {});
+  const query = leerQuery(req);
   const codigo = String(query.codigo || '').trim();
   if (!codigo) {
     res.status(400).json({ error: 'Falta el parámetro "codigo" (código de Material del producto).' });
@@ -244,13 +169,10 @@ module.exports = async (req, res) => {
       res.status(503).json({ error: 'Sin tiempo suficiente para empezar a traer los datos.' });
       return;
     }
-    const [bomRaw, compRaw, vfabRaw] = await Promise.all([
-      sbFetchAll('mm_bom'),
-      sbFetchAll('mm_bom_componentes'),
-      sbFetchAll('mm_vfab')
-    ]);
 
-    if (!bomRaw.length || !compRaw.length) {
+    const datos = await traerDatos();
+
+    if (datos.sinDatos) {
       res.status(200).json({ tipo: 'arbol_producto', estado: 'sin_datos' });
       return;
     }
@@ -259,19 +181,8 @@ module.exports = async (req, res) => {
       res.status(503).json({ error: 'Se agotó el tiempo trayendo Listas de Materiales/Componentes/Versiones de fabricación — el catálogo es demasiado grande para este límite. Vuelve a intentarlo.' });
       return;
     }
-    const mmRaw = await sbFetchAll('mm_materiales').catch(() => []);
 
-    const bomDedup = deduplicar(bomRaw, ['Material', 'Lista mat.alternat.', 'Centro-instalación']);
-    const compDedup = deduplicar(compRaw, ['Material', 'Lista mat.alternat.', 'Núm.posición', 'Posición alternativa', 'Componente']);
-    const vfabDedup = deduplicar(vfabRaw, ['Material', 'Lista mat.alternat.', 'Centro', 'Versión fabricación']);
-
-    const bom = aColumnasYFilas(bomDedup);
-    const comp = aColumnasYFilas(compDedup);
-    const vfab = aColumnasYFilas(vfabDedup);
-
-    const mmEstadoMap = {};
-    mmRaw.forEach((row) => { if (row && row['Material']) mmEstadoMap[String(row['Material'])] = row['Estado mat.todos ce']; });
-
+    const { bom, comp, vfab, mmEstadoMap } = datos;
     const motor = crearMotorArbol({
       BOM_ROWS: bom.filas, BOM_COLUMNS: bom.columnas,
       BOM_COMP_ROWS: comp.filas, BOM_COMP_COLUMNS: comp.columnas,

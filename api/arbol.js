@@ -217,7 +217,16 @@ module.exports = async (req, res) => {
     return;
   }
 
-  const query = req.query || {};
+  /* No depende solo de req.query (helper de Vercel para Funciones Node.js): se parsea
+     también directo de req.url, que es la única vía que este mismo proyecto ya tiene
+     CONFIRMADA en producción (ver el chequeo de "?diagnostico=1" en api/chat-ia.js, que lee
+     req.url directamente). Si req.query no viniera poblado por algún motivo del entorno,
+     esta vía igual encuentra los parámetros — y si sí viene poblado, ambas coinciden. */
+  let queryDeUrl = {};
+  try {
+    queryDeUrl = Object.fromEntries(new URL(req.url, 'http://localhost').searchParams);
+  } catch (e) { /* req.url ausente o no parseable: se sigue solo con req.query */ }
+  const query = Object.assign({}, queryDeUrl, req.query || {});
   const codigo = String(query.codigo || '').trim();
   if (!codigo) {
     res.status(400).json({ error: 'Falta el parámetro "codigo" (código de Material del producto).' });

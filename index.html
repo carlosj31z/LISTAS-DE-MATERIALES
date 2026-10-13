@@ -1299,28 +1299,31 @@ window.__conXLSX = async function(){
   .expl-card-header h2{ font-family:var(--display); font-size:17px; margin:0; color:var(--ink); }
   .expl-card-actions{ display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
   .expl-hint{ font-size:12.5px; color:var(--ink-faint); margin:0 0 14px; }
-  .expl-input-table-wrap{ border:1px solid var(--border); border-radius:10px; overflow:hidden; max-height:360px; overflow-y:auto; }
-  .expl-input-table{ width:100%; border-collapse:collapse; font-size:13px; }
-  .expl-input-table thead th{
-    position:sticky; top:0; background:var(--surface-alt); text-align:left; padding:9px 12px;
-    font-family:var(--mono); font-size:11px; text-transform:uppercase; letter-spacing:.04em; color:var(--ink-soft);
-    border-bottom:1px solid var(--border); z-index:1;
+  /* Entrada: un solo cuadro de texto en vez de una fila de inputs por código. Con miles de
+     códigos, una tabla de inputs se volvía inmanejable (y al pegar, cada fila nueva
+     renumeraba todas las anteriores: 3.000 códigos congelaban la página ~10 s). Un
+     textarea acepta cualquier cantidad de líneas sin costo. */
+  .expl-input-text{
+    width:100%; min-height:220px; max-height:420px; resize:vertical; box-sizing:border-box;
+    border:1px solid var(--border); border-radius:10px; padding:12px 14px; background:var(--surface);
+    font-family:var(--mono); font-size:13px; line-height:1.55; color:var(--ink);
+    transition:border-color .15s, box-shadow .15s;
   }
-  .expl-input-table td{ padding:4px 8px; border-bottom:1px solid var(--border-soft); }
-  .expl-input-table tr:last-child td{ border-bottom:none; }
-  .expl-input-table input[type=text]{
-    width:100%; border:1px solid transparent; background:transparent; padding:7px 8px; border-radius:7px;
-    font-family:var(--mono); font-size:13px; color:var(--ink); transition:border-color .15s, background .15s;
-  }
-  .expl-input-table input[type=text]:focus{ outline:none; border-color:var(--teal); background:var(--teal-soft); }
-  .expl-input-table input[type=text].expl-invalid{ border-color:var(--brick); background:var(--brick-soft); }
-  .expl-row-remove{
-    width:26px; height:26px; border-radius:50%; border:none; background:transparent; color:var(--ink-faint);
-    cursor:pointer; display:flex; align-items:center; justify-content:center; transition:background .15s, color .15s;
-  }
-  .expl-row-remove:hover{ background:var(--brick-soft); color:var(--brick); }
-  .expl-row-num{ font-family:var(--mono); font-size:11px; color:var(--ink-faint); text-align:center; }
+  .expl-input-text:focus{ outline:none; border-color:var(--teal); box-shadow:0 0 0 3px var(--teal-soft); }
+  .expl-input-summary{ min-height:18px; margin-top:8px; font-size:12px; color:var(--ink-soft); line-height:1.6; }
+  .expl-input-summary b{ color:var(--ink); font-family:var(--mono); }
+  .expl-input-summary .expl-sum-warn{ color:var(--brick); }
   .expl-run-row{ display:flex; align-items:center; justify-content:space-between; margin-top:14px; flex-wrap:wrap; gap:10px; }
+  .expl-kbd-hint{ font-size:11.5px; color:var(--ink-faint); }
+  @media (hover: none), (max-width: 720px){
+    .expl-solo-teclado{ visibility:hidden; }
+  }
+
+  /* Barra de progreso de la generación por tramos. */
+  .expl-progress{ max-width:1100px; margin:0 auto 16px; }
+  .expl-progress-track{ height:6px; border-radius:6px; background:var(--surface-alt); overflow:hidden; }
+  .expl-progress-bar{ height:100%; width:0; background:var(--teal); transition:width .12s linear; }
+  .expl-progress-text{ margin-top:6px; font-family:var(--mono); font-size:11.5px; color:var(--ink-soft); }
 
   /* Tabla de confirmación de VFab ambigua/faltante (paso 2). */
   .expl-resolver-row{
@@ -1328,7 +1331,18 @@ window.__conXLSX = async function(){
   }
   .expl-resolver-row:last-child{ border-bottom:none; }
   .expl-resolver-row .mat-code{ font-family:var(--mono); font-weight:700; color:var(--navy-deep); flex:none; min-width:110px; }
-  .expl-resolver-row select{ flex:1; min-width:220px; padding:7px 10px; border-radius:8px; border:1px solid var(--border); font-family:var(--mono); font-size:12.5px; }
+  .expl-resolver-row .expl-resolver-desc{ flex:1 1 200px; min-width:0; font-size:12px; color:var(--ink-soft); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .expl-resolver-row select{ flex:0 1 340px; min-width:220px; padding:7px 10px; border-radius:8px; border:1px solid var(--border); font-family:var(--mono); font-size:12.5px; }
+  .expl-resolver-row .expl-resolver-aviso{ flex-basis:100%; font-size:11.5px; color:var(--brick); margin-top:-4px; }
+  .expl-resolver-list{ max-height:420px; overflow-y:auto; border:1px solid var(--border); border-radius:10px; padding:0 12px; }
+  .expl-bulk-bar{
+    display:flex; align-items:center; gap:10px; flex-wrap:wrap; padding:10px 12px; margin-bottom:10px;
+    background:var(--surface-alt); border-radius:10px; font-size:12.5px; color:var(--ink-soft);
+  }
+  .expl-bulk-bar select{ padding:7px 10px; border-radius:8px; border:1px solid var(--border); font-size:12.5px; background:var(--surface); }
+  .expl-bulk-ok{ font-size:11.5px; color:var(--teal); }
+  .expl-nota-inline{ font-size:12px; color:var(--ink-soft); margin:0 0 10px; }
+  .expl-nota-inline b{ color:var(--brick); font-family:var(--mono); }
 
   /* Tabla de resultados (paso 3): una fila resumen por producto explotado, expandible
      para ver el árbol completo sin perder ningún detalle. Se envuelve en un contenedor
@@ -1336,38 +1350,96 @@ window.__conXLSX = async function(){
      angostas la tabla no desborde el ancho de la página — se desplaza dentro de su propio
      recuadro en vez de romper el layout general. */
   .expl-result-table-wrap{ overflow-x:auto; border:1px solid var(--border); border-radius:10px; -webkit-overflow-scrolling:touch; }
-  .expl-result-table{ width:100%; min-width:640px; border-collapse:collapse; font-size:12.5px; table-layout:fixed; }
+  .expl-result-table{ width:100%; min-width:760px; border-collapse:collapse; font-size:12.5px; table-layout:fixed; }
   .expl-result-table thead th{
     text-align:left; padding:9px 10px; background:var(--surface-alt); font-family:var(--mono); font-size:10.5px;
     text-transform:uppercase; letter-spacing:.03em; color:var(--ink-soft); border-bottom:1px solid var(--border); white-space:nowrap;
   }
   .expl-result-table td{ padding:9px 10px; border-bottom:1px solid var(--border-soft); vertical-align:top; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-  .expl-result-table col.col-chev{ width:28px; }
-  .expl-result-table col.col-mat{ width:118px; }
-  .expl-result-table col.col-alt{ width:52px; }
-  .expl-result-table col.col-vfab{ width:80px; }
-  .expl-result-table col.col-alcance{ width:auto; }
+  .expl-result-table col.col-chev{ width:34px; }
+  .expl-result-table td.expl-chev-td{ padding-left:12px; padding-right:0; text-overflow:clip; color:var(--ink-faint); font-size:10px; }
+  .expl-result-table col.col-mat{ width:112px; }
+  .expl-result-table col.col-desc{ width:auto; }
+  .expl-result-table col.col-alt{ width:46px; }
+  .expl-result-table col.col-vfab{ width:66px; }
+  .expl-result-table col.col-alcance{ width:190px; }
   .expl-result-table col.col-motivo{ width:150px; }
-  .expl-result-table col.col-play{ width:56px; }
+  .expl-result-table col.col-play{ width:60px; }
+  .expl-result-table td.expl-desc{ color:var(--ink-soft); }
+  .expl-result-table td.expl-alcance{ color:var(--ink-soft); font-size:12px; }
   .expl-result-row{ cursor:pointer; transition:background .12s; }
   .expl-result-row:hover{ background:var(--surface-alt); }
   .expl-result-row.expandido{ background:var(--teal-soft); }
   .expl-result-row .chev{ transition:transform .2s var(--ease); display:inline-block; }
   .expl-result-row.expandido .chev{ transform:rotate(90deg); }
-  .expl-motivo{
-    display:inline-flex; align-items:center; gap:5px; padding:3px 9px; border-radius:20px; font-size:11px; font-weight:600;
-    max-width:100%; overflow:hidden; text-overflow:ellipsis;
-  }
-  .expl-motivo.ok{ background:var(--teal-soft); color:#0A5352; }
-  .expl-motivo.z{ background:var(--brick-soft); color:var(--brick); }
-  .expl-motivo.vfab{ background:var(--violet-soft); color:var(--violet); }
-  .expl-motivo.inactiva{ background:var(--amber-soft); color:var(--amber); }
-  .expl-motivo.incoherencia{ background:#EAE6F5; color:#5B4B8A; }
-  .expl-detalle-row td{ background:var(--surface-alt); padding:0; white-space:normal; }
-  .expl-detalle-inner{ padding:16px 20px 20px 20px; }
+  /* Estado de cada árbol: un punto de color + texto corto, sin cajas de fondo — con cientos
+     de filas, una columna de "pastillas" de colores saturaba la vista. El detalle completo
+     del motivo aparece al pasar el cursor, como comentario. */
+  .expl-motivo{ display:inline-flex; align-items:center; gap:6px; font-size:12px; color:var(--ink-soft); max-width:100%; overflow:hidden; text-overflow:ellipsis; }
+  .expl-motivo::before{ content:''; width:7px; height:7px; border-radius:50%; flex:none; background:var(--ink-faint); }
+  .expl-motivo.ok::before{ background:var(--teal); }
+  .expl-motivo.z::before{ background:var(--brick); }
+  .expl-motivo.vfab::before{ background:var(--violet); }
+  .expl-motivo.inactiva::before{ background:var(--amber); }
+  .expl-motivo.incoherencia::before{ background:var(--orange); }
+  .expl-motivo.noresuelto::before{ background:var(--ink-faint); }
+  .expl-detalle-row td{ background:var(--surface-alt); padding:0; white-space:normal; overflow:visible; }
+  .expl-detalle-inner{ padding:14px 18px 16px; }
   @media (max-width: 720px){
-    .expl-detalle-inner{ padding:14px 14px 16px; }
+    .expl-detalle-inner{ padding:12px 12px 14px; }
   }
+
+  /* Barra de filtros de resultados: chips por estado (con conteo) + buscador. */
+  .expl-toolbar{ display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; margin:6px 0 12px; }
+  .expl-chips{ display:flex; gap:6px; flex-wrap:wrap; }
+  .expl-chip{
+    display:inline-flex; align-items:center; gap:6px; padding:5px 11px; border-radius:20px; cursor:pointer;
+    border:1px solid var(--border); background:var(--surface); font-size:12px; color:var(--ink-soft);
+    transition:background .12s, border-color .12s, color .12s;
+  }
+  .expl-chip:hover{ border-color:var(--ink-faint); color:var(--ink); }
+  .expl-chip.activo{ background:var(--navy); border-color:var(--navy); color:#fff; }
+  .expl-chip .n{ font-family:var(--mono); font-size:11px; opacity:.85; }
+  .expl-chip .expl-motivo{ color:inherit; font-size:12px; }
+  .expl-search{
+    flex:0 1 260px; min-width:180px; padding:7px 11px; border-radius:8px; border:1px solid var(--border);
+    font-family:var(--mono); font-size:12.5px; background:var(--surface); color:var(--ink);
+  }
+  .expl-search:focus{ outline:none; border-color:var(--teal); box-shadow:0 0 0 3px var(--teal-soft); }
+  .expl-mas-row{ display:flex; align-items:center; justify-content:center; gap:12px; padding:12px 0 2px; font-size:12px; color:var(--ink-faint); }
+  .expl-vacio-filtro{ padding:22px 10px; text-align:center; font-size:12.5px; color:var(--ink-faint); }
+
+  /* Detalle de un árbol: tabla compacta de etapas. */
+  .expl-det-motivo{ margin:0 0 10px; font-size:12px; color:var(--ink-soft); }
+  /* min-width:0 anula la regla global "table{ min-width:1200px }" de las tablas de datos
+     principales, que estiraba esta tabla anidada más allá de su recuadro. */
+  .expl-det-table{ width:100%; min-width:0; border-collapse:collapse; font-size:12px; background:var(--surface); border-radius:8px; overflow:hidden; table-layout:auto; }
+  .expl-det-table th{
+    text-align:left; padding:7px 10px; font-family:var(--mono); font-size:10px; text-transform:uppercase;
+    letter-spacing:.03em; color:var(--ink-faint); border-bottom:1px solid var(--border); white-space:nowrap;
+  }
+  .expl-det-table td{ padding:7px 10px; border-bottom:1px solid var(--border-soft); vertical-align:top; white-space:normal; overflow:visible; }
+  .expl-det-table tr:last-child td{ border-bottom:none; }
+  .expl-det-table .mono{ font-family:var(--mono); }
+  .expl-det-table td.expl-det-desc{ color:var(--ink-soft); }
+  .expl-det-hint{ margin:8px 0 0; font-size:11px; color:var(--ink-faint); }
+
+  /* Comentario discreto al estilo Excel: un triangulito en la esquina superior derecha de
+     la celda; el texto aparece solo al pasar el cursor (o al tocar la celda en móvil). */
+  .expl-nota{ position:relative; cursor:help; }
+  .expl-nota::after{
+    content:''; position:absolute; top:0; right:0; width:0; height:0;
+    border-style:solid; border-width:0 7px 7px 0; border-color:transparent var(--brick) transparent transparent;
+  }
+  .expl-nota.expl-nota-info::after{ border-right-color:var(--ink-faint); }
+  .expl-nota:focus{ outline:1px dashed var(--ink-faint); outline-offset:-2px; }
+  .expl-nota-pop{
+    position:fixed; z-index:1000; max-width:340px; padding:8px 10px; border-radius:6px;
+    background:#FFFBE6; border:1px solid #E3D9A6; box-shadow:var(--shadow-md);
+    font-size:11.5px; line-height:1.45; color:var(--ink); white-space:pre-line;
+    opacity:0; pointer-events:none; transform:translateY(-2px); transition:opacity .1s, transform .1s;
+  }
+  .expl-nota-pop.visible{ opacity:1; transform:none; }
   .expl-play-btn{
     width:30px; height:30px; border-radius:50%; border:1px solid var(--teal); background:var(--teal-soft);
     color:#0A5352; cursor:pointer; display:flex; align-items:center; justify-content:center;
@@ -1725,7 +1797,7 @@ window.__conXLSX = async function(){
     </button>
     <p class="eyebrow"><span class="dot"></span>SAP · GENERACIÓN MASIVA DE ÁRBOLES</p>
     <h1 class="title">Explosión masiva</h1>
-    <p class="subtitle">Pega desde Excel una lista de Materiales (Acondicionado) con su Versión de Fabricación — o elige una VFab real disponible por fila — y genera todos los árboles de una vez, viendo en qué etapa y por qué motivo se detiene cada uno (bloqueo Z, Vfab bloqueada, o lista de materiales bloqueada/inactiva).</p>
+    <p class="subtitle">Pega desde Excel (o importa un archivo) una lista de Materiales de Acondicionado — con su Versión de Fabricación si la conoces — y genera todos los árboles de una vez, sin límite de cantidad, viendo en qué etapa y por qué motivo se detiene cada uno (bloqueo Z, VFab bloqueada, o lista de materiales inactiva).</p>
   </header>
 
   <main class="view-main">
@@ -1733,24 +1805,19 @@ window.__conXLSX = async function(){
       <div class="expl-card-header">
         <h2>1. Ingresa los productos a explotar</h2>
         <div class="expl-card-actions">
-          <button type="button" class="btn btn-ghost" id="explAddRowBtn">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
-            Agregar fila
+          <button type="button" class="btn btn-ghost btn-compact" id="explImportBtn" title="Lee la primera hoja: columna A = Material, columna B = Versión de Fabricación (opcional)">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            Importar Excel / CSV
           </button>
-          <button type="button" class="btn btn-ghost" id="explClearBtn">Vaciar todo</button>
+          <input type="file" id="explImportFile" accept=".xlsx,.xls,.csv,.txt" hidden>
+          <button type="button" class="btn btn-ghost btn-compact" id="explClearBtn">Vaciar</button>
         </div>
       </div>
-      <p class="expl-hint">Puedes pegar directamente desde Excel dos columnas (Material, Versión de Fabricación) — la Versión de Fabricación es opcional: si la dejas vacía, podrás elegir entre las versiones reales disponibles para ese material antes de ejecutar.</p>
-      <div class="expl-input-table-wrap">
-        <table class="expl-input-table" id="explInputTable">
-          <thead>
-            <tr><th style="width:36px;"></th><th>Material</th><th>Versión de Fabricación (opcional)</th><th style="width:36px;"></th></tr>
-          </thead>
-          <tbody id="explInputBody"></tbody>
-        </table>
-      </div>
+      <p class="expl-hint">Un código por línea. Puedes pegar una o dos columnas copiadas de Excel: Material y, opcionalmente, Versión de Fabricación. No hay límite de líneas; los códigos repetidos se toman una sola vez. Si no indicas la VFab, podrás elegirla (o generar todas) antes de ejecutar.</p>
+      <textarea id="explInputText" class="expl-input-text" spellcheck="false" autocomplete="off" placeholder="6000000217&#10;6000003660&#9;1101&#10;…"></textarea>
+      <div class="expl-input-summary" id="explInputSummary" aria-live="polite"></div>
       <div class="expl-run-row">
-        <span class="count" id="explInputCount" style="font-family:var(--mono); font-size:12px; color:var(--ink-soft);"></span>
+        <span class="expl-kbd-hint expl-solo-teclado">Ctrl + Enter también ejecuta</span>
         <button type="button" class="btn btn-primary" id="explRunBtn">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8Z"/></svg>
           Ejecutar explosión masiva
@@ -1759,12 +1826,28 @@ window.__conXLSX = async function(){
     </div>
 
     <div class="expl-card" id="explResolverCard" style="display:none;">
-      <div class="expl-card-header"><h2>2. Confirma la Versión de Fabricación de cada fila</h2></div>
-      <p class="expl-hint">Estas filas no traían una Versión de Fabricación válida, o tienen más de una registrada para ese Material. Elige cuál usar — solo se muestran versiones reales, tal como están cargadas en Listas de Materiales.</p>
-      <div id="explResolverBody"></div>
+      <div class="expl-card-header"><h2>2. Confirma la Versión de Fabricación</h2></div>
+      <p class="expl-hint" id="explResolverIntro"></p>
+      <div class="expl-bulk-bar">
+        <label for="explBulkSelect">Aplicar a todas las filas:</label>
+        <select id="explBulkSelect">
+          <option value="">— elegir —</option>
+          <option value="todas">Generar todas las versiones</option>
+          <option value="primeraLibre">Solo la primera versión no bloqueada</option>
+          <option value="primera">Solo la primera versión</option>
+        </select>
+        <span class="expl-bulk-ok" id="explBulkOk"></span>
+      </div>
+      <div class="expl-resolver-list" id="explResolverBody"></div>
       <div class="expl-run-row">
+        <span class="expl-kbd-hint">Puedes cambiar cualquier fila después de aplicar a todas.</span>
         <button type="button" class="btn btn-primary" id="explConfirmarBtn">Confirmar y generar árboles</button>
       </div>
+    </div>
+
+    <div class="expl-progress" id="explProgress" hidden>
+      <div class="expl-progress-track"><div class="expl-progress-bar" id="explProgressBar"></div></div>
+      <div class="expl-progress-text" id="explProgressText"></div>
     </div>
 
     <div class="expl-card" id="explResultCard" style="display:none;">
@@ -1778,13 +1861,17 @@ window.__conXLSX = async function(){
           </button>
         </div>
       </div>
+      <div class="expl-toolbar">
+        <div class="expl-chips" id="explChips"></div>
+        <input type="search" class="expl-search" id="explSearch" placeholder="Buscar material, VFab o descripción…" autocomplete="off">
+      </div>
       <div id="explResultBody"></div>
     </div>
 
     <div id="explEmptyState" class="empty-state">
       <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8Z"/></svg>
       <h3>Sin explosión ejecutada todavía</h3>
-      <p>Completa la tabla de arriba con los Materiales a explotar y presiona "Ejecutar explosión masiva".</p>
+      <p>Pega arriba los Materiales a explotar (uno por línea) y presiona "Ejecutar explosión masiva".</p>
     </div>
 
     <footer class="page-footer">EXPLOSIÓN MASIVA — Árboles generados en lote a partir de Listas de Materiales, Componentes y Versiones de Fabricación</footer>
@@ -7358,11 +7445,11 @@ function formatFechaHoraCorta(d){
 /* ============================================================
    APP 4 — EXPLOSIÓN MASIVA (ids con prefijo "expl")
 
-   Genera en lote los árboles de varios productos a la vez, a partir de una
-   tabla editable (Material + Versión de Fabricación opcional) que el
-   usuario puede llenar a mano o pegar directamente desde Excel. Reutiliza
-   EXACTAMENTE la misma lógica de construcción de árbol que "Árbol del
-   producto" (vía window.__arbolAPI), nunca una copia aparte — así ambos
+   Genera en lote los árboles de muchos productos a la vez — sin límite de
+   cantidad — a partir de una lista pegada desde Excel o importada de un
+   archivo (Material + Versión de Fabricación opcional, uno por línea).
+   Reutiliza EXACTAMENTE la misma lógica de construcción de árbol que "Árbol
+   del producto" (vía window.__arbolAPI), nunca una copia aparte — así ambos
    módulos están siempre sincronizados en su comportamiento.
 
    Las Versiones de Fabricación mostradas para elegir son SIEMPRE las
@@ -7371,16 +7458,25 @@ function formatFechaHoraCorta(d){
    ============================================================ */
 (function(){
 
-  var inputBody = document.getElementById('explInputBody');
-  var inputCount = document.getElementById('explInputCount');
-  var addRowBtn = document.getElementById('explAddRowBtn');
+  var inputText = document.getElementById('explInputText');
+  var inputSummary = document.getElementById('explInputSummary');
+  var importBtn = document.getElementById('explImportBtn');
+  var importFile = document.getElementById('explImportFile');
   var clearBtn = document.getElementById('explClearBtn');
   var runBtn = document.getElementById('explRunBtn');
   var resolverCard = document.getElementById('explResolverCard');
+  var resolverIntro = document.getElementById('explResolverIntro');
   var resolverBody = document.getElementById('explResolverBody');
+  var bulkSelect = document.getElementById('explBulkSelect');
+  var bulkOk = document.getElementById('explBulkOk');
   var confirmarBtn = document.getElementById('explConfirmarBtn');
+  var progressWrap = document.getElementById('explProgress');
+  var progressBar = document.getElementById('explProgressBar');
+  var progressText = document.getElementById('explProgressText');
   var resultCard = document.getElementById('explResultCard');
   var resultBody = document.getElementById('explResultBody');
+  var chipsWrap = document.getElementById('explChips');
+  var searchInput = document.getElementById('explSearch');
   var resumenBadge = document.getElementById('explResumenBadge');
   var exportBtn = document.getElementById('explExportBtn');
   var emptyState = document.getElementById('explEmptyState');
@@ -7391,158 +7487,161 @@ function formatFechaHoraCorta(d){
     return api;
   }
 
-  /* ---------- Tabla de entrada editable ---------- */
-  function crearFilaInput(material, vfab){
-    var tr = document.createElement('tr');
-    tr.innerHTML =
-      '<td class="expl-row-num"></td>'+
-      '<td><input type="text" class="expl-input-material" placeholder="Código de Material…" autocomplete="off"></td>'+
-      '<td><input type="text" class="expl-input-vfab" placeholder="Versión de Fabricación (opcional)…" autocomplete="off"></td>'+
-      '<td><button type="button" class="expl-row-remove" title="Quitar fila"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6L6 18"/></svg></button></td>';
-    tr.querySelector('.expl-input-material').value = material || '';
-    tr.querySelector('.expl-input-vfab').value = vfab || '';
-    tr.querySelector('.expl-row-remove').addEventListener('click', function(){
-      tr.remove();
-      renumerarFilas();
-      actualizarContador();
-    });
-    return tr;
-  }
-
-  function renumerarFilas(){
-    Array.prototype.forEach.call(inputBody.querySelectorAll('tr'), function(tr, i){
-      tr.querySelector('.expl-row-num').textContent = (i+1);
+  function esc(v){
+    return String(v===null || v===undefined ? '' : v).replace(/[&<>"']/g, function(c){
+      return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c];
     });
   }
+  function fmt(n){ return Number(n).toLocaleString('es'); }
 
-  function actualizarContador(){
-    var filas = obtenerFilasConDatos();
-    inputCount.textContent = filas.length + ' fila(s) con Material';
-  }
-
-  function obtenerFilasConDatos(){
-    var out = [];
-    Array.prototype.forEach.call(inputBody.querySelectorAll('tr'), function(tr){
-      var mat = tr.querySelector('.expl-input-material').value.trim();
-      var vfab = tr.querySelector('.expl-input-vfab').value.trim();
-      if(mat) out.push({ material: mat, vfab: vfab, tr: tr });
+  /* ---------- Entrada: lista pegada o importada ---------- */
+  /* Una línea por producto. Si la línea trae tabulaciones (copiada de Excel) se respetan
+     las columnas tal cual — A = Material, B = VFab —; si no, se separa por ";", "," o
+     espacios. La segunda columna solo cuenta como VFab si tiene forma de VFab (1 a 6
+     letras/dígitos: 1101, 0097, VF01…), para que pegar por error "Material + Descripción"
+     no convierta la primera palabra de la descripción en una VFab inexistente. Las líneas
+     sin ningún dígito en la primera columna (encabezados como "Material", texto suelto) se
+     ignoran y se informan aparte. Un mismo Material+VFab repetido se toma una sola vez. */
+  var RE_VFAB = /^[A-Za-z0-9]{1,6}$/;
+  function parsearEntrada(texto){
+    var entradas = [], vistos = {};
+    var repetidos = 0, ignoradas = 0, conVfab = 0;
+    String(texto || '').replace(/\r/g, '').split('\n').forEach(function(linea){
+      if(!linea.trim()) return;
+      var partes = linea.indexOf('\t') !== -1
+        ? linea.split('\t').map(function(p){ return p.trim(); })
+        : linea.trim().split(/[;,\s]+/);
+      var mat = partes[0] || '';
+      if(!/\d/.test(mat)){ ignoradas++; return; }
+      var vfab = (partes[1] && RE_VFAB.test(partes[1])) ? partes[1] : '';
+      var clave = mat + '|' + vfab.toUpperCase();
+      if(vistos[clave]){ repetidos++; return; }
+      vistos[clave] = true;
+      if(vfab) conVfab++;
+      entradas.push({ material: mat, vfab: vfab });
     });
-    return out;
+    return { entradas: entradas, repetidos: repetidos, ignoradas: ignoradas, conVfab: conVfab };
   }
 
-  function agregarFilaVacia(focus){
-    var tr = crearFilaInput('', '');
-    inputBody.appendChild(tr);
-    renumerarFilas();
-    if(focus) tr.querySelector('.expl-input-material').focus();
-    return tr;
+  function actualizarResumenEntrada(){
+    var p = parsearEntrada(inputText.value);
+    if(!p.entradas.length && !p.ignoradas){ inputSummary.innerHTML = ''; return p; }
+    var partes = ['<b>' + fmt(p.entradas.length) + '</b> código(s) para explotar'];
+    if(p.conVfab) partes.push(fmt(p.conVfab) + ' con VFab indicada');
+    if(p.repetidos) partes.push(fmt(p.repetidos) + ' repetido(s), se toman una sola vez');
+    if(p.ignoradas) partes.push(fmt(p.ignoradas) + ' línea(s) sin código, ignorada(s)');
+    var a = getApi();
+    if(a && window.BOM_ROWS && window.BOM_ROWS.length){
+      var bomIdx = a.buildBomIndex();
+      var noExisten = 0;
+      p.entradas.forEach(function(e){
+        if(!(bomIdx.altsByMaterial[a.normMat(e.material)] || []).length) noExisten++;
+      });
+      if(noExisten) partes.push('<span class="expl-sum-warn">' + fmt(noExisten) + ' no existe(n) en Listas de Materiales</span>');
+    }
+    inputSummary.innerHTML = partes.join(' · ');
+    return p;
   }
 
-  // Arranca con 6 filas vacías, suficientes para empezar a escribir/pegar sin fricción.
-  for(var i0=0; i0<6; i0++) agregarFilaVacia(false);
-  renumerarFilas();
-  actualizarContador();
-
-  addRowBtn.addEventListener('click', function(){ agregarFilaVacia(true); });
+  var resumenTimer = null;
+  inputText.addEventListener('input', function(){
+    clearTimeout(resumenTimer);
+    resumenTimer = setTimeout(actualizarResumenEntrada, 180);
+  });
+  inputText.addEventListener('keydown', function(e){
+    if(e.key === 'Enter' && (e.ctrlKey || e.metaKey)){
+      e.preventDefault();
+      runBtn.click();
+    }
+  });
   clearBtn.addEventListener('click', function(){
-    if(inputBody.children.length===0 || confirm('¿Vaciar toda la tabla de entrada?')){
-      inputBody.innerHTML = '';
-      for(var i=0;i<6;i++) agregarFilaVacia(false);
-      renumerarFilas();
-      actualizarContador();
+    if(!inputText.value.trim() || confirm('¿Vaciar la lista de códigos?')){
+      inputText.value = '';
+      actualizarResumenEntrada();
+      inputText.focus();
     }
   });
 
-  // Al escribir/perder foco en cualquier celda, se refresca el contador; si el usuario
-  // llena la ÚLTIMA fila visible, se agrega una fila vacía nueva automáticamente (mismo
-  // patrón que una hoja de cálculo, para no obligar a hacer clic en "Agregar fila" todo
-  // el tiempo al escribir varias filas seguidas a mano).
-  inputBody.addEventListener('input', function(e){
-    if(!e.target.matches('.expl-input-material, .expl-input-vfab')) return;
-    e.target.classList.remove('expl-invalid');
-    actualizarContador();
-    var filas = inputBody.querySelectorAll('tr');
-    var ultima = filas[filas.length-1];
-    if(ultima && ultima.querySelector('.expl-input-material').value.trim()){
-      agregarFilaVacia(false);
-    }
+  /* Texto de una celda tal como se ve en Excel, sin perder dígitos: un código numérico
+     grande (6000000217) se toma de su valor entero — el texto formateado podría venir en
+     notación científica —, salvo que la celda muestre ceros a la izquierda (VFab "0097"),
+     en cuyo caso se respeta ese texto visible. */
+  function textoCelda(cell){
+    if(!cell) return '';
+    if(cell.t === 'n' && Number.isInteger(cell.v) && !(cell.w && /^0\d/.test(cell.w))) return String(cell.v);
+    return String(cell.w !== undefined ? cell.w : (cell.v !== undefined ? cell.v : '')).trim();
+  }
+
+  importBtn.addEventListener('click', function(){
+    importFile.value = '';
+    importFile.click();
   });
-
-  /* Pegado desde Excel: al pegar dentro de una celda de Material o VFab, si el contenido
-     del portapapeles tiene varias filas/columnas (tab-separated, típico de copiar un
-     rango de Excel), se distribuye automáticamente en las filas de la tabla a partir de
-     la celda actual, en vez de pegarse todo como texto plano en una sola celda. */
-  inputBody.addEventListener('paste', function(e){
-    var texto = (e.clipboardData || window.clipboardData).getData('text');
-    if(!texto || texto.indexOf('\n')===-1 && texto.indexOf('\t')===-1) return; // pegado simple de una celda, se deja el comportamiento nativo
-    e.preventDefault();
-
-    var esColumnaMaterial = e.target.classList.contains('expl-input-material');
-    var filaActual = e.target.closest('tr');
-    var filasExistentes = Array.prototype.slice.call(inputBody.querySelectorAll('tr'));
-    var indiceInicio = filasExistentes.indexOf(filaActual);
-
-    var lineas = texto.replace(/\r/g,'').split('\n').filter(function(l){ return l.trim()!==''; });
-    lineas.forEach(function(linea, i){
-      var celdas = linea.split('\t');
-      var filaDestino = filasExistentes[indiceInicio + i];
-      if(!filaDestino){
-        filaDestino = agregarFilaVacia(false);
-        filasExistentes.push(filaDestino);
+  importFile.addEventListener('change', async function(){
+    var file = importFile.files && importFile.files[0];
+    if(!file) return;
+    if(!await window.__conXLSX()) return;
+    try{
+      var wb = XLSX.read(new Uint8Array(await file.arrayBuffer()), { type:'array' });
+      var ws = wb.Sheets[wb.SheetNames[0]];
+      if(!ws || !ws['!ref']){
+        inputSummary.innerHTML = '<span class="expl-sum-warn">La primera hoja de «' + esc(file.name) + '» está vacía.</span>';
+        return;
       }
-      if(esColumnaMaterial){
-        // Pegando desde la columna Material: celda[0]=Material, celda[1]=VFab (si vino).
-        filaDestino.querySelector('.expl-input-material').value = (celdas[0]||'').trim();
-        if(celdas[1]!==undefined) filaDestino.querySelector('.expl-input-vfab').value = celdas[1].trim();
-      } else {
-        // Pegando desde la columna VFab: solo se llena esa columna.
-        filaDestino.querySelector('.expl-input-vfab').value = (celdas[0]||'').trim();
+      var rango = XLSX.utils.decode_range(ws['!ref']);
+      var lineas = [];
+      for(var r = rango.s.r; r <= rango.e.r; r++){
+        var mat = textoCelda(ws[XLSX.utils.encode_cell({ r:r, c:rango.s.c })]);
+        var vf = textoCelda(ws[XLSX.utils.encode_cell({ r:r, c:rango.s.c + 1 })]);
+        if(mat || vf) lineas.push(vf ? mat + '\t' + vf : mat);
       }
-    });
-    renumerarFilas();
-    actualizarContador();
+      var actual = inputText.value.replace(/\s+$/, '');
+      inputText.value = (actual ? actual + '\n' : '') + lineas.join('\n');
+      actualizarResumenEntrada();
+    }catch(e){
+      inputSummary.innerHTML = '<span class="expl-sum-warn">No se pudo leer «' + esc(file.name) + '»: ' + esc((e && e.message) || e) + '</span>';
+    }
   });
 
   /* ---------- Resolución de Versión de Fabricación por fila ---------- */
-  /* Para cada fila con Material, se determina si su VFab escrita es válida (existe tal
-     cual, real, en window.BOM_VFAB_ROWS para ALGUNA alternativa de ese material). Si no
-     escribió ninguna, o la escrita no coincide con ninguna real, o el material tiene más
-     de una VFab real y no se puede saber cuál sin preguntar, la fila pasa al paso de
-     confirmación manual — mostrando SOLO las opciones reales disponibles. */
+  /* Para cada código, se determina si su VFab escrita es válida (existe tal cual, real, en
+     window.BOM_VFAB_ROWS para ALGUNA alternativa de ese material). Si no escribió ninguna,
+     o la escrita no coincide con ninguna real, o el material tiene más de una VFab real y
+     no se puede saber cuál sin preguntar, la fila pasa al paso de confirmación — mostrando
+     SOLO las opciones reales disponibles. */
   var filasResueltas = []; // { material, alt, vfabIndex, version, centro } listas para ejecutar
   var filasPendientes = []; // filas que necesitan que el usuario elija en el paso 2
+  var noResueltos = []; // { material, motivo } — códigos que no pueden generar árbol
 
-  function resolverFilasIniciales(filas){
+  function resolverFilasIniciales(entradas){
     var a = getApi();
+    var bomIdx = a.buildBomIndex();
+    var vfabIdx = a.buildVfabIndex();
     filasResueltas = [];
     filasPendientes = [];
-    var sinDatos = [];
+    noResueltos = [];
 
-    filas.forEach(function(f){
+    entradas.forEach(function(f){
       var mat = a.normMat(f.material);
-      if(!mat){ return; }
-      var bomIdx = a.buildBomIndex();
-      var vfabIdx = a.buildVfabIndex();
+      if(!mat) return;
       var candidatasAlt = bomIdx.altsByMaterial[mat] || [];
       if(candidatasAlt.length === 0){
-        sinDatos.push({ material: mat, motivo: 'Material no encontrado en las Listas de Materiales cargadas.' });
+        noResueltos.push({ material: mat, motivo: 'Material no encontrado en las Listas de Materiales cargadas.' });
         return;
       }
 
       // Reunir TODAS las VFab reales de cualquier alternativa de este material.
       var todasVfab = [];
       candidatasAlt.forEach(function(c){
-        var key = a.keyOf(mat, c.alt);
-        var vs = vfabIdx.byKey[key] || [];
+        var vs = vfabIdx.byKey[a.keyOf(mat, c.alt)] || [];
         vs.forEach(function(v, vi){ todasVfab.push({ alt: c.alt, idx: vi, version: v.version, centro: v.centro, bloqueada: v.bloqueada }); });
       });
 
       if(todasVfab.length === 0){
-        sinDatos.push({ material: mat, motivo: 'No tiene ninguna Versión de Fabricación real registrada en el archivo cargado.' });
+        noResueltos.push({ material: mat, motivo: 'No tiene ninguna Versión de Fabricación real registrada en el archivo cargado.' });
         return;
       }
 
-      var vfabEscrita = (f.vfab||'').trim().toUpperCase();
+      var vfabEscrita = (f.vfab || '').trim().toUpperCase();
       var coincidencia = vfabEscrita ? todasVfab.filter(function(v){ return String(v.version).trim().toUpperCase() === vfabEscrita; }) : [];
 
       if(coincidencia.length === 1){
@@ -7557,11 +7656,17 @@ function formatFechaHoraCorta(d){
         filasPendientes.push({ material: mat, vfabEscrita: vfabEscrita, opciones: todasVfab });
       }
     });
+  }
 
-    return sinDatos;
+  function descripcionDe(material){
+    var a = getApi();
+    var alts = a.buildBomIndex().altsByMaterial[a.normMat(material)] || [];
+    for(var i = 0; i < alts.length; i++){ if(alts[i].descripcion) return alts[i].descripcion; }
+    return '';
   }
 
   runBtn.addEventListener('click', function(){
+    if(ejecutando) return;
     if(!window.BOM_ROWS || window.BOM_ROWS.length===0 || !window.BOM_COMP_ROWS || window.BOM_COMP_ROWS.length===0){
       alert('Carga Listas de Materiales y Componentes en la pestaña "Listas de Materiales" primero.');
       return;
@@ -7570,51 +7675,77 @@ function formatFechaHoraCorta(d){
       alert('Carga el archivo de Versiones de Fabricación en la pestaña "Listas de Materiales" primero — la Explosión masiva necesita Versiones de Fabricación reales para trabajar.');
       return;
     }
-    var filas = obtenerFilasConDatos();
-    if(filas.length === 0){
-      alert('Ingresa al menos un Material en la tabla.');
+    var p = actualizarResumenEntrada();
+    if(p.entradas.length === 0){
+      inputSummary.innerHTML = '<span class="expl-sum-warn">Pega al menos un código de Material (uno por línea).</span>';
+      inputText.focus();
       return;
     }
 
-    var sinDatos = resolverFilasIniciales(filas);
-    if(sinDatos.length > 0){
-      alert('No se pudo resolver ' + sinDatos.length + ' fila(s):\n' + sinDatos.map(function(s){ return '• ' + s.material + ': ' + s.motivo; }).join('\n'));
-    }
+    resolverFilasIniciales(p.entradas);
 
     if(filasPendientes.length > 0){
       renderResolverPendientes();
       resolverCard.style.display = 'block';
-      resolverCard.scrollIntoView({behavior:'smooth', block:'start'});
+      resolverCard.scrollIntoView({ behavior:'smooth', block:'start' });
     } else {
+      resolverCard.style.display = 'none';
       ejecutarExplosion();
     }
   });
 
   function renderResolverPendientes(){
+    resolverIntro.innerHTML = '<b>' + fmt(filasPendientes.length) + '</b> material(es) tienen más de una Versión de Fabricación real, o la VFab indicada no existe. Elige cuál usar en cada uno — o aplica una regla a todos de una vez. Solo se muestran versiones reales, tal como están cargadas en Listas de Materiales.' +
+      (noResueltos.length ? ' <span style="color:var(--brick);">' + fmt(noResueltos.length) + ' código(s) no se pudieron resolver; los verás al final en «No resueltos».</span>' : '');
+    bulkSelect.value = '';
+    bulkOk.textContent = '';
     resolverBody.innerHTML = filasPendientes.map(function(p, i){
       var opcionesHtml = p.opciones.map(function(o, oi){
-        var label = 'VFab ' + o.version + ' (Alt. ' + o.alt + ')' + (o.centro?(' — Centro '+o.centro):'') + (o.bloqueada?' — BLOQUEADA':'');
-        return '<option value="'+oi+'">'+getApi().esc(label)+'</option>';
+        var label = 'VFab ' + o.version + ' (Alt. ' + o.alt + ')' + (o.centro ? (' — Centro ' + o.centro) : '') + (o.bloqueada ? ' — BLOQUEADA' : '');
+        return '<option value="' + oi + '">' + esc(label) + '</option>';
       }).join('');
-      var avisoEscrita = p.vfabEscrita ? '<div style="font-size:11.5px; color:var(--brick); margin-top:2px;">No se encontró "'+getApi().esc(p.vfabEscrita)+'" registrada — elige una de las reales.</div>' : '';
       // "TODAS": cuando el material tiene más de una VFab real disponible, se ofrece
       // generar un árbol completo por CADA UNA en la misma ejecución (en vez de forzar a
       // elegir solo una) — es lo que necesita, por ejemplo, el formato de exportación que
       // pide un bloque por cada Versión de Fabricación del material de entrada.
-      var opcionTodas = p.opciones.length > 1 ? '<option value="todas">— Generar TODAS ('+p.opciones.length+') —</option>' : '';
-      return '<div class="expl-resolver-row" data-idx="'+i+'">'+
-        '<span class="mat-code">'+getApi().esc(p.material)+'</span>'+
-        '<select data-idx="'+i+'">'+opcionTodas+opcionesHtml+'</select>'+
-        avisoEscrita+
+      var opcionTodas = p.opciones.length > 1 ? '<option value="todas">— Generar TODAS (' + p.opciones.length + ') —</option>' : '';
+      var desc = descripcionDe(p.material);
+      var aviso = p.vfabEscrita ? '<div class="expl-resolver-aviso">No se encontró la VFab «' + esc(p.vfabEscrita) + '» registrada para este material — elige una de las reales.</div>' : '';
+      return '<div class="expl-resolver-row">' +
+        '<span class="mat-code">' + esc(p.material) + '</span>' +
+        '<span class="expl-resolver-desc" title="' + esc(desc) + '">' + esc(desc) + '</span>' +
+        '<select data-idx="' + i + '" aria-label="Versión de Fabricación para ' + esc(p.material) + '">' + opcionTodas + opcionesHtml + '</select>' +
+        aviso +
       '</div>';
     }).join('');
   }
 
+  /* Regla en bloque para el paso 2: con cientos de materiales ambiguos, elegir uno por uno
+     no es práctico. Solo cambia los selectores (no ejecuta nada): la persona puede seguir
+     ajustando filas sueltas antes de confirmar. */
+  bulkSelect.addEventListener('change', function(){
+    var modo = bulkSelect.value;
+    if(!modo){ bulkOk.textContent = ''; return; }
+    var selects = resolverBody.querySelectorAll('select');
+    Array.prototype.forEach.call(selects, function(sel){
+      var p = filasPendientes[parseInt(sel.getAttribute('data-idx'), 10)];
+      if(modo === 'todas'){
+        sel.value = p.opciones.length > 1 ? 'todas' : '0';
+      } else if(modo === 'primeraLibre'){
+        var libre = 0;
+        for(var i = 0; i < p.opciones.length; i++){ if(!p.opciones[i].bloqueada){ libre = i; break; } }
+        sel.value = String(libre);
+      } else {
+        sel.value = '0';
+      }
+    });
+    bulkOk.textContent = 'Aplicado a ' + fmt(selects.length) + ' fila(s).';
+  });
+
   confirmarBtn.addEventListener('click', function(){
-    var a = getApi();
+    if(ejecutando) return;
     Array.prototype.forEach.call(resolverBody.querySelectorAll('select'), function(sel){
-      var idx = parseInt(sel.getAttribute('data-idx'), 10);
-      var p = filasPendientes[idx];
+      var p = filasPendientes[parseInt(sel.getAttribute('data-idx'), 10)];
       if(sel.value === 'todas'){
         p.opciones.forEach(function(o){
           filasResueltas.push({ material: p.material, alt: o.alt, vfabIndex: o.idx, version: o.version, centro: o.centro });
@@ -7624,12 +7755,16 @@ function formatFechaHoraCorta(d){
         filasResueltas.push({ material: p.material, alt: elegida.alt, vfabIndex: elegida.idx, version: elegida.version, centro: elegida.centro });
       }
     });
+    filasPendientes = [];
     resolverCard.style.display = 'none';
     ejecutarExplosion();
   });
 
   /* ---------- Ejecución masiva ---------- */
-  var resultadosExplosion = []; // { material, alt, version, arbol:[nodos], motivoDetencion, detalleMotivo }
+  var resultadosExplosion = []; // { material, alt, version, centro, vfabIndex, descripcion, arbol:[nodos], motivo }
+  var ejecutando = false;
+  var PAGINA = 200;
+  var estadoVista = { filtro:'todos', texto:'', visibles:PAGINA, expandidos:{} };
 
   /* Determina POR QUÉ se detuvo un árbol, mirando el ÚLTIMO nodo construido y también si
      hay algún bloqueo Z en cualquier etapa/componente intermedio (no solo en el final),
@@ -7657,7 +7792,7 @@ function formatFechaHoraCorta(d){
     }
     // 3) ¿Alguna lista inactiva en la cadena?
     for(var k=0;k<arbol.length;k++){
-      if(arbol[k].estado && String(arbol[k].estado).trim().toLowerCase()==='inactivo'){
+      if(esListaInactiva(arbol[k])){
         return { tipo:'inactiva', texto:'Lista inactiva en ' + arbol[k].etapa + ' (' + arbol[k].material + ')' };
       }
     }
@@ -7679,102 +7814,357 @@ function formatFechaHoraCorta(d){
     return { tipo:'incoherencia', texto:'El retroceso se detuvo antes de llegar a Fabricación (sin un bloqueo Z, VFab o inactividad identificable) — revisar advertencias del árbol.' };
   }
 
-  function ejecutarExplosion(){
-    var a = getApi();
-    resultadosExplosion = [];
-    filasResueltas.forEach(function(f){
-      var elecciones = {};
-      elecciones[a.keyOf(f.material, f.alt)] = f.vfabIndex;
-      var res = a.construirTodosLosArboles(f.material, f.alt, elecciones);
-      var arbol = res.arboles[0] || [];
-      var motivo = determinarMotivo(arbol);
-      resultadosExplosion.push({
-        material: f.material, alt: f.alt, version: f.version, centro: f.centro, vfabIndex: f.vfabIndex,
-        arbol: arbol, motivo: motivo
-      });
-    });
-    renderResultados();
+  function esListaInactiva(n){
+    return !!(n.estado && String(n.estado).trim().toLowerCase() === 'inactivo');
   }
 
-  /* ---------- Renderizado de resultados ---------- */
+  function ponerOcupado(si){
+    ejecutando = si;
+    runBtn.disabled = si;
+    confirmarBtn.disabled = si;
+  }
+
+  function mostrarProgreso(hechos, total){
+    progressBar.style.width = (total ? Math.round(hechos * 100 / total) : 100) + '%';
+    progressText.textContent = 'Generando árboles… ' + fmt(hechos) + ' / ' + fmt(total);
+  }
+
+  /* Se genera por tramos de ~40 ms, cediendo el control al navegador entre uno y otro: con
+     miles de árboles la página nunca se congela y la barra de progreso avanza de verdad.
+     Un mismo Material+Alternativa+VFab pedido dos veces (por ejemplo, escrito con y sin
+     VFab en la lista) se genera una sola vez. */
+  function ejecutarExplosion(){
+    var a = getApi();
+    var bomIdx = a.buildBomIndex();
+    var trabajos = [], vistos = {};
+    filasResueltas.forEach(function(f){
+      var clave = a.keyOf(f.material, f.alt) + '|' + f.vfabIndex;
+      if(vistos[clave]) return;
+      vistos[clave] = true;
+      trabajos.push(f);
+    });
+
+    resultadosExplosion = [];
+    estadoVista = { filtro:'todos', texto:'', visibles:PAGINA, expandidos:{} };
+    searchInput.value = '';
+    ponerOcupado(true);
+    progressWrap.hidden = false;
+    mostrarProgreso(0, trabajos.length);
+
+    var i = 0;
+    function tramo(){
+      var t0 = performance.now();
+      while(i < trabajos.length && performance.now() - t0 < 40){
+        var f = trabajos[i++];
+        var elecciones = {};
+        elecciones[a.keyOf(f.material, f.alt)] = f.vfabIndex;
+        var res = a.construirTodosLosArboles(f.material, f.alt, elecciones);
+        var arbol = res.arboles[0] || [];
+        var entradaBom = bomIdx.byKey[a.keyOf(f.material, f.alt)];
+        resultadosExplosion.push({
+          material: f.material, alt: f.alt, version: f.version, centro: f.centro, vfabIndex: f.vfabIndex,
+          descripcion: entradaBom ? (entradaBom.descripcion || '') : '',
+          arbol: arbol, motivo: determinarMotivo(arbol)
+        });
+      }
+      mostrarProgreso(i, trabajos.length);
+      if(i < trabajos.length){ setTimeout(tramo, 0); return; }
+      ponerOcupado(false);
+      progressWrap.hidden = true;
+      renderResultados();
+      resultCard.scrollIntoView({ behavior:'smooth', block:'start' });
+    }
+    tramo();
+  }
+
+  /* ---------- Resultados ---------- */
   var MOTIVO_LABELS = {
-    ok: 'OK — completo', z: 'Bloqueo Z', vfab: 'VFab bloqueada', inactiva: 'Lista inactiva', incoherencia: 'Incoherencia de datos'
+    ok: 'Completo', z: 'Bloqueo Z', vfab: 'VFab bloqueada', inactiva: 'Lista inactiva',
+    incoherencia: 'Incoherencia de datos', noresuelto: 'No resuelto'
   };
+  var ORDEN_FILTROS = ['todos', 'ok', 'z', 'vfab', 'inactiva', 'incoherencia', 'noresuelto'];
 
   function renderResultados(){
     emptyState.style.display = 'none';
     resultCard.style.display = 'block';
-    var a = getApi();
 
-    var conteoPorMotivo = {};
-    resultadosExplosion.forEach(function(r){ conteoPorMotivo[r.motivo.tipo] = (conteoPorMotivo[r.motivo.tipo]||0)+1; });
-    var resumenTxt = resultadosExplosion.length + ' árbol(es) generado(s)';
-    resumenBadge.textContent = resumenTxt;
-    resumenBadge.className = 'badge ' + (conteoPorMotivo.z || conteoPorMotivo.incoherencia ? 'badge-suspendido' : 'badge-activo');
+    var conteo = { todos: resultadosExplosion.length };
+    resultadosExplosion.forEach(function(r){ conteo[r.motivo.tipo] = (conteo[r.motivo.tipo] || 0) + 1; });
+    if(noResueltos.length) conteo.noresuelto = noResueltos.length;
 
-    var filasHtml = resultadosExplosion.map(function(r, i){
-      var ultimaEtapa = r.arbol.length ? r.arbol[r.arbol.length-1].etapa : '—';
-      var totalEtapas = r.arbol.length;
-      var alcanceTxt = totalEtapas + ' etapa(s), hasta ' + a.esc(ultimaEtapa);
-      return '<tr class="expl-result-row" data-idx="'+i+'">'+
-        '<td><span class="chev">▶</span></td>'+
-        '<td title="'+a.esc(r.material)+'"><span class="mat-code" style="font-family:var(--mono); font-weight:700; color:var(--navy-deep);">'+a.esc(r.material)+'</span></td>'+
-        '<td>'+a.esc(r.alt)+'</td>'+
-        '<td style="font-family:var(--mono);">'+a.esc(r.version)+'</td>'+
-        '<td title="'+alcanceTxt+'">'+alcanceTxt+'</td>'+
-        '<td title="'+a.esc(r.motivo.texto)+'"><span class="expl-motivo '+r.motivo.tipo+'">'+MOTIVO_LABELS[r.motivo.tipo]+'</span></td>'+
-        '<td><button type="button" class="expl-play-btn" data-idx="'+i+'" title="Abrir este árbol en la pestaña Árbol del producto">'+
-          '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7Z"/></svg>'+
-        '</button></td>'+
-      '</tr>'+
-      '<tr class="expl-detalle-row" id="explDetalle'+i+'" style="display:none;"><td colspan="7"><div class="expl-detalle-inner" id="explDetalleInner'+i+'"></div></td></tr>';
+    resumenBadge.textContent = fmt(resultadosExplosion.length) + ' árbol(es)' + (noResueltos.length ? ' · ' + fmt(noResueltos.length) + ' no resuelto(s)' : '');
+    resumenBadge.className = 'badge ' + ((conteo.z || conteo.incoherencia || noResueltos.length) ? 'badge-suspendido' : 'badge-activo');
+
+    // Si solo hay códigos no resueltos (ningún árbol), se abre directo esa lista.
+    if(!resultadosExplosion.length && noResueltos.length) estadoVista.filtro = 'noresuelto';
+
+    chipsWrap.innerHTML = ORDEN_FILTROS.filter(function(t){ return t === 'todos' || conteo[t]; }).map(function(t){
+      var etiqueta = t === 'todos' ? 'Todos' : '<span class="expl-motivo ' + t + '">' + MOTIVO_LABELS[t] + '</span>';
+      return '<button type="button" class="expl-chip' + (estadoVista.filtro === t ? ' activo' : '') + '" data-filtro="' + t + '">' +
+        etiqueta + ' <span class="n">' + fmt(conteo[t] || 0) + '</span></button>';
     }).join('');
 
-    resultBody.innerHTML = '<div class="expl-result-table-wrap"><table class="expl-result-table">'+
-      '<colgroup><col class="col-chev"><col class="col-mat"><col class="col-alt"><col class="col-vfab"><col class="col-alcance"><col class="col-motivo"><col class="col-play"></colgroup>'+
-      '<thead><tr><th></th><th>Material</th><th>Alt.</th><th>VFab</th><th>Alcance</th><th>Motivo de detención</th><th>Ver árbol</th></tr></thead>'+
-      '<tbody>'+filasHtml+'</tbody>'+
-    '</table></div>';
-
-    Array.prototype.forEach.call(resultBody.querySelectorAll('.expl-result-row'), function(tr){
-      tr.addEventListener('click', function(){
-        var idx = parseInt(tr.getAttribute('data-idx'), 10);
-        var detalleRow = document.getElementById('explDetalle'+idx);
-        var detalleInner = document.getElementById('explDetalleInner'+idx);
-        var abierto = detalleRow.style.display !== 'none';
-        if(!abierto && !detalleInner.getAttribute('data-loaded')){
-          detalleInner.innerHTML = renderArbolResumenTexto(resultadosExplosion[idx]);
-          detalleInner.setAttribute('data-loaded', '1');
-        }
-        detalleRow.style.display = abierto ? 'none' : 'table-row';
-        tr.classList.toggle('expandido', !abierto);
-      });
-    });
-
-    // Botón "play": abre el árbol de esa fila directamente en la vista gráfica completa
-    // de "Árbol del producto" (diagrama, selector de combinaciones, componentes
-    // desplegables…), fijando exactamente la misma Versión de Fabricación ya resuelta
-    // aquí — sin volver a preguntar nada, y sin disparar el toggle de expandir de la fila.
-    Array.prototype.forEach.call(resultBody.querySelectorAll('.expl-play-btn'), function(btn){
-      btn.addEventListener('click', function(e){
-        e.stopPropagation();
-        var idx = parseInt(btn.getAttribute('data-idx'), 10);
-        var r = resultadosExplosion[idx];
-        if(a.abrirArbolDesdeExplosion){
-          a.abrirArbolDesdeExplosion(r.material, r.alt, r.vfabIndex);
-        }
-      });
-    });
+    renderTabla();
   }
 
-  /* ---------- Exportación a Excel ---------- */
+  function renderTabla(){
+    ocultarNota();
+    if(estadoVista.filtro === 'noresuelto'){ renderNoResueltos(); return; }
+
+    var q = estadoVista.texto.trim().toUpperCase();
+    var indices = [];
+    resultadosExplosion.forEach(function(r, i){
+      if(estadoVista.filtro !== 'todos' && r.motivo.tipo !== estadoVista.filtro) return;
+      if(q && (r.material + ' ' + r.version + ' ' + r.descripcion).toUpperCase().indexOf(q) === -1) return;
+      indices.push(i);
+    });
+    if(!indices.length){
+      resultBody.innerHTML = '<div class="expl-vacio-filtro">' + (resultadosExplosion.length ? 'Ningún árbol coincide con este filtro.' : 'No se generó ningún árbol.') + '</div>';
+      return;
+    }
+
+    var visibles = indices.slice(0, estadoVista.visibles);
+    var restantes = indices.length - visibles.length;
+    resultBody.innerHTML = '<div class="expl-result-table-wrap"><table class="expl-result-table">' +
+      '<colgroup><col class="col-chev"><col class="col-mat"><col class="col-desc"><col class="col-alt"><col class="col-vfab"><col class="col-alcance"><col class="col-motivo"><col class="col-play"></colgroup>' +
+      '<thead><tr><th></th><th>Material</th><th>Descripción</th><th>Alt.</th><th>VFab</th><th>Alcance</th><th>Estado</th><th>Árbol</th></tr></thead>' +
+      '<tbody>' + visibles.map(function(i){ return filaResultadoHtml(resultadosExplosion[i], i); }).join('') + '</tbody>' +
+    '</table></div>' +
+    '<div class="expl-mas-row">Mostrando ' + fmt(visibles.length) + ' de ' + fmt(indices.length) +
+      (restantes > 0 ? ' <button type="button" class="btn btn-ghost btn-compact" data-accion="mas">Mostrar ' + fmt(Math.min(PAGINA, restantes)) + ' más</button>' : '') +
+      (restantes > PAGINA ? ' <button type="button" class="btn btn-ghost btn-compact" data-accion="todo">Mostrar todos</button>' : '') +
+    '</div>';
+  }
+
+  function filaResultadoHtml(r, i){
+    var ultimaEtapa = r.arbol.length ? r.arbol[r.arbol.length-1].etapa : '';
+    var alcance = r.arbol.length + ' etapa(s) · hasta ' + (ultimaEtapa || '—');
+    var abierto = !!estadoVista.expandidos[i];
+    return '<tr class="expl-result-row' + (abierto ? ' expandido' : '') + '" data-idx="' + i + '">' +
+      '<td class="expl-chev-td"><span class="chev">▶</span></td>' +
+      '<td><span style="font-family:var(--mono); font-weight:700; color:var(--navy-deep);">' + esc(r.material) + '</span></td>' +
+      '<td class="expl-desc" title="' + esc(r.descripcion) + '">' + esc(r.descripcion || '—') + '</td>' +
+      '<td>' + esc(r.alt) + '</td>' +
+      '<td style="font-family:var(--mono);">' + esc(r.version) + '</td>' +
+      '<td class="expl-alcance" title="' + esc(alcance) + '">' + esc(alcance) + '</td>' +
+      '<td data-nota="' + esc(r.motivo.texto) + '"><span class="expl-motivo ' + r.motivo.tipo + '">' + MOTIVO_LABELS[r.motivo.tipo] + '</span></td>' +
+      '<td><button type="button" class="expl-play-btn" data-idx="' + i + '" title="Abrir este árbol en la pestaña Árbol del producto">' +
+        '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7Z"/></svg>' +
+      '</button></td>' +
+    '</tr>' +
+    '<tr class="expl-detalle-row"' + (abierto ? '' : ' style="display:none;"') + '><td colspan="8"><div class="expl-detalle-inner">' + (abierto ? renderDetalle(r) : '') + '</div></td></tr>';
+  }
+
+  function renderNoResueltos(){
+    var q = estadoVista.texto.trim().toUpperCase();
+    var lista = noResueltos.filter(function(n){ return !q || n.material.toUpperCase().indexOf(q) !== -1; });
+    if(!lista.length){
+      resultBody.innerHTML = '<div class="expl-vacio-filtro">Ningún código coincide con la búsqueda.</div>';
+      return;
+    }
+    resultBody.innerHTML =
+      '<p class="expl-nota-inline">Estos códigos de la lista no generaron árbol. <button type="button" class="btn btn-ghost btn-compact" data-accion="copiar">Copiar códigos</button></p>' +
+      '<div class="expl-result-table-wrap"><table class="expl-result-table" style="min-width:0;">' +
+        '<colgroup><col style="width:130px;"><col></colgroup>' +
+        '<thead><tr><th>Material</th><th>Motivo</th></tr></thead><tbody>' +
+        lista.map(function(n){
+          return '<tr><td style="font-family:var(--mono); font-weight:700; color:var(--navy-deep);">' + esc(n.material) + '</td><td style="white-space:normal;">' + esc(n.motivo) + '</td></tr>';
+        }).join('') +
+      '</tbody></table></div>';
+  }
+
+  function copiarNoResueltos(btn){
+    var texto = noResueltos.map(function(n){ return n.material; }).join('\n');
+    var listo = function(){
+      btn.textContent = 'Copiado';
+      setTimeout(function(){ btn.textContent = 'Copiar códigos'; }, 1600);
+    };
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(texto).then(listo, function(){ window.prompt('Copia los códigos:', texto); });
+    } else {
+      window.prompt('Copia los códigos:', texto);
+    }
+  }
+
+  /* Un solo manejador para toda la tabla (en vez de uno por fila): con miles de filas,
+     registrar dos listeners por cada una era trabajo de más en cada render. */
+  resultBody.addEventListener('click', function(e){
+    var play = e.target.closest('.expl-play-btn');
+    if(play){
+      // Botón "play": abre el árbol de esa fila en la vista gráfica completa de "Árbol del
+      // producto", fijando exactamente la misma Versión de Fabricación ya resuelta aquí.
+      e.stopPropagation();
+      var r = resultadosExplosion[parseInt(play.getAttribute('data-idx'), 10)];
+      var a = getApi();
+      if(r && a.abrirArbolDesdeExplosion) a.abrirArbolDesdeExplosion(r.material, r.alt, r.vfabIndex);
+      return;
+    }
+    var accion = e.target.closest('[data-accion]');
+    if(accion){
+      var tipo = accion.getAttribute('data-accion');
+      if(tipo === 'copiar'){ copiarNoResueltos(accion); return; }
+      estadoVista.visibles = tipo === 'todo' ? Infinity : estadoVista.visibles + PAGINA;
+      renderTabla();
+      return;
+    }
+    var fila = e.target.closest('.expl-result-row');
+    if(!fila) return;
+    var idx = parseInt(fila.getAttribute('data-idx'), 10);
+    var detalle = fila.nextElementSibling;
+    var abierto = !!estadoVista.expandidos[idx];
+    if(abierto){
+      delete estadoVista.expandidos[idx];
+    } else {
+      estadoVista.expandidos[idx] = true;
+      var inner = detalle.querySelector('.expl-detalle-inner');
+      if(!inner.innerHTML) inner.innerHTML = renderDetalle(resultadosExplosion[idx]);
+    }
+    detalle.style.display = abierto ? 'none' : 'table-row';
+    fila.classList.toggle('expandido', !abierto);
+    ocultarNota();
+  });
+
+  chipsWrap.addEventListener('click', function(e){
+    var chip = e.target.closest('[data-filtro]');
+    if(!chip) return;
+    estadoVista.filtro = chip.getAttribute('data-filtro');
+    estadoVista.visibles = PAGINA;
+    Array.prototype.forEach.call(chipsWrap.querySelectorAll('.expl-chip'), function(c){ c.classList.toggle('activo', c === chip); });
+    renderTabla();
+  });
+
+  var busquedaTimer = null;
+  searchInput.addEventListener('input', function(){
+    clearTimeout(busquedaTimer);
+    busquedaTimer = setTimeout(function(){
+      estadoVista.texto = searchInput.value;
+      estadoVista.visibles = PAGINA;
+      renderTabla();
+    }, 150);
+  });
+
+  /* ---------- Detalle de un árbol ---------- */
+  /* Reparte los avisos de cada etapa en la celda a la que se refieren, para mostrarlos como
+     comentario de esa celda (triangulito en la esquina, texto al pasar el cursor) en vez de
+     cajas de texto: bloqueo Z e inactividad van en el Material, VFab bloqueada / estimada /
+     incoherente en la VFab, y el resto (inconsistencias de alternativa, fin natural,
+     componentes faltantes, ciclos) en la Etapa. */
+  function notasDeNodo(n){
+    var a = getApi();
+    var notas = { etapa:[], etapaInfo:[], material:[], vfab:[], vfabInfo:[] };
+    if(n.bloqueoZ) notas.material.push('Bloqueo ' + n.bloqueoZ + ' en el Maestro de Materiales' + (a.isZ3Code(n.bloqueoZ) ? ' (bloqueo definitivo).' : '.'));
+    if(esListaInactiva(n)) notas.material.push('Lista de materiales INACTIVA en SAP.');
+    if(n.vfabBloqueada) notas.vfab.push('Versión de Fabricación BLOQUEADA.');
+    (n.advertencias || []).forEach(function(w){
+      // Los tres avisos de bloqueo ya quedaron arriba, redactados más corto.
+      if(w.indexOf('figura BLOQUEADA') !== -1 || w.indexOf('figura con estado') !== -1 || w.indexOf('INACTIVA') !== -1) return;
+      if(w.indexOf('INCONSISTENCIA') !== -1) notas.etapa.push(w);
+      else if(w.indexOf('ESTIMADO') !== -1) notas.vfabInfo.push(w);
+      else if(w.indexOf('Versión de Fabricación') !== -1) notas.vfab.push(w);
+      else notas.etapa.push(w);
+    });
+    if(n.finNaturalInfo) notas.etapaInfo.push(n.finNaturalInfo);
+    return notas;
+  }
+
+  /* notas = avisos de problema (triángulo rojo); notasInfo = solo informativos (triángulo
+     gris). Sin ninguno, es una celda normal. */
+  function celdaConNota(contenidoHtml, notas, notasInfo, clase){
+    notas = notas || [];
+    notasInfo = notasInfo || [];
+    var todas = notas.concat(notasInfo);
+    if(!todas.length) return '<td' + (clase ? ' class="' + clase + '"' : '') + '>' + contenidoHtml + '</td>';
+    var cls = (clase ? clase + ' ' : '') + 'expl-nota' + (notas.length ? '' : ' expl-nota-info');
+    return '<td class="' + cls + '" tabindex="0" data-nota="' + esc(todas.join('\n\n')) + '">' + contenidoHtml + '</td>';
+  }
+
+  function renderDetalle(r){
+    var a = getApi();
+    if(!r.arbol.length) return '<p class="expl-det-motivo">No se pudo reconstruir ninguna etapa para este material.</p>';
+    var hayNotas = false;
+    var filas = r.arbol.map(function(n){
+      var notas = notasDeNodo(n);
+      var comps = n.componentes || [];
+      var compsZ = [];
+      comps.forEach(function(c){
+        var z = a.estadoZDelMaterial(c.componente);
+        if(z) compsZ.push(c.componente + (c.denominacion ? ' · ' + c.denominacion : '') + ' — ' + z);
+      });
+      var notaComps = compsZ.length ? ['Componentes con bloqueo Z en el Maestro de Materiales:\n' + compsZ.join('\n')] : [];
+      if(notas.etapa.length || notas.etapaInfo.length || notas.material.length || notas.vfab.length || notas.vfabInfo.length || notaComps.length) hayNotas = true;
+      return '<tr>' +
+        celdaConNota(esc(n.etapa || '—'), notas.etapa, notas.etapaInfo) +
+        celdaConNota(esc(n.material), notas.material, null, 'mono') +
+        '<td class="mono">' + esc(n.alt) + '</td>' +
+        celdaConNota(esc(n.version || '—'), notas.vfab, notas.vfabInfo, 'mono') +
+        '<td class="expl-det-desc">' + esc(n.descripcion || '') + '</td>' +
+        celdaConNota(fmt(comps.length), notaComps, null, 'mono') +
+      '</tr>';
+    }).join('');
+    return '<p class="expl-det-motivo">' + esc(r.motivo.texto) + '</p>' +
+      '<table class="expl-det-table"><thead><tr><th>Etapa</th><th>Material</th><th>Alt.</th><th>VFab</th><th>Descripción</th><th>Comp.</th></tr></thead>' +
+      '<tbody>' + filas + '</tbody></table>' +
+      (hayNotas ? '<p class="expl-det-hint">Las celdas con un triangulito en la esquina tienen un comentario: pasa el cursor (o tócalas) para leerlo.</p>' : '');
+  }
+
+  /* Un único globo de comentario, flotante (position:fixed) para que nunca lo recorte el
+     scroll horizontal de la tabla. Aparece al pasar el cursor o al enfocar/tocar la celda. */
+  var notaPop = document.createElement('div');
+  notaPop.className = 'expl-nota-pop';
+  notaPop.setAttribute('role', 'tooltip');
+  document.body.appendChild(notaPop);
+  var notaActual = null;
+
+  function mostrarNota(el){
+    if(notaActual === el) return;
+    notaActual = el;
+    notaPop.textContent = el.getAttribute('data-nota');
+    notaPop.classList.add('visible');
+    var caja = el.getBoundingClientRect();
+    var ancho = notaPop.offsetWidth, alto = notaPop.offsetHeight;
+    var left = Math.min(Math.max(8, caja.left), window.innerWidth - ancho - 8);
+    var top = caja.bottom + 6;
+    if(top + alto > window.innerHeight - 8) top = Math.max(8, caja.top - alto - 6);
+    notaPop.style.left = left + 'px';
+    notaPop.style.top = top + 'px';
+  }
+  function ocultarNota(){
+    notaActual = null;
+    notaPop.classList.remove('visible');
+  }
+  resultBody.addEventListener('mouseover', function(e){
+    var el = e.target.closest('[data-nota]');
+    if(el) mostrarNota(el); else ocultarNota();
+  });
+  resultBody.addEventListener('mouseleave', ocultarNota);
+  resultBody.addEventListener('focusin', function(e){
+    var el = e.target.closest('[data-nota]');
+    if(el) mostrarNota(el);
+  });
+  resultBody.addEventListener('focusout', ocultarNota);
+  window.addEventListener('scroll', ocultarNota, true);
+
   /* ---------- Exportación a Excel (formato "EXPLOSIÓN" a nivel de componente) ---------- */
   exportBtn.addEventListener('click', async function(){
-    if(!await window.__conXLSX()) return;
-    if(resultadosExplosion.length === 0){
+    if(resultadosExplosion.length === 0 && noResueltos.length === 0){
       alert('No hay resultados para exportar.');
       return;
     }
+    var contenidoOriginal = exportBtn.innerHTML;
+    exportBtn.disabled = true;
+    exportBtn.lastChild.textContent = ' Exportando…';
+    try{
+      if(!await window.__conXLSX()) return;
+      // Un respiro para que se pinte "Exportando…" antes del trabajo pesado.
+      await new Promise(function(r){ setTimeout(r, 30); });
+      exportarExcel();
+    } finally {
+      exportBtn.disabled = false;
+      exportBtn.innerHTML = contenidoOriginal;
+    }
+  });
+
+  function exportarExcel(){
     var a = getApi();
 
     // Formato fijo acordado: una fila por CADA COMPONENTE de cada etapa (no una fila por
@@ -7786,13 +8176,18 @@ function formatFechaHoraCorta(d){
 
     // Metadatos por fila para poder aplicar color/comentario después de tener toda la
     // hoja armada: qué celdas de esa fila deben marcarse y con qué texto de comentario.
-    // rowMeta[i] = { lmatBloqueada:bool, vfabBloqueada:bool, comentarioComponente:string|null }
+    // rowMeta[i] = { lmatBloqueada:bool, vfabBloqueada:bool, zTexto:string|null, inicioEtapa:bool }
+    // inicioEtapa marca la primera fila de cada etapa: ahí (y solo ahí) va el comentario de
+    // LMAT/VFAB bloqueada, que es de la etapa entera — repetirlo en cada componente llenaba
+    // la hoja de triangulitos idénticos (~88% de todos los comentarios) y, como la librería
+    // arma los comentarios con un costo que crece al cuadrado, hacía que exportar unos
+    // miles de productos tardara casi un minuto. El amarillo sí se mantiene en cada fila.
     var rowMeta = [];
 
     resultadosExplosion.forEach(function(r){
       if(r.arbol.length === 0) return; // sin etapas reconstruidas: no hay nada que desglosar a nivel de componente
       r.arbol.forEach(function(n){
-        var lmatBloqueada = n.estado && String(n.estado).trim().toLowerCase() === 'inactivo';
+        var lmatBloqueada = esListaInactiva(n);
         var vfabBloqueada = !!n.vfabBloqueada;
         var comps = n.componentes || [];
 
@@ -7800,11 +8195,11 @@ function formatFechaHoraCorta(d){
           // Etapa sin componentes cargados: igual se deja constancia de la etapa en una
           // fila (sin desglose), para no perder de vista que esa etapa existe en el árbol.
           aoa.push([r.centro||'—', r.material, r.version, n.etapa||'—', n.material, n.version, '—', '—', '(sin componentes cargados)', '', '']);
-          rowMeta.push({ lmatBloqueada: lmatBloqueada, vfabBloqueada: vfabBloqueada, zTexto: null });
+          rowMeta.push({ lmatBloqueada: lmatBloqueada, vfabBloqueada: vfabBloqueada, zTexto: null, inicioEtapa: true });
           return;
         }
 
-        comps.forEach(function(c){
+        comps.forEach(function(c, ci){
           var estadoComp = a.estadoZDelMaterial(c.componente);
           aoa.push([
             r.centro||'—', r.material, r.version, n.etapa||'—', n.material, n.version,
@@ -7813,16 +8208,12 @@ function formatFechaHoraCorta(d){
           rowMeta.push({
             lmatBloqueada: lmatBloqueada,
             vfabBloqueada: vfabBloqueada,
-            zTexto: estadoComp ? ('BLOQUEO ' + estadoComp) : null
+            zTexto: estadoComp ? ('BLOQUEO ' + estadoComp) : null,
+            inicioEtapa: ci === 0
           });
         });
       });
     });
-
-    if(aoa.length === 1){
-      alert('No hay ninguna etapa con datos para exportar en este formato.');
-      return;
-    }
 
     var ws = XLSX.utils.aoa_to_sheet(aoa);
     ws['!cols'] = [
@@ -7845,17 +8236,25 @@ function formatFechaHoraCorta(d){
     // F=VFab (5), H=Componente (7).
     var COL_MATERIAL_HIJO = 4, COL_VFAB = 5, COL_COMPONENTE = 7;
 
-    for(var c=0; c<headers.length; c++){
-      var addr = XLSX.utils.encode_cell({r:0, c});
-      ws[addr].s = { fill: HEADER_FILL, font: HEADER_FONT, alignment:{ vertical:'center', horizontal:'center', wrapText:true }, border: CELL_BORDER };
+    function estilarEncabezado(hoja, totalColumnas){
+      for(var c=0; c<totalColumnas; c++){
+        var addr = XLSX.utils.encode_cell({r:0, c:c});
+        hoja[addr].s = { fill: HEADER_FILL, font: HEADER_FONT, alignment:{ vertical:'center', horizontal:'center', wrapText:true }, border: CELL_BORDER };
+      }
     }
+    estilarEncabezado(ws, headers.length);
 
     /* Agrega (o añade a) el comentario de una celda, en el formato que espera
-       xlsx-js-style/SheetJS: un array de {a: autor, t: texto} en la propiedad "c". */
+       xlsx-js-style/SheetJS: un array de {a: autor, t: texto} en la propiedad "c".
+       Se marca OCULTO: así Excel lo muestra como un comentario de verdad (triangulito rojo
+       en la esquina, texto al pasar el cursor). Sin "hidden", la librería escribe la nota
+       como visible y Excel dibuja cada una como un cuadro de texto siempre abierto encima
+       de la hoja, tapando las celdas vecinas. */
     function agregarComentario(addr, texto){
       if(!ws[addr]) ws[addr] = { t:'s', v:'' };
       if(!ws[addr].c) ws[addr].c = [];
       ws[addr].c.push({ a:'SAP MM & LM', t: texto });
+      ws[addr].c.hidden = true;
     }
 
     rowMeta.forEach(function(meta, i){
@@ -7871,12 +8270,12 @@ function formatFechaHoraCorta(d){
       if(meta.lmatBloqueada){
         var addrLmat = XLSX.utils.encode_cell({r:rIdx, c:COL_MATERIAL_HIJO});
         ws[addrLmat].s = { fill: FILL_AMARILLO, font: FONT_BOLD, border: CELL_BORDER, alignment:{ vertical:'center', wrapText:true } };
-        agregarComentario(addrLmat, 'LMAT BLOQUEADA');
+        if(meta.inicioEtapa) agregarComentario(addrLmat, 'LMAT BLOQUEADA');
       }
       if(meta.vfabBloqueada){
         var addrVfab = XLSX.utils.encode_cell({r:rIdx, c:COL_VFAB});
         ws[addrVfab].s = { fill: FILL_AMARILLO, font: FONT_BOLD, border: CELL_BORDER, alignment:{ vertical:'center', wrapText:true } };
-        agregarComentario(addrVfab, 'VFAB BLOQUEADA');
+        if(meta.inicioEtapa) agregarComentario(addrVfab, 'VFAB BLOQUEADA');
       }
       if(meta.zTexto){
         var addrComp = XLSX.utils.encode_cell({r:rIdx, c:COL_COMPONENTE});
@@ -7889,25 +8288,53 @@ function formatFechaHoraCorta(d){
     var wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'EXPLOSION');
 
+    // RESUMEN: una fila por árbol, para filtrar en Excel cuáles quedaron completos y cuáles
+    // se detuvieron (y dónde) sin tener que recorrer miles de filas de componentes.
+    var resumenHeaders = ['Material','Descripción','Alt.','VFab','Centro','Etapas','Llega hasta','Estado','Detalle'];
+    var resumenAoa = [resumenHeaders].concat(resultadosExplosion.map(function(r){
+      var ultima = r.arbol.length ? (r.arbol[r.arbol.length-1].etapa || '') : '';
+      return [r.material, r.descripcion || '', r.alt, r.version, r.centro || '', r.arbol.length, ultima, MOTIVO_LABELS[r.motivo.tipo], r.motivo.texto];
+    }));
+    var wsResumen = XLSX.utils.aoa_to_sheet(resumenAoa);
+    wsResumen['!cols'] = [{wch:13},{wch:42},{wch:6},{wch:8},{wch:8},{wch:7},{wch:26},{wch:20},{wch:80}];
+    wsResumen['!autofilter'] = { ref: 'A1:' + XLSX.utils.encode_col(resumenHeaders.length-1) + resumenAoa.length };
+    estilarEncabezado(wsResumen, resumenHeaders.length);
+    XLSX.utils.book_append_sheet(wb, wsResumen, 'RESUMEN');
+
+    if(noResueltos.length){
+      var noResAoa = [['Material','Motivo']].concat(noResueltos.map(function(n){ return [n.material, n.motivo]; }));
+      var wsNoRes = XLSX.utils.aoa_to_sheet(noResAoa);
+      wsNoRes['!cols'] = [{wch:14},{wch:90}];
+      estilarEncabezado(wsNoRes, 2);
+      XLSX.utils.book_append_sheet(wb, wsNoRes, 'NO RESUELTOS');
+    }
+
     var legendAoa = [
       ['Leyenda — Explosión masiva'],
-      ['Amarillo con comentario "LMAT BLOQUEADA" (sobre la columna "Material hijo") — esa lista de materiales figura INACTIVA en SAP. Pasa el cursor sobre la celda para ver el comentario.'],
-      ['Amarillo con comentario "VFAB BLOQUEADA" (sobre la columna "VFab" de esa etapa) — esa Versión de Fabricación figura bloqueada en el archivo de Versiones de Fabricación cargado.'],
+      ['Amarillo en la columna "Material hijo" (comentario "LMAT BLOQUEADA" en la primera fila de esa etapa) — esa lista de materiales figura INACTIVA en SAP.'],
+      ['Amarillo en la columna "VFab" de la etapa (comentario "VFAB BLOQUEADA" en la primera fila de esa etapa) — esa Versión de Fabricación figura bloqueada en el archivo de Versiones de Fabricación cargado.'],
       ['Amarillo con comentario "BLOQUEO Z1 / Z2 / Z3" (sobre la columna "Componente") — ese componente figura con ese estado en el Maestro de Materiales.'],
+      ['Los comentarios no tapan la hoja: la celda comentada muestra un triangulito rojo en la esquina y el texto aparece al pasar el cursor sobre ella.'],
       [''],
       ['Nota: cada bloque de filas con el mismo "Material padre" + "VFab" (columnas B y C) corresponde a UN árbol completo, desglosado componente por componente en cada etapa. Si el material de partida tenía más de una Versión de Fabricación disponible, aparece un bloque completo por cada una, uno detrás del otro.'],
+      ['Hoja RESUMEN: una fila por árbol generado, con hasta qué etapa llegó y su estado. Hoja NO RESUELTOS (si existe): códigos de la lista que no generaron árbol, con el motivo.'],
     ];
     var wsLegend = XLSX.utils.aoa_to_sheet(legendAoa);
     wsLegend['!cols'] = [{wch:120}];
+    var FONT_NOTA = { italic:true, sz:10, name:'Calibri', color:{ rgb:'5C6B77' } };
     wsLegend['A1'].s = { font:{ bold:true, sz:12, name:'Calibri' } };
     wsLegend['A2'].s = { fill:FILL_AMARILLO, font:FONT_BOLD };
     wsLegend['A3'].s = { fill:FILL_AMARILLO, font:FONT_BOLD };
     wsLegend['A4'].s = { fill:FILL_AMARILLO, font:FONT_BOLD };
-    wsLegend['A6'].s = { font:{ italic:true, sz:10, name:'Calibri', color:{ rgb:'5C6B77' } } };
+    wsLegend['A5'].s = { font:FONT_NOTA };
+    wsLegend['A7'].s = { font:FONT_NOTA };
+    wsLegend['A8'].s = { font:FONT_NOTA };
     XLSX.utils.book_append_sheet(wb, wsLegend, 'Leyenda');
 
-    XLSX.writeFile(wb, 'EXPLOSION_'+new Date().toISOString().slice(0,10).replace(/-/g,'_')+'.xlsx');
-  });
+    // compression:true — la librería guarda el .xlsx SIN comprimir por defecto: con 1.000
+    // productos el archivo pesaba ~17 MB (casi todo XML repetitivo de filas y comentarios).
+    XLSX.writeFile(wb, 'EXPLOSION_'+new Date().toISOString().slice(0,10).replace(/-/g,'_')+'.xlsx', { compression: true });
+  }
 
   var explHeader = document.getElementById('explosionHeaderTop');
   var explToggle = document.getElementById('explosionHeaderToggle');

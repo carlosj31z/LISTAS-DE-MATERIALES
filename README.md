@@ -46,9 +46,14 @@ grep -n "APP [0-9] —" index.html
    retrocediendo por los componentes de posición 0010 de cada lista. Soporta
    múltiples combinaciones cuando hay ambigüedad de Versión de Fabricación.
 4. **Explosión masiva** — corre el mismo motor del Árbol del producto sobre
-   varios materiales pegados desde Excel a la vez, exporta a Excel con formato
-   "EXPLOSION" (una fila por componente, con comentarios y celdas amarillas en
-   bloqueos).
+   una lista de materiales sin límite de cantidad (pegada desde Excel en un
+   cuadro de texto, o importada de un .xlsx/.csv: columna A = Material,
+   B = VFab opcional). Los materiales con varias VFab se resuelven en bloque
+   ("generar todas" / "primera no bloqueada"); los árboles se generan por tramos
+   con barra de progreso; los resultados se filtran por estado y se buscan.
+   Exporta a Excel con formato "EXPLOSION" (una fila por componente, celdas
+   amarillas en bloqueos con comentarios ocultos —triangulito rojo, texto al
+   pasar el cursor—) más hojas RESUMEN (una fila por árbol) y NO RESUELTOS.
 5. **Chat con IA** (botón flotante, esquina inferior derecha, en MM y BOM) —
    filtrado de las tablas con preguntas en lenguaje natural, vía Gemini. Ver
    sección 5 — **tiene un bug pendiente sin resolver**.

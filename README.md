@@ -21,6 +21,8 @@ variables sueltas del scope interno).
 
 ```
 <script>  Bloque 0-2: utilidades globales, cliente Supabase, selección de celdas
+<script>  Inicio de sesión (Supabase Auth)            → window.__auth
+<script>  Registro de cargas de archivos + avisos      → window.__cargas, window.__aviso
 <script>  Bloque 3: coordinador de la ventana de carga inicial
 <script>  APP 1 — Maestro de Materiales      (prefijo de ids: "mm")
 <script>  APP 2 — Explorador BOM / Listas de Materiales  (prefijo: "bom")
@@ -62,6 +64,35 @@ grep -n "APP [0-9] —" index.html
 5. **Chat con IA** (botón flotante, esquina inferior derecha, en MM y BOM) —
    filtrado de las tablas con preguntas en lenguaje natural, vía Gemini. Ver
    sección 5 — **tiene un bug pendiente sin resolver**.
+
+### Inicio de sesión
+La app abre con una pantalla de login (correo + contraseña) y no pide ningún
+dato a Supabase hasta que hay sesión: `__sbFetchAll` y `__sbGetLastCargaDate`
+esperan `window.__auth.listo`.
+- La cuenta vive en **Supabase Auth** (Authentication → Users). La contraseña
+  **nunca** se escribe en el código; se cambia desde Supabase.
+- Solo un correo puede entrar: el código guarda su huella SHA-256
+  (`CORREO_PERMITIDO_SHA256`), no el correo en claro. Para cambiarlo, calcular
+  `sha256(correo en minúsculas)` y reemplazar la constante.
+- Hay **dos clientes**: `window.__sb` (datos, clave pública, sin sesión — las
+  tablas se leen y guardan exactamente como antes) y `window.__sbAuth` (solo
+  login; guarda la sesión en el navegador con la clave `sb-listas-sesion`).
+- El login es una barrera de la interfaz: las tablas siguen siendo legibles
+  con la clave pública (también las usa `/api/arbol`). Cerrarlas de verdad
+  requeriría reglas RLS en Supabase y ajustar `/api/arbol`.
+
+### Registro de cargas ("Archivos" en la barra superior)
+`window.__cargas` sabe, para cada archivo (Maestro, Listas, Componentes, VFab,
+Programa), si está cargado, cuántas filas tiene, cuándo se cargó y —mientras se
+carga— qué archivo es y en qué paso va (leyendo / borrando la carga anterior /
+guardando N de M). La fecha sale del `carga_id` (`c<timestamp>_…`) de cada
+tabla; `mm_programa_produccion` no tiene esa columna, así que la fecha va en
+`data._cargadoEn`. Cada flujo de carga solo informa:
+`iniciar(id, nombreArchivo) → paso(id, texto, progreso) → terminar(id, {filas, fecha}) | cancelar(id) | fallar(id, msg)`.
+Los botones de carga se marcan con `data-carga-btn="<id>"` (estructura
+`.carga-btn-txt` + `.carga-btn-n`) y los textos de "Cargado el …" con
+`data-carga-meta="<id>"`; el registro los pinta, ningún flujo debe cambiar su
+`innerHTML`. Los resultados se muestran con `window.__aviso(texto, 'error'?)`.
 
 ---
 

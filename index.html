@@ -575,6 +575,144 @@ window.__conXLSX = async function(){
   .global-loading-text{ font-family:var(--body); font-size:14px; font-weight:500; color:var(--ink); margin:0; text-align:center; }
   .global-loading-subtext{ font-family:var(--body); font-size:12px; color:var(--ink-faint); margin:0; text-align:center; }
 
+  /* ================= INICIO DE SESIÓN ================= */
+  /* Cubre toda la aplicación (por encima incluso de la ventana de carga inicial) hasta que
+     hay una sesión válida: los datos de Supabase recién se piden después de iniciar sesión. */
+  .login-overlay{
+    position:fixed; inset:0; z-index:10050; display:flex; align-items:center; justify-content:center; padding:24px 16px;
+    background-image:
+      radial-gradient(ellipse 900px 420px at 15% -10%, rgba(79,209,197,0.22), transparent 60%),
+      repeating-linear-gradient(90deg, rgba(255,255,255,0.035) 0px, rgba(255,255,255,0.035) 1px, transparent 1px, transparent 28px),
+      linear-gradient(160deg, var(--navy-deep) 0%, var(--navy) 100%);
+    transition:opacity .3s ease, visibility .3s ease; overflow-y:auto;
+  }
+  .login-overlay.oculto{ opacity:0; visibility:hidden; pointer-events:none; }
+  .login-card{
+    width:100%; max-width:400px; background:var(--surface); border-radius:18px; box-shadow:var(--shadow-lg);
+    padding:34px 32px 26px; box-sizing:border-box;
+  }
+  .login-eyebrow{
+    font-family:var(--mono); font-size:10px; letter-spacing:.14em; text-transform:uppercase; color:var(--teal);
+    display:flex; align-items:center; gap:8px; margin:0 0 16px;
+  }
+  .login-eyebrow .dot{ width:6px; height:6px; border-radius:50%; background:#4FD1C5; box-shadow:0 0 0 3px rgba(79,209,197,0.18); }
+  .login-card h1{ font-family:var(--display); font-size:24px; margin:0 0 4px; color:var(--ink); }
+  .login-sub{ font-size:13px; color:var(--ink-soft); margin:0 0 22px; line-height:1.45; }
+  .login-verificando{ display:flex; align-items:center; gap:10px; font-size:13px; color:var(--ink-soft); padding:6px 0 10px; }
+  .login-verificando .win11-spinner{ width:20px; height:20px; border-width:2px; }
+  .login-form[hidden], .login-verificando[hidden]{ display:none; }
+  .login-field{ display:flex; flex-direction:column; gap:6px; margin-bottom:14px; }
+  .login-field label{ font-size:12px; font-weight:600; color:var(--ink-soft); }
+  .login-input-wrap{ position:relative; }
+  .login-field input{
+    width:100%; box-sizing:border-box; padding:11px 12px; border:1px solid var(--border); border-radius:10px;
+    font-size:14px; font-family:var(--body); color:var(--ink); background:var(--surface);
+    transition:border-color .15s, box-shadow .15s;
+  }
+  .login-field input:focus{ outline:none; border-color:var(--teal); box-shadow:0 0 0 3px var(--teal-soft); }
+  .login-field input.con-ojo{ padding-right:46px; }
+  .login-ojo{
+    position:absolute; right:6px; top:50%; transform:translateY(-50%); width:34px; height:34px; border:none;
+    background:transparent; color:var(--ink-faint); border-radius:8px; cursor:pointer; display:flex; align-items:center; justify-content:center;
+  }
+  .login-ojo:hover, .login-ojo.activo{ color:var(--ink); background:var(--surface-alt); }
+  .login-ojo svg{ width:18px; height:18px; }
+  .login-error{ display:none; margin:2px 0 14px; padding:10px 12px; border-radius:10px; background:var(--brick-soft); color:var(--brick); font-size:12.5px; line-height:1.45; }
+  .login-error.visible{ display:block; }
+  .login-error.info{ background:var(--amber-soft); color:var(--amber); }
+  .login-reenviar{ display:block; margin-top:8px; padding:0; border:none; background:none; color:inherit; font:inherit; font-weight:600; text-decoration:underline; cursor:pointer; }
+  .login-reenviar:disabled{ opacity:.6; cursor:default; text-decoration:none; }
+  .login-btn{ width:100%; justify-content:center; padding:12px 14px; font-size:14px; border-radius:10px; }
+  .login-btn[disabled]{ opacity:.75; cursor:progress; transform:none; }
+  .login-btn .login-spin{ width:15px; height:15px; border-radius:50%; border:2px solid rgba(255,255,255,0.35); border-top-color:#fff; animation:win11-spin .8s linear infinite; display:none; }
+  .login-btn.cargando .login-spin{ display:inline-block; }
+  .login-pie{ margin:18px 0 0; text-align:center; font-size:11px; color:var(--ink-faint); line-height:1.5; }
+
+  /* ================= BARRA SUPERIOR: sesión y archivos ================= */
+  .suite-top{ display:flex; align-items:center; justify-content:space-between; gap:12px; margin:0 0 12px; flex-wrap:wrap; }
+  .suite-top .suite-eyebrow{ margin:0; }
+  .suite-acciones{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+  .suite-chip{
+    display:inline-flex; align-items:center; gap:7px; padding:6px 11px; border-radius:20px; cursor:pointer;
+    border:1px solid rgba(255,255,255,0.18); background:rgba(255,255,255,0.06); color:#DCE7EA;
+    font-family:var(--body); font-size:12px; transition:background .15s, border-color .15s;
+  }
+  .suite-chip:hover{ background:rgba(255,255,255,0.12); border-color:rgba(255,255,255,0.3); }
+  .suite-chip svg{ width:14px; height:14px; flex:none; }
+  .suite-chip .cargas-resumen{ font-family:var(--mono); font-size:11px; color:#9FE0DA; }
+  .suite-usuario{ font-family:var(--mono); font-size:11px; color:#9DB3BD; max-width:230px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .cargas-dot{ width:8px; height:8px; border-radius:50%; background:#7FBBBA; flex:none; }
+  .cargas-dot.ok{ background:#4FD1C5; box-shadow:0 0 0 3px rgba(79,209,197,0.2); }
+  .cargas-dot.falta{ background:#EAD98C; box-shadow:0 0 0 3px rgba(234,217,140,0.2); }
+  .cargas-dot.cargando{ background:transparent; border:2px solid rgba(79,209,197,0.35); border-top-color:#4FD1C5; width:10px; height:10px; box-sizing:border-box; animation:win11-spin .8s linear infinite; }
+
+  /* Panel "Archivos cargados": qué hay, cuándo se cargó cada uno y qué se está cargando. */
+  .cargas-panel{
+    position:fixed; top:14px; right:14px; z-index:9000; width:420px; max-width:calc(100vw - 28px);
+    max-height:calc(100vh - 28px); overflow-y:auto; box-sizing:border-box;
+    background:var(--surface); border:1px solid var(--border); border-radius:14px; box-shadow:var(--shadow-lg);
+    padding:14px 16px 12px;
+  }
+  .cargas-panel[hidden]{ display:none; }
+  .cargas-panel-head{ display:flex; align-items:center; justify-content:space-between; margin-bottom:6px; }
+  .cargas-panel-head h3{ font-family:var(--display); font-size:16px; margin:0; color:var(--ink); }
+  .cargas-cerrar{ width:30px; height:30px; border:none; border-radius:8px; background:transparent; color:var(--ink-faint); cursor:pointer; display:flex; align-items:center; justify-content:center; }
+  .cargas-cerrar:hover{ background:var(--surface-alt); color:var(--ink); }
+  .cargas-cerrar svg{ width:16px; height:16px; }
+  .carga-item{ display:flex; gap:11px; padding:11px 0; border-top:1px solid var(--border-soft); align-items:flex-start; }
+  .carga-item:first-child{ border-top:none; }
+  .carga-icono{
+    width:28px; height:28px; border-radius:50%; flex:none; display:flex; align-items:center; justify-content:center;
+    background:var(--surface-alt); color:var(--ink-faint); margin-top:1px;
+  }
+  .carga-icono svg{ width:15px; height:15px; }
+  .carga-item.listo .carga-icono{ background:var(--teal-soft); color:var(--teal); }
+  .carga-item.vacio .carga-icono{ background:var(--amber-soft); color:var(--amber); }
+  .carga-item.error .carga-icono{ background:var(--brick-soft); color:var(--brick); }
+  .carga-item.cargando .carga-icono{ background:transparent; border:2.5px solid var(--teal-soft); border-top-color:var(--teal); box-sizing:border-box; animation:win11-spin .8s linear infinite; }
+  .carga-item.cargando .carga-icono svg{ display:none; }
+  .carga-cuerpo{ flex:1; min-width:0; }
+  .carga-nombre{ font-size:13.5px; font-weight:600; color:var(--ink); }
+  .carga-detalle{ font-size:12px; color:var(--ink-soft); margin-top:2px; line-height:1.45; }
+  .carga-detalle .mono{ font-family:var(--mono); }
+  .carga-paso{ font-size:12px; color:var(--teal); margin-top:3px; }
+  .carga-archivo{ font-family:var(--mono); font-size:11px; color:var(--ink-faint); margin-top:2px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .carga-barra{ height:4px; border-radius:4px; background:var(--surface-alt); overflow:hidden; margin-top:6px; }
+  .carga-barra i{ display:block; height:100%; width:0; background:var(--teal); transition:width .15s linear; }
+  .carga-barra.indeterminada i{ width:35%; animation:cargaVaiven 1.1s ease-in-out infinite alternate; }
+  @keyframes cargaVaiven{ from{ transform:translateX(-10%); } to{ transform:translateX(200%); } }
+  .carga-accion{ flex:none; }
+  .cargas-pie{ margin:8px 0 0; font-size:11px; color:var(--ink-faint); line-height:1.45; }
+
+  /* Botones de carga con estado: sin cargar / cargando (con avance) / cargado. */
+  .carga-btn .carga-btn-spin{ display:none; width:12px; height:12px; border-radius:50%; border:2px solid currentColor; border-top-color:transparent; animation:win11-spin .8s linear infinite; flex:none; }
+  .carga-btn.cargando .carga-btn-spin{ display:inline-block; }
+  .carga-btn.cargando .carga-btn-ico{ display:none; }
+  .carga-btn .carga-btn-n{ font-family:var(--mono); font-size:11px; opacity:.9; }
+  .carga-btn.vacio{ border-style:dashed; }
+  .carga-meta{ font-family:var(--mono); font-size:11px; color:var(--ink-faint); }
+  .carga-meta.cargando{ color:var(--teal); }
+
+  /* Avisos no bloqueantes (en vez de ventanas de alerta para los resultados de carga). */
+  .avisos-pila{ position:fixed; top:14px; left:50%; transform:translateX(-50%); z-index:10100; display:flex; flex-direction:column; gap:8px; width:min(460px, calc(100vw - 28px)); pointer-events:none; }
+  .aviso{
+    pointer-events:auto; display:flex; gap:10px; align-items:flex-start; padding:11px 12px 11px 14px; border-radius:12px;
+    background:var(--navy-deep); color:#EAF1F3; box-shadow:var(--shadow-lg); font-size:12.5px; line-height:1.5; white-space:pre-line;
+    opacity:0; transform:translateY(-6px); transition:opacity .18s ease, transform .18s ease;
+  }
+  .aviso.visible{ opacity:1; transform:none; }
+  .aviso .aviso-ico{ width:16px; height:16px; flex:none; margin-top:2px; color:#4FD1C5; }
+  .aviso.error .aviso-ico{ color:#F2A196; }
+  .aviso .aviso-txt{ flex:1; }
+  .aviso .aviso-x{ border:none; background:transparent; color:#9DB3BD; cursor:pointer; padding:0 2px; font-size:16px; line-height:1; }
+  @media (max-width: 720px){
+    .suite-top{ padding:0 16px; }
+    .suite-usuario{ display:none; }
+    .cargas-panel{ top:auto; bottom:12px; right:12px; left:12px; width:auto; max-width:none; max-height:75vh; }
+    .login-card{ padding:28px 22px 22px; }
+    .suite-top .suite-eyebrow{ padding:0; }
+  }
+
   @media (max-width: 720px){
     header.top{padding:22px 16px 18px;}
     header.top.top-collapsed h1.title{ font-size:15.5px; }
@@ -1500,6 +1638,51 @@ window.__conXLSX = async function(){
 </head>
 <body>
 
+<!-- ========================= INICIO DE SESIÓN ========================= -->
+<div class="login-overlay" id="loginOverlay">
+  <div class="login-card" role="dialog" aria-labelledby="loginTitulo">
+    <p class="login-eyebrow"><span class="dot"></span>SAP · Maestro de Materiales &amp; Listas</p>
+    <h1 id="loginTitulo">Iniciar sesión</h1>
+    <p class="login-sub">Ingresa con tu correo y contraseña para ver y cargar la información.</p>
+    <div class="login-verificando" id="loginVerificando">
+      <div class="win11-spinner"></div><span>Verificando sesión…</span>
+    </div>
+    <form class="login-form" id="loginForm" novalidate hidden>
+      <div class="login-field">
+        <label for="loginCorreo">Correo</label>
+        <input type="email" id="loginCorreo" autocomplete="username" inputmode="email" placeholder="tu.correo@ejemplo.com" required>
+      </div>
+      <div class="login-field">
+        <label for="loginClave">Contraseña</label>
+        <div class="login-input-wrap">
+          <input type="password" id="loginClave" class="con-ojo" autocomplete="current-password" placeholder="••••••••" required>
+          <button type="button" class="login-ojo" id="loginOjo" aria-label="Mostrar contraseña" title="Mostrar u ocultar la contraseña">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+          </button>
+        </div>
+      </div>
+      <div class="login-error" id="loginError" role="alert"></div>
+      <button type="submit" class="btn btn-primary login-btn" id="loginBtn"><span class="login-spin"></span><span id="loginBtnTexto">Ingresar</span></button>
+    </form>
+    <p class="login-pie">La sesión queda abierta en este navegador hasta que cierres sesión.</p>
+  </div>
+</div>
+
+<!-- Avisos no bloqueantes (resultados de carga) -->
+<div class="avisos-pila" id="avisosPila" aria-live="polite"></div>
+
+<!-- ========================= ARCHIVOS CARGADOS ========================= -->
+<div class="cargas-panel" id="cargasPanel" role="dialog" aria-labelledby="cargasTitulo" hidden>
+  <div class="cargas-panel-head">
+    <h3 id="cargasTitulo">Archivos cargados</h3>
+    <button type="button" class="cargas-cerrar" id="cargasCerrar" aria-label="Cerrar" title="Cerrar">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg>
+    </button>
+  </div>
+  <div id="cargasLista"></div>
+  <p class="cargas-pie">Fecha y hora de la última carga guardada de cada archivo. Se ven igual desde cualquier equipo.</p>
+</div>
+
 <!-- ========================= VENTANA DE CARGA INICIAL (estilo Windows 11) ========================= -->
 <div class="global-loading-overlay" id="globalLoadingOverlay">
   <div class="global-loading-card">
@@ -1511,7 +1694,19 @@ window.__conXLSX = async function(){
 
 <!-- ========================= BARRA DE PESTAÑAS DE LA SUITE ========================= -->
 <div class="suite-bar">
-  <p class="suite-eyebrow"><span class="dot"></span>SAP · Maestro de Materiales &amp; Listas de materiales</p>
+  <div class="suite-top">
+    <p class="suite-eyebrow"><span class="dot"></span>SAP · Maestro de Materiales &amp; Listas de materiales</p>
+    <div class="suite-acciones">
+      <button type="button" class="suite-chip" id="cargasBtn" title="Ver qué archivos están cargados y cuándo se cargó cada uno">
+        <span class="cargas-dot" id="cargasDot"></span>Archivos <span class="cargas-resumen" id="cargasResumen"></span>
+      </button>
+      <span class="suite-usuario" id="sesionUsuario"></span>
+      <button type="button" class="suite-chip" id="sesionSalirBtn" title="Cerrar sesión">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+        Salir
+      </button>
+    </div>
+  </div>
   <div class="suite-tabs">
     <button class="suite-tab active" data-tab="mm" id="tabBtnMM">Maestro de Materiales <span class="tab-badge" id="tabBadgeMM">0</span></button>
     <button class="suite-tab" data-tab="bom" id="tabBtnBOM">Listas de Materiales <span class="tab-badge" id="tabBadgeBOM">0</span></button>
@@ -1547,14 +1742,15 @@ window.__conXLSX = async function(){
       </svg>
       <h2>Suelta aquí tu export de SAP</h2>
       <p>Acepta el .xlsx generado desde el maestro de materiales (transacción MM03 / MM60 y similares). El archivo se procesa en tu navegador &mdash; no se envía a ningún servidor.</p>
-      <button class="btn btn-success" id="mmBtnSelect" type="button">Seleccionar archivo</button>
+      <button class="btn btn-success carga-btn" id="mmBtnSelect" type="button" data-carga-btn="mm" data-carga-label="Seleccionar archivo" data-carga-sin-conteo="1"><span class="carga-btn-spin"></span><span class="carga-btn-txt">Seleccionar archivo</span><span class="carga-btn-n"></span></button>
       <input type="file" id="mmFileInput" accept=".xlsx,.xls">
       <p class="dz-error" id="mmDzError"></p>
     </div>
 
     <div class="filebar" id="mmFilebar">
       <span class="fname"><span class="dot"></span><span id="mmFnameText"></span></span>
-      <button class="btn btn-ghost" id="mmBtnChange" type="button">Cambiar archivo</button>
+      <span class="carga-meta" data-carga-meta="mm"></span>
+      <button class="btn btn-ghost carga-btn" id="mmBtnChange" type="button" data-carga-btn="mm" data-carga-label="Cambiar archivo" data-carga-sin-conteo="1"><span class="carga-btn-spin"></span><span class="carga-btn-txt">Cambiar archivo</span><span class="carga-btn-n"></span></button>
     </div>
 
     <div class="toolbar-row" id="mmToolbar" style="display:none; margin-top:14px;">
@@ -1654,21 +1850,21 @@ window.__conXLSX = async function(){
       </div>
 
       <input type="file" id="bomFileInput" accept=".xlsx,.xls,.csv">
-      <button class="btn btn-success btn-compact" id="bomLoadExcelBtn" title="Cargar el export de SAP de Listas de Materiales">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-        Excel
+      <button class="btn btn-success btn-compact carga-btn" id="bomLoadExcelBtn" data-carga-btn="bom" data-carga-label="Listas" title="Cargar el export de SAP de Listas de Materiales">
+        <svg class="carga-btn-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg><span class="carga-btn-spin"></span>
+        <span class="carga-btn-txt">Listas</span><span class="carga-btn-n"></span>
       </button>
 
       <input type="file" id="bomComponentesFileInput" accept=".xlsx,.xls,.csv">
-      <button class="btn btn-amber btn-compact" id="bomLoadComponentesBtn" title="Cargar el export de SAP con los componentes de cada lista de materiales (Material, Lista mat.alternat., Componente, Denominación, Cantidad, Unidad…)">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M20 7h-9M14 17H5M17 3l4 4-4 4M7 21l-4-4 4-4"/></svg>
-        Componentes
+      <button class="btn btn-amber btn-compact carga-btn" id="bomLoadComponentesBtn" data-carga-btn="comp" data-carga-label="Componentes" title="Cargar el export de SAP con los componentes de cada lista de materiales (Material, Lista mat.alternat., Componente, Denominación, Cantidad, Unidad…)">
+        <svg class="carga-btn-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M20 7h-9M14 17H5M17 3l4 4-4 4M7 21l-4-4 4-4"/></svg><span class="carga-btn-spin"></span>
+        <span class="carga-btn-txt">Componentes</span><span class="carga-btn-n"></span>
       </button>
 
       <input type="file" id="bomVfabFileInput" accept=".xlsx,.xls,.csv">
-      <button class="btn btn-amber btn-compact" id="bomLoadVfabBtn" title="Cargar el export de SAP con las Versiones de Fabricación (Material, Versión fabricación, Lista mat.alternat., Utilización LMat, Bloqueo de versión de fabricación…)">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M8 2v4M16 2v4M3 10h18"/><path d="M9 15l2 2 4-4"/></svg>
-        Vfab
+      <button class="btn btn-amber btn-compact carga-btn" id="bomLoadVfabBtn" data-carga-btn="vfab" data-carga-label="VFab" title="Cargar el export de SAP con las Versiones de Fabricación (Material, Versión fabricación, Lista mat.alternat., Utilización LMat, Bloqueo de versión de fabricación…)">
+        <svg class="carga-btn-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M8 2v4M16 2v4M3 10h18"/><path d="M9 15l2 2 4-4"/></svg><span class="carga-btn-spin"></span>
+        <span class="carga-btn-txt">VFab</span><span class="carga-btn-n"></span>
       </button>
 
       <div class="toolbar-divider"></div>
@@ -1760,15 +1956,16 @@ window.__conXLSX = async function(){
       <p class="prog-panel-hint">Carga el Excel del Programa de Producción (con los códigos de PT programados, sus secciones y filas/columnas ocultas) para filtrar las Listas de Materiales que están en él.</p>
 
       <input type="file" id="bomProgramaFileInput" accept=".xlsx,.xls">
-      <button type="button" class="prog-upload-btn" id="bomProgramaUploadBtn">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-        Cargar Excel del programa
+      <button type="button" class="prog-upload-btn carga-btn" id="bomProgramaUploadBtn" data-carga-btn="prog" data-carga-label="Cargar Excel del programa" data-carga-sin-conteo="1">
+        <svg class="carga-btn-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg><span class="carga-btn-spin"></span>
+        <span class="carga-btn-txt">Cargar Excel del programa</span><span class="carga-btn-n"></span>
       </button>
 
       <div class="prog-status" id="bomProgramaStatus">
         <span class="dot"></span>
         <span id="bomProgramaStatusText">Sin programa cargado</span>
       </div>
+      <div class="carga-meta" data-carga-meta="prog" style="margin-top:6px;"></div>
 
       <div class="prog-filter-row">
         <label class="prog-toggle">
@@ -2068,7 +2265,17 @@ function formatFechaHoraCorta(d){
   var SUPABASE_ANON_KEY = 'sb_publishable_2Qm4zOkdHeSMOYvatAyNiA_K5crlvFc';
   try{
     if(window.supabase && window.supabase.createClient){
-      window.__sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+      /* Dos clientes a propósito. window.__sb (datos) sigue hablando con las tablas
+         exactamente como siempre, con la clave pública y SIN sesión: si llevara el token
+         del usuario, Supabase evaluaría sus reglas de acceso con otro rol y la app podría
+         dejar de leer o guardar. window.__sbAuth solo maneja el inicio de sesión
+         (correo + contraseña de Supabase Auth) y guarda la sesión en este navegador. */
+      window.__sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+        auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false, storageKey: 'sb-listas-datos' }
+      });
+      window.__sbAuth = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+        auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true, storageKey: 'sb-listas-sesion' }
+      });
     } else {
       console.error('No se pudo cargar la librería de Supabase.');
     }
@@ -2105,6 +2312,8 @@ function formatFechaHoraCorta(d){
 
   window.__sbFetchAll = async function(table, selectCols){
     if(!window.__sb) return [];
+    // Ningún dato se pide antes de iniciar sesión (ver módulo INICIO DE SESIÓN).
+    if(window.__auth) await window.__auth.listo;
 
     var total = null;
     try{
@@ -2180,6 +2389,7 @@ function formatFechaHoraCorta(d){
      la tabla está vacía o el carga_id no tiene el formato esperado. */
   window.__sbGetLastCargaDate = async function(table){
     if(!window.__sb) return null;
+    if(window.__auth) await window.__auth.listo;
     try{
       var res = await window.__sb.from(table).select('carga_id').limit(1);
       if(res.error || !res.data || res.data.length===0) return null;
@@ -2194,6 +2404,428 @@ function formatFechaHoraCorta(d){
       return null;
     }
   };
+})();
+</script>
+
+<script>
+/* ============================================================
+   INICIO DE SESIÓN (Supabase Auth)
+
+   La cuenta vive en Supabase Auth: la contraseña nunca está escrita en este archivo. Solo
+   un correo puede entrar, y se compara por su huella SHA-256 para no dejarlo a la vista en
+   el código. Mientras no haya sesión, window.__auth.listo no se resuelve y ningún dato se
+   pide a Supabase (__sbFetchAll y __sbGetLastCargaDate lo esperan antes de consultar).
+   ============================================================ */
+(function(){
+  var CORREO_PERMITIDO_SHA256 = '94e2e8af921cdcba26359d92eacfc9d2645851c2db10379f4f03b458db02fe83';
+  var overlay = document.getElementById('loginOverlay');
+  var verificando = document.getElementById('loginVerificando');
+  var form = document.getElementById('loginForm');
+  var inCorreo = document.getElementById('loginCorreo');
+  var inClave = document.getElementById('loginClave');
+  var ojo = document.getElementById('loginOjo');
+  var btn = document.getElementById('loginBtn');
+  var btnTexto = document.getElementById('loginBtnTexto');
+  var errorEl = document.getElementById('loginError');
+  var auth = window.__sbAuth ? window.__sbAuth.auth : null;
+
+  var resolverListo;
+  var listo = new Promise(function(r){ resolverListo = r; });
+  var sesionActual = null;
+
+  async function huella(texto){
+    var buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(texto));
+    return Array.prototype.map.call(new Uint8Array(buf), function(b){ return ('0' + b.toString(16)).slice(-2); }).join('');
+  }
+  async function correoPermitido(correo){
+    if(!correo || !window.crypto || !crypto.subtle) return false;
+    return (await huella(String(correo).trim().toLowerCase())) === CORREO_PERMITIDO_SHA256;
+  }
+
+  function mostrarError(msg, tipo){
+    errorEl.textContent = msg;
+    errorEl.className = 'login-error visible' + (tipo === 'info' ? ' info' : '');
+  }
+  // Correo sin confirmar: además del mensaje, un enlace para que Supabase envíe de nuevo el
+  // correo de confirmación (al abrirlo se vuelve a esta página y la sesión se abre sola).
+  function ofrecerReenvio(correo){
+    var b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'login-reenviar';
+    b.textContent = 'Reenviar correo de confirmación';
+    b.addEventListener('click', async function(){
+      b.disabled = true;
+      b.textContent = 'Enviando…';
+      try{
+        var r = await auth.resend({ type:'signup', email: correo, options:{ emailRedirectTo: location.origin + location.pathname } });
+        if(r.error) throw r.error;
+        b.textContent = 'Listo: revisa ' + correo + ' (también Spam).';
+      }catch(err){
+        b.disabled = false;
+        b.textContent = /rate limit|too many|seconds/i.test(String(err && err.message)) ? 'Ya se envió hace poco; espera unos minutos y reintenta.' : 'No se pudo enviar; reintenta.';
+      }
+    });
+    errorEl.appendChild(b);
+  }
+  function limpiarError(){ errorEl.className = 'login-error'; errorEl.textContent = ''; }
+  function ocupado(si){
+    btn.disabled = si;
+    btn.classList.toggle('cargando', si);
+    btnTexto.textContent = si ? 'Ingresando…' : 'Ingresar';
+  }
+  function mostrarFormulario(){
+    verificando.hidden = true;
+    form.hidden = false;
+    overlay.classList.remove('oculto');
+    setTimeout(function(){ (inCorreo.value ? inClave : inCorreo).focus(); }, 60);
+  }
+  function abrirApp(sesion){
+    sesionActual = sesion;
+    var usuario = document.getElementById('sesionUsuario');
+    if(usuario) usuario.textContent = sesion.user.email;
+    overlay.classList.add('oculto');
+    resolverListo(sesion);
+  }
+
+  function traducirError(err){
+    var m = String((err && (err.message || err.error_description)) || err || '');
+    var codigo = String((err && (err.code || err.error_code)) || '');
+    if(/not confirmed/i.test(m) || codigo === 'email_not_confirmed'){
+      return { msg: 'Tu correo aún no está confirmado. Abre el enlace que Supabase envió a tu bandeja de entrada (revisa también Spam o Promociones) y vuelve a intentar.', tipo: 'info' };
+    }
+    if(/invalid login credentials/i.test(m) || codigo === 'invalid_credentials') return { msg: 'Correo o contraseña incorrectos.' };
+    if(/rate limit|too many/i.test(m) || codigo === 'over_request_rate_limit') return { msg: 'Demasiados intentos seguidos. Espera un minuto y vuelve a intentar.' };
+    if(/fetch|network|load failed/i.test(m)) return { msg: 'No se pudo conectar con el servicio de inicio de sesión. Revisa tu conexión a internet.' };
+    return { msg: 'No se pudo iniciar sesión: ' + m };
+  }
+
+  form.addEventListener('submit', async function(e){
+    e.preventDefault();
+    limpiarError();
+    var correo = inCorreo.value.trim().toLowerCase();
+    var clave = inClave.value;
+    if(!correo || !clave){ mostrarError('Escribe tu correo y tu contraseña.'); return; }
+    if(!auth){ mostrarError('No se pudo cargar el servicio de inicio de sesión. Recarga la página.'); return; }
+    ocupado(true);
+    try{
+      // Un correo distinto ni siquiera se envía a Supabase; el mensaje es el mismo que el de
+      // una contraseña equivocada, para no revelar qué correo es el que tiene acceso.
+      if(!(await correoPermitido(correo))){ mostrarError('Correo o contraseña incorrectos.'); return; }
+      var res = await auth.signInWithPassword({ email: correo, password: clave });
+      if(res.error){
+        var t = traducirError(res.error);
+        mostrarError(t.msg, t.tipo);
+        if(t.tipo === 'info') ofrecerReenvio(correo);
+        return;
+      }
+      inClave.value = '';
+      abrirApp(res.data.session);
+    }catch(err){
+      var t2 = traducirError(err);
+      mostrarError(t2.msg, t2.tipo);
+    }finally{
+      ocupado(false);
+    }
+  });
+
+  ojo.addEventListener('click', function(){
+    var ver = inClave.type === 'password';
+    inClave.type = ver ? 'text' : 'password';
+    ojo.classList.toggle('activo', ver);
+    ojo.setAttribute('aria-label', ver ? 'Ocultar contraseña' : 'Mostrar contraseña');
+    inClave.focus();
+  });
+
+  async function cerrarSesion(){
+    // Sin sesionActual, el aviso SIGNED_OUT de abajo no recarga por su cuenta: una sola recarga.
+    sesionActual = null;
+    try{ if(auth) await auth.signOut(); }catch(e){ console.error(e); }
+    location.reload();
+  }
+  var salirBtn = document.getElementById('sesionSalirBtn');
+  if(salirBtn) salirBtn.addEventListener('click', cerrarSesion);
+
+  // Sesión ya abierta en este navegador, o recién creada al abrir el enlace de confirmación
+  // del correo (Supabase la deja en la URL y el cliente la toma solo).
+  (async function(){
+    if(!auth){
+      mostrarFormulario();
+      mostrarError('No se pudo cargar el servicio de inicio de sesión. Revisa tu conexión y recarga la página.');
+      return;
+    }
+    try{
+      var r = await auth.getSession();
+      var s = r && r.data ? r.data.session : null;
+      if(s && await correoPermitido(s.user && s.user.email)){ abrirApp(s); return; }
+      if(s) await auth.signOut();
+    }catch(e){ console.error('Error verificando la sesión', e); }
+    mostrarFormulario();
+  })();
+
+  // Si la sesión se cierra en otra pestaña (o vence), esta vuelve al inicio de sesión.
+  if(auth) auth.onAuthStateChange(function(evento){
+    if(evento === 'SIGNED_OUT' && sesionActual) location.reload();
+  });
+
+  window.__auth = {
+    listo: listo,
+    cerrarSesion: cerrarSesion,
+    usuario: function(){ return sesionActual && sesionActual.user ? sesionActual.user.email : ''; }
+  };
+})();
+</script>
+
+<script>
+/* ============================================================
+   REGISTRO DE CARGAS DE ARCHIVOS
+
+   Un solo lugar que sabe, para cada uno de los cinco archivos, si está cargado, cuántas
+   filas tiene, cuándo se cargó (fecha guardada en Supabase, la misma desde cualquier
+   equipo) y, mientras se carga, qué archivo es y en qué paso va. Lo muestran el panel
+   "Archivos" de la barra superior, los botones de carga de cada pantalla (atributos
+   data-carga-btn / data-carga-meta) y los avisos de resultado. Cada flujo de carga solo
+   informa: iniciar -> paso(…) -> terminar | cancelar | fallar.
+   ============================================================ */
+(function(){
+  var ARCHIVOS = [
+    { id:'mm',   tabla:'mm_materiales',          nombre:'Maestro de Materiales',    input:'mmFileInput',             unidad:'materiales' },
+    { id:'bom',  tabla:'mm_bom',                 nombre:'Listas de Materiales',     input:'bomFileInput',            unidad:'registros' },
+    { id:'comp', tabla:'mm_bom_componentes',     nombre:'Componentes',              input:'bomComponentesFileInput', unidad:'componentes' },
+    { id:'vfab', tabla:'mm_vfab',                nombre:'Versiones de Fabricación', input:'bomVfabFileInput',        unidad:'versiones' },
+    { id:'prog', tabla:'mm_programa_produccion', nombre:'Programa de Producción',   input:'bomProgramaFileInput',    unidad:'PT programados' }
+  ];
+  var PORID = {};
+  var estado = {};
+  ARCHIVOS.forEach(function(a){ PORID[a.id] = a; estado[a.id] = { fase:'consultando' }; });
+
+  var lista = document.getElementById('cargasLista');
+  var panel = document.getElementById('cargasPanel');
+  var chip = document.getElementById('cargasBtn');
+  var dot = document.getElementById('cargasDot');
+  var resumen = document.getElementById('cargasResumen');
+  var pila = document.getElementById('avisosPila');
+
+  function fmtN(n){ return Number(n || 0).toLocaleString('es-PE'); }
+  function dos(n){ return (n < 10 ? '0' : '') + n; }
+  function fmtFecha(d){ return dos(d.getDate()) + '/' + dos(d.getMonth()+1) + '/' + d.getFullYear() + ' ' + dos(d.getHours()) + ':' + dos(d.getMinutes()); }
+  function hace(d){
+    var s = Math.round((Date.now() - d.getTime()) / 1000);
+    if(s < 60) return 'hace un momento';
+    var m = Math.round(s / 60); if(m < 60) return 'hace ' + m + ' min';
+    var h = Math.round(m / 60); if(h < 24) return 'hace ' + h + ' h';
+    var dd = Math.round(h / 24); return 'hace ' + dd + (dd === 1 ? ' día' : ' días');
+  }
+  function esc(t){
+    return String(t === null || t === undefined ? '' : t).replace(/[&<>"']/g, function(c){
+      return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c];
+    });
+  }
+
+  /* ---------- Avisos no bloqueantes ---------- */
+  function aviso(texto, tipo, ms){
+    if(!pila) return;
+    var el = document.createElement('div');
+    el.className = 'aviso' + (tipo === 'error' ? ' error' : '');
+    el.setAttribute('role', tipo === 'error' ? 'alert' : 'status');
+    el.innerHTML = (tipo === 'error'
+      ? '<svg class="aviso-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>'
+      : '<svg class="aviso-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg>') +
+      '<span class="aviso-txt"></span><button type="button" class="aviso-x" aria-label="Cerrar aviso">&times;</button>';
+    el.querySelector('.aviso-txt').textContent = texto;
+    var quitar = function(){ el.classList.remove('visible'); setTimeout(function(){ if(el.parentNode) el.parentNode.removeChild(el); }, 220); };
+    el.querySelector('.aviso-x').addEventListener('click', quitar);
+    pila.appendChild(el);
+    requestAnimationFrame(function(){ el.classList.add('visible'); });
+    setTimeout(quitar, ms || (tipo === 'error' ? 12000 : 8000));
+  }
+
+  /* ---------- Estado de cada archivo ---------- */
+  async function consultar(a){
+    var sb = window.__sb;
+    var conteo = await sb.from(a.tabla).select('id', { count:'exact', head:true });
+    if(conteo.error) return { error: conteo.error };
+    var fecha = null;
+    if(conteo.count){
+      if(a.id === 'prog'){
+        // Esta tabla no tiene carga_id: la fecha de carga va dentro de cada fila (data._cargadoEn).
+        var r = await sb.from(a.tabla).select('data').limit(1);
+        var d = r.data && r.data[0] && r.data[0].data;
+        fecha = d && d._cargadoEn ? new Date(d._cargadoEn) : null;
+      } else {
+        fecha = await window.__sbGetLastCargaDate(a.tabla);
+      }
+    }
+    return { filas: conteo.count || 0, fecha: fecha };
+  }
+
+  async function refrescar(id){
+    var a = PORID[id];
+    if(!a || !window.__sb) return;
+    if(window.__auth) await window.__auth.listo;
+    if(estado[id].fase === 'cargando') return;
+    try{
+      var r = await consultar(a);
+      if(estado[id].fase === 'cargando') return; // empezó una carga mientras se consultaba
+      if(r.error) estado[id] = { fase:'error', error:'No se pudo consultar su estado' };
+      else estado[id] = r.filas ? { fase:'listo', filas:r.filas, fecha:r.fecha } : { fase:'vacio', filas:0 };
+    }catch(e){
+      console.error('Error consultando el estado de ' + a.tabla, e);
+      estado[id] = { fase:'error', error:'No se pudo consultar su estado' };
+    }
+    render();
+  }
+  function refrescarTodo(){ ARCHIVOS.forEach(function(a){ refrescar(a.id); }); }
+
+  function iniciar(id, archivo){
+    estado[id] = { fase:'cargando', archivo: archivo || '', paso:'Leyendo el archivo…', progreso:null, previo: estado[id] };
+    render();
+  }
+  function paso(id, texto, progreso){
+    var e = estado[id];
+    if(!e || e.fase !== 'cargando') return;
+    e.paso = texto;
+    e.progreso = (progreso === null || progreso === undefined) ? null : Math.max(0, Math.min(1, progreso));
+    render();
+  }
+  function terminar(id, info){
+    var archivo = estado[id] ? estado[id].archivo : '';
+    estado[id] = { fase:'listo', filas: info && info.filas, fecha: (info && info.fecha) || new Date(), archivo: archivo };
+    render();
+  }
+  // Se canceló antes de guardar (archivo vacío, columnas que no corresponden…): lo guardado
+  // no cambió, así que se vuelve a mostrar el estado real de la tabla.
+  function cancelar(id){
+    var e = estado[id];
+    estado[id] = (e && e.previo && e.previo.fase !== 'cargando') ? e.previo : { fase:'consultando' };
+    render();
+    refrescar(id);
+  }
+  // Falló (al leer o a medio guardar): se avisa y se consulta qué quedó en la tabla.
+  function fallar(id, mensaje){
+    if(mensaje) aviso(mensaje, 'error');
+    cancelar(id);
+  }
+
+  /* ---------- Dibujo: panel, chip de la barra, botones y textos de cada pantalla ---------- */
+  var ICONOS = {
+    listo: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg>',
+    vacio: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M12 5v14M5 12h14"/></svg>',
+    error: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M12 7v6M12 17h.01"/></svg>',
+    consultando: '<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="6" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="18" cy="12" r="1.6"/></svg>'
+  };
+
+  function detalle(a, e){
+    if(e.fase === 'listo') return fmtN(e.filas) + ' ' + a.unidad + (e.fecha ? ' · cargado el ' + fmtFecha(e.fecha) + ' (' + hace(e.fecha) + ')' : ' · fecha de carga no registrada');
+    if(e.fase === 'vacio') return 'Sin cargar todavía';
+    if(e.fase === 'error') return e.error || 'No se pudo consultar su estado';
+    if(e.fase === 'consultando') return 'Consultando…';
+    return '';
+  }
+  function textoCorto(e){
+    if(e.progreso !== null && e.progreso !== undefined) return 'Guardando ' + Math.round(e.progreso * 100) + '%';
+    return String(e.paso || 'Cargando').split(' ')[0].replace(/…$/, '') + '…';
+  }
+
+  function render(){
+    if(lista){
+      lista.innerHTML = ARCHIVOS.map(function(a){
+        var e = estado[a.id];
+        var cuerpo = '<div class="carga-nombre">' + esc(a.nombre) + '</div>';
+        if(e.fase === 'cargando'){
+          var pct = e.progreso === null ? null : Math.round(e.progreso * 100);
+          cuerpo += (e.archivo ? '<div class="carga-archivo" title="' + esc(e.archivo) + '">' + esc(e.archivo) + '</div>' : '') +
+            '<div class="carga-paso">' + esc(e.paso || 'Cargando…') + '</div>' +
+            '<div class="carga-barra' + (pct === null ? ' indeterminada' : '') + '"><i style="width:' + (pct === null ? 35 : pct) + '%"></i></div>';
+        } else {
+          cuerpo += '<div class="carga-detalle">' + esc(detalle(a, e)) + '</div>';
+          if(e.fase === 'listo' && e.archivo) cuerpo += '<div class="carga-archivo" title="Archivo cargado en esta sesión">' + esc(e.archivo) + '</div>';
+        }
+        var accion = (e.fase === 'cargando' || e.fase === 'consultando') ? '' :
+          '<button type="button" class="btn ' + (e.fase === 'vacio' ? 'btn-success' : 'btn-ghost') + ' btn-compact" data-cargar="' + a.id + '">' + (e.fase === 'vacio' ? 'Cargar' : 'Actualizar') + '</button>';
+        return '<div class="carga-item ' + e.fase + '"><div class="carga-icono">' + (ICONOS[e.fase] || '') + '</div>' +
+          '<div class="carga-cuerpo">' + cuerpo + '</div><div class="carga-accion">' + accion + '</div></div>';
+      }).join('');
+    }
+
+    var total = ARCHIVOS.length, listos = 0, cargando = 0, consultando = 0;
+    ARCHIVOS.forEach(function(a){
+      var f = estado[a.id].fase;
+      if(f === 'listo') listos++;
+      else if(f === 'cargando') cargando++;
+      else if(f === 'consultando') consultando++;
+    });
+    if(resumen) resumen.textContent = cargando ? 'cargando…' : (consultando ? '' : listos + '/' + total);
+    if(dot) dot.className = 'cargas-dot' + (cargando ? ' cargando' : (consultando ? '' : (listos === total ? ' ok' : ' falta')));
+    if(chip) chip.title = cargando ? 'Hay un archivo cargándose — clic para ver el avance'
+      : (listos === total ? 'Los 5 archivos están cargados — clic para ver cuándo se cargó cada uno'
+      : (total - listos) + ' archivo(s) sin cargar — clic para ver el detalle');
+
+    Array.prototype.forEach.call(document.querySelectorAll('[data-carga-btn]'), pintarBoton);
+    Array.prototype.forEach.call(document.querySelectorAll('[data-carga-meta]'), pintarMeta);
+  }
+
+  function pintarBoton(b){
+    var id = b.getAttribute('data-carga-btn');
+    var a = PORID[id], e = estado[id];
+    if(!a || !e) return;
+    var txt = b.querySelector('.carga-btn-txt');
+    var n = b.querySelector('.carga-btn-n');
+    var etiqueta = b.getAttribute('data-carga-label') || a.nombre;
+    var sinConteo = b.hasAttribute('data-carga-sin-conteo');
+    b.classList.toggle('cargando', e.fase === 'cargando');
+    b.classList.toggle('vacio', e.fase === 'vacio');
+    b.classList.toggle('listo', e.fase === 'listo');
+    if(b.classList.contains('btn-amber')) b.classList.toggle('loaded', e.fase === 'listo');
+    b.disabled = e.fase === 'cargando';
+    if(e.fase === 'cargando'){
+      if(txt) txt.textContent = textoCorto(e);
+      if(n) n.textContent = '';
+      b.title = a.nombre + ': ' + (e.paso || 'cargando…') + (e.archivo ? ' — ' + e.archivo : '');
+      return;
+    }
+    if(txt) txt.textContent = etiqueta;
+    if(n) n.textContent = sinConteo ? '' : (e.fase === 'listo' ? ' (' + fmtN(e.filas) + ')' : (e.fase === 'vacio' ? ' · sin cargar' : ''));
+    b.title = a.nombre + ': ' + detalle(a, e) + '. Clic para ' + (e.fase === 'vacio' ? 'cargar' : 'volver a cargar') + ' el archivo.';
+  }
+
+  function pintarMeta(el){
+    var id = el.getAttribute('data-carga-meta');
+    var e = estado[id];
+    if(!e) return;
+    el.classList.toggle('cargando', e.fase === 'cargando');
+    if(e.fase === 'cargando') el.textContent = (e.paso || 'Cargando…') + (e.archivo ? ' · ' + e.archivo : '');
+    else if(e.fase === 'listo') el.textContent = e.fecha ? 'Cargado el ' + fmtFecha(e.fecha) + ' (' + hace(e.fecha) + ')' : 'Fecha de carga no registrada';
+    else if(e.fase === 'vacio') el.textContent = 'Sin cargar todavía';
+    else el.textContent = '';
+  }
+
+  /* ---------- Panel ---------- */
+  function abrirPanel(){ panel.hidden = false; render(); refrescarTodo(); }
+  function cerrarPanel(){ panel.hidden = true; }
+  if(chip) chip.addEventListener('click', function(){ if(panel.hidden) abrirPanel(); else cerrarPanel(); });
+  document.getElementById('cargasCerrar').addEventListener('click', cerrarPanel);
+  document.addEventListener('keydown', function(e){ if(e.key === 'Escape' && !panel.hidden) cerrarPanel(); });
+  document.addEventListener('mousedown', function(e){
+    if(panel.hidden) return;
+    if(panel.contains(e.target) || (chip && chip.contains(e.target))) return;
+    cerrarPanel();
+  }, true);
+  if(lista) lista.addEventListener('click', function(e){
+    var b = e.target.closest('[data-cargar]');
+    if(!b) return;
+    var a = PORID[b.getAttribute('data-cargar')];
+    var input = a && document.getElementById(a.input);
+    if(input) input.click();
+  });
+
+  // "hace X min" se mantiene al día sin volver a consultar.
+  setInterval(render, 60000);
+
+  window.__cargas = { iniciar: iniciar, paso: paso, terminar: terminar, cancelar: cancelar, fallar: fallar, refrescar: refrescar };
+  window.__aviso = aviso;
+
+  render();
+  refrescarTodo();
 })();
 </script>
 
@@ -2529,6 +3161,9 @@ function formatFechaHoraCorta(d){
   });
   fileInput.addEventListener('change', function(e){
     var f = e.target.files && e.target.files[0];
+    // Se limpia para que elegir otra vez el mismo archivo (p. ej. desde "Actualizar" del
+    // panel de archivos) vuelva a disparar la carga.
+    e.target.value = '';
     if(f) handleFile(f);
   });
 
@@ -2570,9 +3205,17 @@ function formatFechaHoraCorta(d){
 
   function showError(msg){ dzError.textContent = msg; dzError.style.display = 'block'; }
 
+  /* Error al leer el archivo del Maestro: se muestra en la zona de carga y, como esa zona
+     queda oculta cuando ya hay datos (botón "Cambiar archivo"), también como aviso. */
+  function errorCargaMM(msg){
+    showError(msg);
+    window.__cargas.fallar('mm', 'Maestro de Materiales: ' + msg);
+  }
+
   async function handleFile(file){
     if(!await window.__conXLSX()) return;
     dzError.style.display = 'none';
+    window.__cargas.iniciar('mm', file.name);
     var reader = new FileReader();
     reader.onload = async function(e){
       try{
@@ -2580,13 +3223,13 @@ function formatFechaHoraCorta(d){
         var wb = XLSX.read(data, {type:'array', cellDates:true});
         var sheet = wb.Sheets[wb.SheetNames[0]];
         var rowsArr = XLSX.utils.sheet_to_json(sheet, {header:1, defval:'', raw:false, dateNF:'dd/mm/yyyy'});
-        if(!rowsArr.length){ showError('El archivo no contiene filas legibles.'); return; }
+        if(!rowsArr.length){ errorCargaMM('El archivo no contiene filas legibles.'); return; }
         var headers = rowsArr[0].map(function(h){ return String(h).trim(); });
         var idx = {};
         headers.forEach(function(h,i){ idx[h] = i; });
 
         if(idx['Material'] === undefined){
-          showError('No se reconocen las columnas del maestro de materiales en este archivo.');
+          errorCargaMM('No se reconocen las columnas del maestro de materiales en este archivo.');
           return;
         }
 
@@ -2614,10 +3257,10 @@ function formatFechaHoraCorta(d){
         await onDataLoaded(file.name);
       }catch(err){
         console.error(err);
-        showError('No se pudo leer el archivo. Verifica que sea un export válido de SAP (.xlsx).');
+        errorCargaMM('No se pudo leer el archivo. Verifica que sea un export válido de SAP (.xlsx).');
       }
     };
-    reader.onerror = function(){ showError('Ocurrió un error leyendo el archivo.'); };
+    reader.onerror = function(){ errorCargaMM('Ocurrió un error leyendo el archivo.'); };
     reader.readAsArrayBuffer(file);
   }
 
@@ -2745,14 +3388,12 @@ function formatFechaHoraCorta(d){
          evitar el timeout de Postgres con tablas grandes) y puede tardar varios segundos.
          Sin esperar, el usuario podía cargar otro archivo o cerrar la página mientras el
          guardado anterior seguía en curso, dejando datos viejos mezclados con los nuevos. */
-      var originalBtnText = btnChange.textContent;
-      btnChange.disabled = true;
-      btnChange.textContent = 'Guardando…';
-      try{
-        await saveToSupabaseMM();
-      } finally {
-        btnChange.disabled = false;
-        btnChange.textContent = originalBtnText;
+      var r = await saveToSupabaseMM();
+      if(r.ok){
+        window.__cargas.terminar('mm', { filas: state.rows.length, fecha: r.fecha });
+        window.__aviso('Maestro de Materiales cargado: ' + state.rows.length.toLocaleString('es-PE') + ' materiales de ' + fname + '.');
+      } else {
+        window.__cargas.fallar('mm');
       }
     }
     updateUltimaCarga();
@@ -2767,10 +3408,14 @@ function formatFechaHoraCorta(d){
     el.textContent = d ? formatFechaHoraCorta(d) : '—';
   }
 
+  /* Devuelve { ok, fecha }: fecha es el momento de la carga (el mismo que queda en el
+     carga_id), para que el registro de cargas lo muestre sin volver a consultar. */
   async function saveToSupabaseMM(){
-    if(!window.__sb) return;
-    var cargaId = 'c' + Date.now() + '_' + Math.random().toString(36).slice(2,8);
+    if(!window.__sb) return { ok:false };
+    var ahora = Date.now();
+    var cargaId = 'c' + ahora + '_' + Math.random().toString(36).slice(2,8);
     try{
+      window.__cargas.paso('mm', 'Borrando la carga anterior…');
       /* Se borra TODO lo existente antes de insertar la carga nueva (en bloques pequeños
          vía __sbDeleteAll, no con un único DELETE masivo que puede exceder el timeout de
          Postgres/Supabase con decenas de miles de filas). Insertar primero y borrar después
@@ -2781,7 +3426,7 @@ function formatFechaHoraCorta(d){
       if(delRes.error){
         console.error('Supabase delete (limpieza previa) mm_materiales error', delRes.error);
         alert('No se pudo limpiar el Maestro de Materiales anterior en Supabase antes de guardar el nuevo. No se guardó nada para evitar duplicados. Detalle: ' + delRes.error.message);
-        return;
+        return { ok:false };
       }
 
       var records = state.rows.map(function(r){
@@ -2794,17 +3439,20 @@ function formatFechaHoraCorta(d){
         };
       });
       for(var i=0; i<records.length; i+=500){
+        window.__cargas.paso('mm', 'Guardando ' + i.toLocaleString('es-PE') + ' de ' + records.length.toLocaleString('es-PE') + ' materiales…', i / records.length);
         var chunk = records.slice(i, i+500);
         var res = await window.__sb.from('mm_materiales').insert(chunk);
         if(res.error){
           console.error('Supabase insert mm_materiales error', res.error);
           alert('Se limpió el Maestro de Materiales anterior en Supabase, pero ocurrió un error guardando el nuevo (quedó incompleto). Vuelve a cargar el archivo. Detalle: ' + res.error.message);
-          return;
+          return { ok:false };
         }
       }
+      return { ok:true, fecha: new Date(ahora) };
     }catch(e){
       console.error('Error guardando Maestro de Materiales en Supabase', e);
       alert('No se pudo guardar el Maestro de Materiales en Supabase. Revisa la consola para más detalle.');
+      return { ok:false };
     }
   }
 
@@ -3910,8 +4558,12 @@ function formatFechaHoraCorta(d){
 
   document.getElementById('bomFileInput').addEventListener('change', async (e)=>{
     const file = e.target.files[0];
+    // Se limpia ya (el archivo queda en `file`) para que elegir de nuevo el mismo archivo
+    // vuelva a disparar la carga, también cuando esta se corta por una validación.
+    e.target.value = '';
     if(!file) return;
     if(!await window.__conXLSX()) return;
+    window.__cargas.iniciar('bom', file.name);
 
     try {
       const data = await file.arrayBuffer();
@@ -3921,6 +4573,7 @@ function formatFechaHoraCorta(d){
       const jsonData = XLSX.utils.sheet_to_json(worksheet, { defval: '' });
 
       if(jsonData.length === 0) {
+        window.__cargas.cancelar('bom');
         alert('El archivo está vacío o no tiene datos.');
         return;
       }
@@ -3930,6 +4583,7 @@ function formatFechaHoraCorta(d){
       const colMaterial = COLUMNS.indexOf('Material');
       const colCentro = COLUMNS.indexOf('Centro-instalación');
       if(colMaterial === -1 || colCentro === -1) {
+        window.__cargas.cancelar('bom');
         alert('El archivo debe contener las columnas "Material" y "Centro-instalación".\nColumnas encontradas: ' + COLUMNS.join(', '));
         return;
       }
@@ -3951,26 +4605,20 @@ function formatFechaHoraCorta(d){
          el timeout de Postgres) y puede tardar; si no se esperaba, el usuario podía volver
          a cargar el archivo o cerrar la página mientras el guardado anterior seguía en
          curso, dejando datos viejos mezclados con los nuevos. */
-      const bomLoadBtnEl = document.getElementById('bomLoadExcelBtn');
-      const bomLoadBtnOriginalHtml = bomLoadBtnEl ? bomLoadBtnEl.innerHTML : '';
-      if(bomLoadBtnEl){ bomLoadBtnEl.disabled = true; bomLoadBtnEl.innerHTML = 'Guardando…'; }
-      try{
-        await saveBomToSupabase(jsonDataFiltrada);
-      } finally {
-        if(bomLoadBtnEl){ bomLoadBtnEl.disabled = false; bomLoadBtnEl.innerHTML = bomLoadBtnOriginalHtml; }
-      }
+      const guardado = await saveBomToSupabase(jsonDataFiltrada);
       updateUltimaCargaBom();
+      if(!guardado.ok){ window.__cargas.fallar('bom'); return; }
+      window.__cargas.terminar('bom', { filas: ROWS.length, fecha: guardado.fecha });
 
-      let msg = `Se cargaron ${ROWS.length.toLocaleString('es-PE')} registros correctamente (utilización = 1).`;
+      let msg = `Listas de Materiales: se cargaron ${ROWS.length.toLocaleString('es-PE')} registros de ${file.name} (utilización = 1).`;
       if(omitidosUtil > 0) msg += `\nSe omitieron ${omitidosUtil.toLocaleString('es-PE')} registro(s) con utilización distinta de 1 (incluye utilización 8).`;
       if(colUtil === -1) msg += `\nAviso: no se encontró la columna "Utilización LMat"; no se aplicó el filtro de utilización.`;
-      alert(msg);
+      window.__aviso(msg);
 
     } catch(err) {
       console.error(err);
-      alert('Error al leer el archivo. Asegúrate de que sea un Excel válido (.xlsx, .xls).');
+      window.__cargas.fallar('bom', 'Listas de Materiales: error al leer el archivo. Asegúrate de que sea un Excel válido (.xlsx, .xls).');
     }
-    e.target.value = '';
   });
 
   document.getElementById('bomLoadComponentesBtn').addEventListener('click', ()=>{
@@ -3979,8 +4627,10 @@ function formatFechaHoraCorta(d){
 
   document.getElementById('bomComponentesFileInput').addEventListener('change', async (e)=>{
     const file = e.target.files[0];
+    e.target.value = ''; // ver nota en bomFileInput
     if(!file) return;
     if(!await window.__conXLSX()) return;
+    window.__cargas.iniciar('comp', file.name);
 
     try {
       const data = await file.arrayBuffer();
@@ -3990,6 +4640,7 @@ function formatFechaHoraCorta(d){
       const jsonData = XLSX.utils.sheet_to_json(worksheet, { defval: '' });
 
       if(jsonData.length === 0) {
+        window.__cargas.cancelar('comp');
         alert('El archivo de componentes está vacío o no tiene datos.');
         return;
       }
@@ -4002,6 +4653,7 @@ function formatFechaHoraCorta(d){
       const descartados = jsonData.length - jsonDataFiltrada.length;
 
       if(jsonDataFiltrada.length === 0) {
+        window.__cargas.cancelar('comp');
         alert('Ningún componente tiene la columna "Relevancia p.fabr." con valor, así que no hay componentes para cargar.');
         return;
       }
@@ -4027,6 +4679,7 @@ function formatFechaHoraCorta(d){
       cRelevFab   = COMP_IDX['Relevancia p.fabr.'] ?? -1;
 
       if(cMaterial === undefined || cAlt === undefined || cComponente === undefined) {
+        window.__cargas.cancelar('comp');
         alert('El archivo de componentes debe contener las columnas "Material", "Lista mat.alternat." y "Componente".\nColumnas encontradas: ' + COMP_COLUMNS.join(', '));
         return;
       }
@@ -4045,31 +4698,20 @@ function formatFechaHoraCorta(d){
          cargar el archivo mientras el guardado anterior seguía en curso en segundo plano,
          dejando los componentes viejos mezclados con los nuevos o directamente sin
          reemplazar — que es exactamente el síntoma reportado ("los anteriores se mantienen"). */
-      const compBtnEl = document.getElementById('bomLoadComponentesBtn');
-      if(compBtnEl){
-        compBtnEl.disabled = true;
-        compBtnEl.innerHTML = 'Guardando componentes…';
-      }
-      try{
-        await saveComponentesToSupabase(jsonDataFiltrada);
-      } finally {
-        if(compBtnEl){ compBtnEl.disabled = false; }
-        // Restaura el label correcto del botón (ícono + conteo actualizado de COMP_ROWS),
-        // en vez de dejar "Guardando componentes…" o el texto de antes de esta carga.
-        updateFilterButtonStates();
-      }
+      const guardado = await saveComponentesToSupabase(jsonDataFiltrada);
       updateUltimaCargaBom();
+      if(!guardado.ok){ window.__cargas.fallar('comp'); return; }
+      window.__cargas.terminar('comp', { filas: COMP_ROWS.length, fecha: guardado.fecha });
 
-      let msg = `Se cargaron ${COMP_ROWS.length.toLocaleString('es-PE')} componentes correctamente.`;
+      let msg = `Componentes: se cargaron ${COMP_ROWS.length.toLocaleString('es-PE')} componentes de ${file.name}.`;
       if(descartados > 0) msg += `\nSe descartaron ${descartados.toLocaleString('es-PE')} fila(s) sin "Relevancia p.fabr." (no se cruzarán con el BOM).`;
       if(!tieneColRelevFab) msg += `\nAviso: el archivo no tiene la columna "Relevancia p.fabr.", no se aplicó el filtro.`;
-      alert(msg);
+      window.__aviso(msg);
 
     } catch(err) {
       console.error(err);
-      alert('Error al leer el archivo de componentes. Asegúrate de que sea un Excel válido (.xlsx, .xls).');
+      window.__cargas.fallar('comp', 'Componentes: error al leer el archivo. Asegúrate de que sea un Excel válido (.xlsx, .xls).');
     }
-    e.target.value = '';
   });
 
   document.getElementById('bomLoadVfabBtn').addEventListener('click', ()=>{
@@ -4078,8 +4720,10 @@ function formatFechaHoraCorta(d){
 
   document.getElementById('bomVfabFileInput').addEventListener('change', async (e)=>{
     const file = e.target.files[0];
+    e.target.value = ''; // ver nota en bomFileInput
     if(!file) return;
     if(!await window.__conXLSX()) return;
+    window.__cargas.iniciar('vfab', file.name);
 
     try {
       const data = await file.arrayBuffer();
@@ -4101,6 +4745,7 @@ function formatFechaHoraCorta(d){
         const transformado = transformarVfabSapui5(dataRows);
         jsonData = transformado.filas;
         if(jsonData.length === 0){
+          window.__cargas.cancelar('vfab');
           alert('No se encontró ninguna fila con Centro 1020 o 1021 en este archivo.');
           return;
         }
@@ -4112,6 +4757,7 @@ function formatFechaHoraCorta(d){
       }
 
       if(jsonData.length === 0) {
+        window.__cargas.cancelar('vfab');
         alert('El archivo de Versiones de Fabricación está vacío o no tiene datos.');
         return;
       }
@@ -4121,6 +4767,7 @@ function formatFechaHoraCorta(d){
       const tieneVersion = colsCheck.indexOf('Versión fabricación') !== -1;
       const tieneAlt = colsCheck.indexOf('Lista mat.alternat.') !== -1;
       if(!tieneMaterial || !tieneVersion || !tieneAlt){
+        window.__cargas.cancelar('vfab');
         alert('El archivo debe contener las columnas "Material", "Versión fabricación" y "Lista mat.alternat.".\nColumnas encontradas: ' + colsCheck.join(', '));
         return;
       }
@@ -4132,6 +4779,7 @@ function formatFechaHoraCorta(d){
       const omitidasUtil = jsonData.length - jsonDataFiltrada.length;
 
       if(jsonDataFiltrada.length === 0) {
+        window.__cargas.cancelar('vfab');
         alert('Ninguna fila tiene Utilización LMat = 1, así que no hay Versiones de Fabricación para cargar.');
         return;
       }
@@ -4153,6 +4801,7 @@ function formatFechaHoraCorta(d){
       vBloqueo       = VFAB_IDX['Bloqueo de versión de fabricación'] ?? -1;
 
       if(vMaterial === undefined || vAlt === undefined || vVersion === undefined) {
+        window.__cargas.cancelar('vfab');
         alert('El archivo de Versiones de Fabricación debe contener las columnas "Material", "Lista mat.alternat." y "Versión fabricación".\nColumnas encontradas: ' + VFAB_COLUMNS.join(', '));
         return;
       }
@@ -4163,33 +4812,28 @@ function formatFechaHoraCorta(d){
       /* Se espera (await) el guardado en Supabase, por la misma razón que en Componentes:
          el borrado por lotes puede tardar, y no esperar dejaba abierta la posibilidad de
          cargas superpuestas con datos viejos mezclados con los nuevos. */
-      const vfabBtnEl = document.getElementById('bomLoadVfabBtn');
-      const vfabBtnOriginalHtml = vfabBtnEl ? vfabBtnEl.innerHTML : '';
-      if(vfabBtnEl){ vfabBtnEl.disabled = true; vfabBtnEl.innerHTML = 'Guardando versiones…'; }
-      try{
-        await saveVfabToSupabase(jsonDataFiltrada);
-      } finally {
-        if(vfabBtnEl){ vfabBtnEl.disabled = false; }
-        updateFilterButtonStates();
-      }
+      const guardado = await saveVfabToSupabase(jsonDataFiltrada);
       updateUltimaCargaBom();
+      if(!guardado.ok){ window.__cargas.fallar('vfab'); return; }
+      window.__cargas.terminar('vfab', { filas: VFAB_ROWS.length, fecha: guardado.fecha });
 
-      let msg = `Se cargaron ${VFAB_ROWS.length.toLocaleString('es-PE')} versiones de fabricación correctamente (Utilización LMat = 1).`;
+      let msg = `Versiones de Fabricación: se cargaron ${VFAB_ROWS.length.toLocaleString('es-PE')} versiones de ${file.name} (Utilización LMat = 1).`;
       if(omitidasUtil > 0) msg += `\nSe omitieron ${omitidasUtil.toLocaleString('es-PE')} fila(s) con Utilización LMat distinta de 1.`;
-      alert(msg);
+      window.__aviso(msg);
 
     } catch(err) {
       console.error(err);
-      alert('Error al leer el archivo de Versiones de Fabricación. Asegúrate de que sea un Excel válido (.xlsx, .xls).');
+      window.__cargas.fallar('vfab', 'Versiones de Fabricación: error al leer el archivo. Asegúrate de que sea un Excel válido (.xlsx, .xls).');
     }
-    e.target.value = '';
   });
 
   /* ---------- Persistencia en Supabase: Listas de Materiales (BOM) ---------- */
   async function saveBomToSupabase(jsonDataArr){
-    if(!window.__sb) return;
-    const cargaId = 'c' + Date.now() + '_' + Math.random().toString(36).slice(2,8);
+    if(!window.__sb) return { ok:false };
+    const ahora = Date.now();
+    const cargaId = 'c' + ahora + '_' + Math.random().toString(36).slice(2,8);
     try{
+      window.__cargas.paso('bom', 'Borrando la carga anterior…');
       /* Se borra TODO lo existente antes de insertar la carga nueva (en bloques pequeños
          vía __sbDeleteAll, ver nota equivalente en saveToSupabaseMM): insertar antes de
          borrar dejaba dos cargas convivendo y producía filas duplicadas al leer, y un
@@ -4198,7 +4842,7 @@ function formatFechaHoraCorta(d){
       if(delRes.error){
         console.error('Supabase delete (limpieza previa) mm_bom error', delRes.error);
         alert('No se pudo limpiar Listas de Materiales anterior en Supabase antes de guardar el nuevo. No se guardó nada para evitar duplicados. Detalle: ' + delRes.error.message);
-        return;
+        return { ok:false };
       }
 
       const records = jsonDataArr.map(row => ({
@@ -4210,17 +4854,20 @@ function formatFechaHoraCorta(d){
         carga_id: cargaId
       }));
       for(let i=0; i<records.length; i+=500){
+        window.__cargas.paso('bom', 'Guardando ' + i.toLocaleString('es-PE') + ' de ' + records.length.toLocaleString('es-PE') + ' registros…', i / records.length);
         const chunk = records.slice(i, i+500);
         const res = await window.__sb.from('mm_bom').insert(chunk);
         if(res.error){
           console.error('Supabase insert mm_bom error', res.error);
           alert('Se limpió Listas de Materiales anterior en Supabase, pero ocurrió un error guardando el nuevo (quedó incompleto). Vuelve a cargar el archivo. Detalle: ' + res.error.message);
-          return;
+          return { ok:false };
         }
       }
+      return { ok:true, fecha: new Date(ahora) };
     }catch(e){
       console.error('Error guardando Listas de Materiales en Supabase', e);
       alert('No se pudo guardar Listas de Materiales en Supabase. Revisa la consola para más detalle.');
+      return { ok:false };
     }
   }
 
@@ -4255,9 +4902,11 @@ function formatFechaHoraCorta(d){
 
   /* ---------- Persistencia en Supabase: Componentes ---------- */
   async function saveComponentesToSupabase(jsonDataArr){
-    if(!window.__sb) return;
-    const cargaId = 'c' + Date.now() + '_' + Math.random().toString(36).slice(2,8);
+    if(!window.__sb) return { ok:false };
+    const ahora = Date.now();
+    const cargaId = 'c' + ahora + '_' + Math.random().toString(36).slice(2,8);
     try{
+      window.__cargas.paso('comp', 'Borrando la carga anterior…');
       /* Se borra TODO lo existente antes de insertar la carga nueva (en bloques pequeños
          vía __sbDeleteAll, ver nota equivalente en saveToSupabaseMM): insertar antes de
          borrar dejaba dos cargas convivendo y producía componentes duplicados al leer
@@ -4269,7 +4918,7 @@ function formatFechaHoraCorta(d){
       if(delRes.error){
         console.error('Supabase delete (limpieza previa) mm_bom_componentes error', delRes.error);
         alert('No se pudo limpiar Componentes anterior en Supabase antes de guardar el nuevo. No se guardó nada para evitar duplicados. Detalle: ' + delRes.error.message);
-        return;
+        return { ok:false };
       }
 
       const records = jsonDataArr.map(row => ({
@@ -4280,17 +4929,20 @@ function formatFechaHoraCorta(d){
         carga_id: cargaId
       }));
       for(let i=0; i<records.length; i+=500){
+        window.__cargas.paso('comp', 'Guardando ' + i.toLocaleString('es-PE') + ' de ' + records.length.toLocaleString('es-PE') + ' componentes…', i / records.length);
         const chunk = records.slice(i, i+500);
         const res = await window.__sb.from('mm_bom_componentes').insert(chunk);
         if(res.error){
           console.error('Supabase insert mm_bom_componentes error', res.error);
           alert('Se limpió Componentes anterior en Supabase, pero ocurrió un error guardando el nuevo (quedó incompleto). Vuelve a cargar el archivo. Detalle: ' + res.error.message);
-          return;
+          return { ok:false };
         }
       }
+      return { ok:true, fecha: new Date(ahora) };
     }catch(e){
       console.error('Error guardando Componentes en Supabase', e);
       alert('No se pudo guardar Componentes en Supabase. Revisa la consola para más detalle.');
+      return { ok:false };
     }
   }
 
@@ -4351,9 +5003,11 @@ function formatFechaHoraCorta(d){
 
   /* ---------- Persistencia en Supabase: Versiones de Fabricación (Vfab) ---------- */
   async function saveVfabToSupabase(jsonDataArr){
-    if(!window.__sb) return;
-    const cargaId = 'c' + Date.now() + '_' + Math.random().toString(36).slice(2,8);
+    if(!window.__sb) return { ok:false };
+    const ahora = Date.now();
+    const cargaId = 'c' + ahora + '_' + Math.random().toString(36).slice(2,8);
     try{
+      window.__cargas.paso('vfab', 'Borrando la carga anterior…');
       /* Mismo patrón de borrado por lotes + insertar después que el resto de las tablas
          (ver notas equivalentes en saveComponentesToSupabase / saveToSupabaseMM): evita
          tanto el timeout de Postgres con tablas grandes como las duplicaciones que dejaba
@@ -4362,7 +5016,7 @@ function formatFechaHoraCorta(d){
       if(delRes.error){
         console.error('Supabase delete (limpieza previa) mm_vfab error', delRes.error);
         alert('No se pudo limpiar Versiones de Fabricación anterior en Supabase antes de guardar el nuevo. No se guardó nada para evitar duplicados. Detalle: ' + delRes.error.message);
-        return;
+        return { ok:false };
       }
 
       const records = jsonDataArr.map(row => ({
@@ -4373,17 +5027,20 @@ function formatFechaHoraCorta(d){
         carga_id: cargaId
       }));
       for(let i=0; i<records.length; i+=500){
+        window.__cargas.paso('vfab', 'Guardando ' + i.toLocaleString('es-PE') + ' de ' + records.length.toLocaleString('es-PE') + ' versiones…', i / records.length);
         const chunk = records.slice(i, i+500);
         const res = await window.__sb.from('mm_vfab').insert(chunk);
         if(res.error){
           console.error('Supabase insert mm_vfab error', res.error);
           alert('Se limpió Versiones de Fabricación anterior en Supabase, pero ocurrió un error guardando el nuevo (quedó incompleto). Vuelve a cargar el archivo. Detalle: ' + res.error.message);
-          return;
+          return { ok:false };
         }
       }
+      return { ok:true, fecha: new Date(ahora) };
     }catch(e){
       console.error('Error guardando Versiones de Fabricación en Supabase', e);
       alert('No se pudo guardar Versiones de Fabricación en Supabase. Revisa la consola para más detalle.');
+      return { ok:false };
     }
   }
 
@@ -4551,27 +5208,34 @@ function formatFechaHoraCorta(d){
 
   /* ---------- Persistencia en Supabase: Programa de Producción ---------- */
   async function saveProgramaProduccionToSupabase(entries){
-    if(!window.__sb) return;
+    if(!window.__sb) return { ok:false };
+    const fecha = new Date();
     try{
+      window.__cargas.paso('prog', 'Borrando la carga anterior…');
       const delRes = await window.__sbDeleteAll('mm_programa_produccion');
       if(delRes.error){
         console.error('Supabase delete (limpieza previa) mm_programa_produccion error', delRes.error);
         alert('No se pudo limpiar el Programa de Producción anterior en Supabase antes de guardar el nuevo. No se guardó nada para evitar duplicados. Detalle: ' + delRes.error.message);
-        return;
+        return { ok:false };
       }
-      const records = entries.map(e => ({ data: e }));
+      // Esta tabla no tiene columna carga_id: la fecha de carga se guarda dentro de cada
+      // fila para que el registro de cargas pueda mostrar cuándo se cargó el programa.
+      const records = entries.map(e => ({ data: Object.assign({}, e, { _cargadoEn: fecha.toISOString() }) }));
       for(let i=0; i<records.length; i+=500){
+        window.__cargas.paso('prog', 'Guardando ' + i.toLocaleString('es-PE') + ' de ' + records.length.toLocaleString('es-PE') + ' PT…', i / records.length);
         const chunk = records.slice(i, i+500);
         const res = await window.__sb.from('mm_programa_produccion').insert(chunk);
         if(res.error){
           console.error('Supabase insert mm_programa_produccion error', res.error);
           alert('Se limpió el Programa de Producción anterior en Supabase, pero ocurrió un error guardando el nuevo (quedó incompleto). Vuelve a cargar el archivo. Detalle: ' + res.error.message);
-          return;
+          return { ok:false };
         }
       }
+      return { ok:true, fecha: fecha };
     }catch(e){
       console.error('Error guardando el Programa de Producción en Supabase', e);
       alert('No se pudo guardar el Programa de Producción en Supabase. Revisa la consola para más detalle.');
+      return { ok:false };
     }
   }
 
@@ -5277,23 +5941,8 @@ function formatFechaHoraCorta(d){
     const vfabBloqBtn = document.getElementById('bomToggleVfabBloqueada');
     if(vfabBloqBtn) vfabBloqBtn.classList.toggle('active', filterVfabBloqueada);
 
-    const compBtn = document.getElementById('bomLoadComponentesBtn');
-    if(compBtn){
-      compBtn.classList.toggle('loaded', COMP_ROWS.length>0);
-      if(COMP_ROWS.length>0){
-        compBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg> Componentes (${COMP_ROWS.length.toLocaleString('es-PE')})`;
-        compBtn.title = `Componentes cargados: ${COMP_ROWS.length.toLocaleString('es-PE')}. Clic para volver a cargar.`;
-      }
-    }
-
-    const vfabBtn = document.getElementById('bomLoadVfabBtn');
-    if(vfabBtn){
-      vfabBtn.classList.toggle('loaded', VFAB_ROWS.length>0);
-      if(VFAB_ROWS.length>0){
-        vfabBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg> Vfab (${VFAB_ROWS.length.toLocaleString('es-PE')})`;
-        vfabBtn.title = `Versiones de Fabricación cargadas: ${VFAB_ROWS.length.toLocaleString('es-PE')}. Clic para volver a cargar.`;
-      }
-    }
+    // Los botones de carga (Listas / Componentes / VFab) los pinta el registro de cargas
+    // (window.__cargas): estado, conteo, fecha de carga y avance mientras se guarda.
   }
 
   function updateAll(){
@@ -6683,12 +7332,11 @@ function formatFechaHoraCorta(d){
 
     fileInput.addEventListener('change', async (e)=>{
       const file = e.target.files[0];
+      e.target.value = ''; // permite volver a elegir el mismo archivo
       if(!file) return;
       if(!await window.__conXLSX()) return;
 
-      const originalHtml = uploadBtn.innerHTML;
-      uploadBtn.disabled = true;
-      uploadBtn.innerHTML = 'Leyendo…';
+      window.__cargas.iniciar('prog', file.name);
       try{
         const data = await file.arrayBuffer();
         // cellStyles:true es imprescindible aquí (a diferencia del resto de cargas de
@@ -6698,6 +7346,7 @@ function formatFechaHoraCorta(d){
         const workbook = XLSX.read(data, { type:'array', cellStyles:true });
         const entries = parseProgramaProduccion(workbook);
         if(entries.length === 0){
+          window.__cargas.cancelar('prog');
           alert('No se encontraron códigos de PT en el archivo. Verifica que tenga columnas "Código" y "Producto" y que los datos no estén todos en filas/columnas ocultas.');
           return;
         }
@@ -6705,17 +7354,13 @@ function formatFechaHoraCorta(d){
         currentPage = 1;
         updateAll();
 
-        uploadBtn.innerHTML = 'Guardando…';
-        await saveProgramaProduccionToSupabase(entries);
-
-        alert('Se cargaron ' + entries.length.toLocaleString('es-PE') + ' código(s) de PT únicos del Programa de Producción (' + workbook.SheetNames.length + ' hoja(s): ' + workbook.SheetNames.join(', ') + ').');
+        const guardado = await saveProgramaProduccionToSupabase(entries);
+        if(!guardado.ok){ window.__cargas.fallar('prog'); return; }
+        window.__cargas.terminar('prog', { filas: entries.length, fecha: guardado.fecha });
+        window.__aviso('Programa de Producción: se cargaron ' + entries.length.toLocaleString('es-PE') + ' código(s) de PT únicos de ' + file.name + ' (' + workbook.SheetNames.length + ' hoja(s): ' + workbook.SheetNames.join(', ') + ').');
       }catch(err){
         console.error(err);
-        alert('Error al leer el Programa de Producción. Asegúrate de que sea un Excel válido (.xlsx, .xls).');
-      }finally{
-        uploadBtn.disabled = false;
-        uploadBtn.innerHTML = originalHtml;
-        e.target.value = '';
+        window.__cargas.fallar('prog', 'Programa de Producción: error al leer el archivo. Asegúrate de que sea un Excel válido (.xlsx, .xls).');
       }
     });
 

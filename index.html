@@ -708,6 +708,52 @@ window.__conXLSX = async function(){
   }
   .arbol-timeline{ display:flex; flex-direction:column; gap:0; max-width:640px; margin:0 auto; }
 
+  /* Bifurcación (kit vial + solvente, envase con dos graneles…): la tarjeta se ensancha,
+     los nodos de arriba siguen centrados a 640px y debajo del padre se abren columnas
+     iguales, una por cada material fabricado que consume. Los conectores ya se centran
+     solos en la mitad de su contenedor (+39px), así que el del tronco cae justo en el
+     medio de la barra que une los conectores de las columnas. */
+  .arbol-card.con-ramas{ max-width:1280px; }
+  .arbol-timeline.con-ramas{ max-width:none; overflow-x:auto; }
+  .arbol-timeline.con-ramas > .arbol-nodo{ width:100%; max-width:640px; margin-left:auto; margin-right:auto; box-sizing:border-box; }
+  .arbol-fork{ display:flex; flex-direction:column; min-width:min-content; }
+  .arbol-fork-cols{ display:flex; gap:20px; align-items:flex-start; }
+  .arbol-rama{ position:relative; flex:1 1 0; min-width:340px; }
+  .arbol-fork-cols > .arbol-rama::before,
+  .arbol-fork-cols > .arbol-rama::after{
+    content:''; position:absolute; top:0; height:2px; background:var(--teal); opacity:.55;
+  }
+  .arbol-fork-cols > .arbol-rama::before{ left:0; width:calc(50% + 39px); }
+  .arbol-fork-cols > .arbol-rama::after{ left:calc(50% + 39px); right:-20px; }
+  .arbol-fork-cols > .arbol-rama:first-child::before,
+  .arbol-fork-cols > .arbol-rama:last-child::after{ display:none; }
+  .arbol-rama-tag{
+    margin-left:78px; text-align:center; font-family:var(--mono); font-size:10.5px;
+    color:var(--ink-faint); letter-spacing:.03em; margin-top:-2px;
+  }
+  /* Bifurcación apilada (más de 3 ramas, o ramas con ramas): cada rama es un recuadro
+     punteado, uno debajo del otro, con sus tarjetas centradas igual que las de arriba. */
+  .arbol-fork.apilada{ min-width:0; }
+  .arbol-fork.apilada > .arbol-fork-tronco{ display:none; }
+  .arbol-fork.apilada > .arbol-fork-cols{ flex-direction:column; gap:10px; }
+  .arbol-fork.apilada > .arbol-fork-cols > .arbol-rama{
+    min-width:0; width:100%; box-sizing:border-box; border:1px dashed var(--border); border-radius:14px; padding:0 6px 6px;
+  }
+  .arbol-fork.apilada > .arbol-fork-cols > .arbol-rama::before,
+  .arbol-fork.apilada > .arbol-fork-cols > .arbol-rama::after{ display:none; }
+  .arbol-fork.apilada > .arbol-fork-cols > .arbol-rama > .arbol-nodo{ width:100%; max-width:640px; margin-left:auto; margin-right:auto; box-sizing:border-box; }
+  @media (max-width: 720px){
+    /* En el celular nunca caben lado a lado: siempre apiladas. */
+    .arbol-fork{ min-width:0; }
+    .arbol-fork-tronco{ display:none; }
+    .arbol-fork-cols{ flex-direction:column; gap:8px; }
+    .arbol-rama{ min-width:0; width:100%; box-sizing:border-box; border:1px dashed var(--border); border-radius:14px; padding:0 4px 4px; }
+    .arbol-fork-cols > .arbol-rama::before,
+    .arbol-fork-cols > .arbol-rama::after{ display:none; }
+    .arbol-timeline.con-ramas > .arbol-nodo,
+    .arbol-fork.apilada > .arbol-fork-cols > .arbol-rama > .arbol-nodo{ max-width:none; }
+  }
+
   /* ---- Diagrama de flujo: tarjeta por etapa + conector animado entre ellas ---- */
   .arbol-nodo{
     position:relative; display:flex; gap:14px; padding:10px 4px;
@@ -1422,6 +1468,8 @@ window.__conXLSX = async function(){
   .expl-det-table tr:last-child td{ border-bottom:none; }
   .expl-det-table .mono{ font-family:var(--mono); }
   .expl-det-table td.expl-det-desc{ color:var(--ink-soft); }
+  .expl-det-table td.expl-det-nv{ color:var(--ink-faint); width:28px; }
+  .expl-det-rama{ font-family:var(--mono); font-size:10px; color:var(--teal); margin-left:4px; white-space:nowrap; }
   .expl-det-hint{ margin:8px 0 0; font-size:11px; color:var(--ink-faint); }
 
   /* Comentario discreto al estilo Excel: un triangulito en la esquina superior derecha de
@@ -5870,7 +5918,7 @@ function formatFechaHoraCorta(d){
       var res = api.construirTodosLosArboles(prod.material, prod.alt, {});
       res.arboles.forEach(function(arbol){
         arbolesRevisados++;
-        arbol.forEach(function(n){
+        api.aplanarArbol(arbol).forEach(function(n){
           n.advertencias.forEach(function(w){
             if(w.indexOf('INCOHERENCIA') === -1 && w.indexOf('INCONSISTENCIA') === -1) return;
             var tipo = 'Otra incoherencia';
@@ -6759,7 +6807,8 @@ function formatFechaHoraCorta(d){
     get BOM_COMP_COLUMNS(){ return window.BOM_COMP_COLUMNS; },
     get BOM_VFAB_ROWS(){ return window.BOM_VFAB_ROWS; },
     get BOM_VFAB_COLUMNS(){ return window.BOM_VFAB_COLUMNS; },
-    get MM_ESTADO_MAP(){ return window.MM_ESTADO_MAP; }
+    get MM_ESTADO_MAP(){ return window.MM_ESTADO_MAP; },
+    get MM_TIPO_MAP(){ return window.MM_TIPO_MAP; }
   });
   var normMat = motorArbol.normMat;
   var normAlt = motorArbol.normAlt;
@@ -6774,6 +6823,8 @@ function formatFechaHoraCorta(d){
   var getProductosTerminados = motorArbol.getProductosTerminados;
   var encontrarProductosTerminados = motorArbol.encontrarProductosTerminados;
   var construirTodosLosArboles = motorArbol.construirTodosLosArboles;
+  var aplanarArbol = motorArbol.aplanarArbol;
+  var finesDeArbol = motorArbol.finesDeArbol;
   var isSuspendedCode = motorArbol.isSuspendedCode;
   var isZ3Code = motorArbol.isZ3Code;
   var MAX_ARBOLES_COMBINACIONES = motorArbol.MAX_ARBOLES_COMBINACIONES;
@@ -7003,10 +7054,13 @@ function formatFechaHoraCorta(d){
     return '<div class="arbol-comp-list">'+filas+'</div>';
   }
 
-  function renderNodo(nodo, index, total){
-    var esUltimo = index === total-1;
-    var cls = nodo.advertencias.length>0 ? 'warn' : (esUltimo && ((nodo.etapa && esEtapaFabricacion(nodo.etapa)) || nodo.finNatural) ? 'ok' : '');
-    var marker = (index+1);
+  /* index = posición del nodo en el árbol aplanado (ids únicos de sus controles); esFin =
+     es la última etapa de su cadena (principal o rama). El número del marcador es el NIVEL
+     (1 = Acondicionado), como la columna "Nv" de la explosión multinivel de SAP: dos
+     semielaborados de un mismo kit comparten nivel. */
+  function renderNodo(nodo, index, esFin){
+    var cls = nodo.advertencias.length>0 ? 'warn' : (esFin && ((nodo.etapa && esEtapaFabricacion(nodo.etapa)) || nodo.finNatural) ? 'ok' : '');
+    var marker = nodo.nivel || (index+1);
 
     // Los 3 tipos de observación que se muestran como chip BREVE a la izquierda (no como
     // párrafo largo debajo del nodo): VFab bloqueada, Lista inactiva, Código con estado Z.
@@ -7096,12 +7150,64 @@ function formatFechaHoraCorta(d){
     '</div>';
   }
 
+  /* Dibuja una cadena; cuando un nodo abre ramas (otros materiales fabricados que consume
+     su lista), debajo se abre una bifurcación en columnas: la continuación de su propia
+     cadena (posición 0010) y una columna por cada rama, cada una con su conector hacia el
+     nodo padre. Recursivo: una columna puede volver a bifurcarse. El orden de los nodos en
+     el DOM es el mismo de aplanarArbol (de ahí salen los ids). */
+  function renderCadenaHtml(cadena, indicePorNodo, fines){
+    var html = '';
+    for(var i = 0; i < cadena.length; i++){
+      var n = cadena[i];
+      if(i > 0) html += renderConector(n.advertencias.length > 0);
+      html += renderNodo(n, indicePorNodo.get(n), fines.has(n));
+      if(n.ramas && n.ramas.length){
+        var columnas = [];
+        var resto = cadena.slice(i + 1);
+        if(resto.length) columnas.push({ pos: n.componentePrevio ? n.componentePrevio.pos : '', nodos: resto });
+        n.ramas.forEach(function(r){ columnas.push({ pos: r.pos, nodos: r.nodos }); });
+        return html + renderBifurcacion(n, columnas, indicePorNodo, fines);
+      }
+    }
+    return html;
+  }
+
+  function tieneBifurcacion(cadena){
+    return cadena.some(function(n){ return n.ramas && n.ramas.length; });
+  }
+
+  /* Lado a lado solo cuando cabe y se lee de un vistazo: hasta 3 columnas y ninguna con
+     otra bifurcación adentro. Si no (un pack con varios productos, cada uno con sus
+     propias ramas), las columnas se apilan como recuadros, una debajo de otra — así el
+     árbol nunca se convierte en un lienzo de miles de píxeles de ancho. */
+  function renderBifurcacion(padre, columnas, indicePorNodo, fines){
+    var apilada = columnas.length > 3 || columnas.some(function(col){ return tieneBifurcacion(col.nodos); });
+    var cols = columnas.map(function(col){
+      var cabeza = col.nodos[0];
+      return '<div class="arbol-rama">'+
+        renderConector(cabeza.advertencias.length > 0)+
+        '<div class="arbol-rama-tag" title="'+esc(cabeza.material+' entra en la lista de '+padre.material+' en la posición '+(col.pos || '—'))+'">pos. '+esc(col.pos || '—')+' de '+esc(padre.material)+'</div>'+
+        renderCadenaHtml(col.nodos, indicePorNodo, fines)+
+      '</div>';
+    }).join('');
+    if(columnas.length === 1) return cols;
+    return '<div class="arbol-fork'+(apilada ? ' apilada' : '')+'">'+
+      '<div class="arbol-fork-tronco">'+renderConector(false)+'</div>'+
+      '<div class="arbol-fork-cols">'+cols+'</div>'+
+    '</div>';
+  }
+
   function renderArbol(nodos, materialInicial, altInicial){
     if(nodos.length === 0){
       resultado.innerHTML = '<div class="arbol-card">No se pudo construir ningún nodo.</div>';
       return;
     }
-    var totalAdvertencias = nodos.reduce(function(sum,n){ return sum + n.advertencias.length; }, 0);
+    var planos = aplanarArbol(nodos);
+    var indicePorNodo = new Map();
+    planos.forEach(function(n, i){ indicePorNodo.set(n, i); });
+    var fines = new Set(finesDeArbol(nodos));
+    var conRamas = fines.size > 1;
+    var totalAdvertencias = planos.reduce(function(sum,n){ return sum + n.advertencias.length; }, 0);
     var totalArboles = arbolesActuales.length;
 
     // Selector navegable "Árbol X de N" con flechas — solo se muestra si hay más de una
@@ -7121,23 +7227,20 @@ function formatFechaHoraCorta(d){
       (arbolSeRecorto ? '<div class="arbol-nav-note">Hay más combinaciones posibles de las que caben aquí — se muestran las primeras '+MAX_ARBOLES_COMBINACIONES+'.</div>' : '');
     }
 
-    var resumenHtml = '<div class="arbol-card">'+
+    // El conector va ANTES de cada nodo (entre él y el que lo consume); se pinta en rojo si
+    // ese nodo (la etapa hacia la que apunta la flecha) tiene advertencias.
+    var resumenHtml = '<div class="arbol-card'+(conRamas?' con-ramas':'')+'">'+
       '<div class="arbol-resumen">'+
         '<h2>Árbol de '+esc(materialInicial)+' (alt. '+esc(altInicial)+')</h2>'+
         '<span class="badge '+(totalAdvertencias>0?'badge-suspendido':'badge-activo')+'">'+
           (totalAdvertencias>0 ? totalAdvertencias+' advertencia'+(totalAdvertencias!==1?'s':'') : 'Sin advertencias')+
         '</span>'+
-        '<span class="badge badge-neutro">'+nodos.length+' etapa'+(nodos.length!==1?'s':'')+' reconstruida'+(nodos.length!==1?'s':'')+'</span>'+
+        '<span class="badge badge-neutro">'+planos.length+' etapa'+(planos.length!==1?'s':'')+' reconstruida'+(planos.length!==1?'s':'')+'</span>'+
+        (conRamas ? '<span class="badge badge-neutro" title="Caminos de fabricación distintos que terminan en este producto (por ejemplo, vial y solvente de un kit)">'+fines.size+' ramas</span>' : '')+
       '</div>'+
       navHtml+
-      '<div class="arbol-timeline">'+
-        nodos.map(function(n,i){
-          var nodoHtml = renderNodo(n, i, nodos.length);
-          if(i === 0) return nodoHtml;
-          // El conector va ANTES de este nodo (entre él y el anterior); se pinta en rojo
-          // si este nodo (la etapa hacia la que apunta la flecha) tiene advertencias.
-          return renderConector(n.advertencias.length>0) + nodoHtml;
-        }).join('')+
+      '<div class="arbol-timeline'+(conRamas?' con-ramas':'')+'">'+
+        renderCadenaHtml(nodos, indicePorNodo, fines)+
       '</div>'+
     '</div>';
     resultado.innerHTML = resumenHtml;
@@ -7157,7 +7260,7 @@ function formatFechaHoraCorta(d){
     // animación de "raíces" (cada fila ya trae su propio keyframe con retraso escalonado
     // vía CSS, solo hace falta generar el HTML la primera vez que se abre — así el árbol
     // inicial se renderiza rápido incluso con muchas etapas).
-    nodos.forEach(function(nodo, i){
+    planos.forEach(function(nodo, i){
       var toggleBtn = document.getElementById('arbolCompToggle'+i);
       var panel = document.getElementById('arbolCompPanel'+i);
       if(toggleBtn && panel){
@@ -7189,7 +7292,7 @@ function formatFechaHoraCorta(d){
     // Si se pidió resaltar una etapa específica (salto desde Listas de Materiales), se
     // desplaza la vista hasta ella y se aplica un realce visual temporal.
     if(arbolResaltarKey){
-      nodos.forEach(function(nodo, i){
+      planos.forEach(function(nodo, i){
         if(keyOf(nodo.material, nodo.alt) === arbolResaltarKey){
           var el = document.querySelectorAll('.arbol-nodo')[i];
           if(el){
@@ -7270,7 +7373,7 @@ function formatFechaHoraCorta(d){
     indiceArbolActual = 0;
     if(arbolResaltarKey){
       for(var i=0; i<arbolesActuales.length; i++){
-        if(arbolesActuales[i].some(function(n){ return keyOf(n.material, n.alt) === arbolResaltarKey; })){
+        if(aplanarArbol(arbolesActuales[i]).some(function(n){ return keyOf(n.material, n.alt) === arbolResaltarKey; })){
           indiceArbolActual = i;
           break;
         }
@@ -7282,7 +7385,7 @@ function formatFechaHoraCorta(d){
     renderArbol(arbolesActuales[indiceArbolActual] || [], mat, normAlt(alt));
 
     var t1 = (typeof performance!=='undefined' && performance.now) ? performance.now() : Date.now();
-    var nodos = arbolesActuales[indiceArbolActual] || [];
+    var nodos = aplanarArbol(arbolesActuales[indiceArbolActual] || []);
     var totalAdv = nodos.reduce(function(s,n){ return s+n.advertencias.length; }, 0);
     var combTxt = arbolesActuales.length > 1 ? (' · ' + arbolesActuales.length + ' combinaciones posibles' + (arbolSeRecorto ? ' (se muestran las primeras '+MAX_ARBOLES_COMBINACIONES+')' : '')) : '';
     statusEl.textContent = nodos.length + ' etapa(s) · ' + (totalAdv>0 ? totalAdv+' advertencia(s)' : 'sin advertencias') + combTxt + ' · ' + Math.round(t1-t0) + 'ms';
@@ -7325,6 +7428,8 @@ function formatFechaHoraCorta(d){
      pudiera desincronizarse. */
   window.__arbolAPI = {
     construirTodosLosArboles: construirTodosLosArboles,
+    aplanarArbol: aplanarArbol,
+    finesDeArbol: finesDeArbol,
     construirYMostrarArbol: construirYMostrarArbol,
     abrirArbolDesdeExplosion: abrirArbolDesdeExplosion,
     buildBomIndex: buildBomIndex,
@@ -7771,9 +7876,11 @@ function formatFechaHoraCorta(d){
      ya que un bloqueo a mitad de camino es tan relevante como el que frena el retroceso.
      Categorías (una sola por árbol, la más relevante primero): Z en lista o componente >
      Vfab bloqueada > Lista inactiva > Incoherencia de datos > Completo hasta Fabricación. */
-  function determinarMotivo(arbol){
+  function determinarMotivo(arbolConRamas){
     var a = getApi();
-    var ultimo = arbol[arbol.length-1];
+    // Todas las etapas, también las de las ramas (vial y solvente de un kit, dos graneles…):
+    // un bloqueo en cualquier rama detiene igual la fabricación del producto.
+    var arbol = a.aplanarArbol(arbolConRamas);
 
     // 1) ¿Algún nodo de la cadena tiene bloqueo Z en el material, o algún componente
     //    propio con estado Z? (los componentes ya vienen resueltos con su estado en
@@ -7804,14 +7911,18 @@ function formatFechaHoraCorta(d){
         return { tipo:'incoherencia', texto:'Datos incoherentes detectados en ' + arbol[m].etapa + ' (' + arbol[m].material + ') — revisar advertencias del árbol.' };
       }
     }
-    // 5) Si llegó hasta Fabricación sin ninguno de los anteriores, está completo/sano.
-    if(ultimo && a.esEtapaFabricacion(ultimo.etapa)){
-      return { tipo:'ok', texto:'Árbol completo hasta Fabricación, sin bloqueos detectados.' };
+    // 5) Completo si CADA camino (la cadena principal y cada rama) llega a Fabricación o a un
+    //    fin natural (materia prima sin lista propia).
+    var fines = a.finesDeArbol(arbolConRamas);
+    var cortado = fines.filter(function(n){ return !a.esEtapaFabricacion(n.etapa) && !n.finNatural; })[0];
+    if(fines.length && !cortado){
+      var hayFabricacion = fines.some(function(n){ return a.esEtapaFabricacion(n.etapa); });
+      var sufijoRamas = fines.length > 1 ? ' (' + fines.length + ' ramas)' : '';
+      return { tipo:'ok', texto: hayFabricacion
+        ? 'Árbol completo hasta Fabricación' + sufijoRamas + ', sin bloqueos detectados.'
+        : 'Árbol completo' + sufijoRamas + ' — termina en materia prima sin lista propia (fin natural).' };
     }
-    if(ultimo && ultimo.finNatural){
-      return { tipo:'ok', texto:'Árbol completo — termina en materia prima sin lista propia (fin natural).' };
-    }
-    return { tipo:'incoherencia', texto:'El retroceso se detuvo antes de llegar a Fabricación (sin un bloqueo Z, VFab o inactividad identificable) — revisar advertencias del árbol.' };
+    return { tipo:'incoherencia', texto:'El retroceso se detuvo antes de llegar a Fabricación' + (cortado ? ' en ' + cortado.etapa + ' (' + cortado.material + ')' : '') + ' (sin un bloqueo Z, VFab o inactividad identificable) — revisar advertencias del árbol.' };
   }
 
   function esListaInactiva(n){
@@ -7936,9 +8047,18 @@ function formatFechaHoraCorta(d){
     '</div>';
   }
 
+  /* Cuántas etapas tiene el árbol (contando ramas) y hasta dónde llega cada camino. */
+  function resumenAlcance(arbol){
+    var a = getApi();
+    var fines = a.finesDeArbol(arbol);
+    var etapasFin = [];
+    fines.forEach(function(n){ var e = n.etapa || '—'; if(etapasFin.indexOf(e) === -1) etapasFin.push(e); });
+    return { etapas: a.aplanarArbol(arbol).length, ramas: fines.length, hasta: etapasFin.join(' / ') };
+  }
+
   function filaResultadoHtml(r, i){
-    var ultimaEtapa = r.arbol.length ? r.arbol[r.arbol.length-1].etapa : '';
-    var alcance = r.arbol.length + ' etapa(s) · hasta ' + (ultimaEtapa || '—');
+    var al = resumenAlcance(r.arbol);
+    var alcance = al.etapas + ' etapa(s)' + (al.ramas > 1 ? ' · ' + al.ramas + ' ramas' : '') + ' · hasta ' + (al.hasta || '—');
     var abierto = !!estadoVista.expandidos[i];
     return '<tr class="expl-result-row' + (abierto ? ' expandido' : '') + '" data-idx="' + i + '">' +
       '<td class="expl-chev-td"><span class="chev">▶</span></td>' +
@@ -8082,7 +8202,9 @@ function formatFechaHoraCorta(d){
     var a = getApi();
     if(!r.arbol.length) return '<p class="expl-det-motivo">No se pudo reconstruir ninguna etapa para este material.</p>';
     var hayNotas = false;
-    var filas = r.arbol.map(function(n){
+    var planos = a.aplanarArbol(r.arbol);
+    var conRamas = planos.some(function(n){ return n.esInicioRama; });
+    var filas = planos.map(function(n){
       var notas = notasDeNodo(n);
       var comps = n.componentes || [];
       var compsZ = [];
@@ -8092,8 +8214,13 @@ function formatFechaHoraCorta(d){
       });
       var notaComps = compsZ.length ? ['Componentes con bloqueo Z en el Maestro de Materiales:\n' + compsZ.join('\n')] : [];
       if(notas.etapa.length || notas.etapaInfo.length || notas.material.length || notas.vfab.length || notas.vfabInfo.length || notaComps.length) hayNotas = true;
+      // Sangría por nivel (como la columna "Nv" de SAP) y, al inicio de cada rama, la
+      // posición en la que entra en la lista que lo consume.
+      var sangria = '<span style="display:inline-block; width:' + ((n.nivel || 1) - 1) * 14 + 'px;"></span>';
+      var tagRama = n.esInicioRama ? ' <span class="expl-det-rama" title="Rama: entra en la lista de ' + esc(n.padre || '') + ' en la posición ' + esc(n.posEnPadre || '—') + '">pos. ' + esc(n.posEnPadre || '—') + '</span>' : '';
       return '<tr>' +
-        celdaConNota(esc(n.etapa || '—'), notas.etapa, notas.etapaInfo) +
+        '<td class="mono expl-det-nv">' + esc(n.nivel || '') + '</td>' +
+        celdaConNota(sangria + esc(n.etapa || '—') + tagRama, notas.etapa, notas.etapaInfo) +
         celdaConNota(esc(n.material), notas.material, null, 'mono') +
         '<td class="mono">' + esc(n.alt) + '</td>' +
         celdaConNota(esc(n.version || '—'), notas.vfab, notas.vfabInfo, 'mono') +
@@ -8102,8 +8229,9 @@ function formatFechaHoraCorta(d){
       '</tr>';
     }).join('');
     return '<p class="expl-det-motivo">' + esc(r.motivo.texto) + '</p>' +
-      '<table class="expl-det-table"><thead><tr><th>Etapa</th><th>Material</th><th>Alt.</th><th>VFab</th><th>Descripción</th><th>Comp.</th></tr></thead>' +
+      '<table class="expl-det-table"><thead><tr><th title="Nivel en el árbol (1 = Acondicionado)">Nv</th><th>Etapa</th><th>Material</th><th>Alt.</th><th>VFab</th><th>Descripción</th><th>Comp.</th></tr></thead>' +
       '<tbody>' + filas + '</tbody></table>' +
+      (conRamas ? '<p class="expl-det-hint">Este producto consume más de un material fabricado: cada rama se muestra con su sangría y la posición en la que entra.</p>' : '') +
       (hayNotas ? '<p class="expl-det-hint">Las celdas con un triangulito en la esquina tienen un comentario: pasa el cursor (o tócalas) para leerlo.</p>' : '');
   }
 
@@ -8186,7 +8314,9 @@ function formatFechaHoraCorta(d){
 
     resultadosExplosion.forEach(function(r){
       if(r.arbol.length === 0) return; // sin etapas reconstruidas: no hay nada que desglosar a nivel de componente
-      r.arbol.forEach(function(n){
+      // Todas las etapas, ramas incluidas (vial y solvente de un kit, dos graneles…), en el
+      // mismo orden en que se ven en pantalla.
+      a.aplanarArbol(r.arbol).forEach(function(n){
         var lmatBloqueada = esListaInactiva(n);
         var vfabBloqueada = !!n.vfabBloqueada;
         var comps = n.componentes || [];
@@ -8292,8 +8422,8 @@ function formatFechaHoraCorta(d){
     // se detuvieron (y dónde) sin tener que recorrer miles de filas de componentes.
     var resumenHeaders = ['Material','Descripción','Alt.','VFab','Centro','Etapas','Llega hasta','Estado','Detalle'];
     var resumenAoa = [resumenHeaders].concat(resultadosExplosion.map(function(r){
-      var ultima = r.arbol.length ? (r.arbol[r.arbol.length-1].etapa || '') : '';
-      return [r.material, r.descripcion || '', r.alt, r.version, r.centro || '', r.arbol.length, ultima, MOTIVO_LABELS[r.motivo.tipo], r.motivo.texto];
+      var al = resumenAlcance(r.arbol);
+      return [r.material, r.descripcion || '', r.alt, r.version, r.centro || '', al.etapas, al.hasta, MOTIVO_LABELS[r.motivo.tipo], r.motivo.texto];
     }));
     var wsResumen = XLSX.utils.aoa_to_sheet(resumenAoa);
     wsResumen['!cols'] = [{wch:13},{wch:42},{wch:6},{wch:8},{wch:8},{wch:7},{wch:26},{wch:20},{wch:80}];
@@ -9051,8 +9181,10 @@ function formatFechaHoraCorta(d){
   function tarjetaArbol(obs){
     var nodosHtml = obs.nodos.map(function(n){
       var warnHtml = (n.advertencias||[]).map(function(w){ return '<div class="ia-tree-warn">'+esc(w)+'</div>'; }).join('');
-      return '<div class="ia-tree-node" data-ask="'+escAttr('Cuéntame del material '+n.material)+'" style="cursor:pointer;">'+
-        '<div class="ia-tree-etapa">'+esc(n.etapa||'—')+'</div>'+
+      var sangria = n.nivel > 1 ? (n.nivel - 1) * 12 : 0;
+      var desde = n.esInicioRama ? ' · pos. '+esc(n.posEnPadre||'—')+' de '+esc(n.padre||'') : '';
+      return '<div class="ia-tree-node" data-ask="'+escAttr('Cuéntame del material '+n.material)+'" style="cursor:pointer;'+(sangria ? ' margin-left:'+sangria+'px;' : '')+'">'+
+        '<div class="ia-tree-etapa">'+esc(n.etapa||'—')+desde+'</div>'+
         '<div class="ia-tree-mat"><b>'+esc(n.material)+'</b> · alt. '+esc(n.alt)+'</div>'+
         '<div class="ia-tree-meta">'+etiquetaVersion(n)+(n.estado?'<span class="ia-tag">'+esc(n.estado)+'</span>':'')+'</div>'+
         warnHtml+
@@ -9284,8 +9416,11 @@ function formatFechaHoraCorta(d){
       return { observacion:{ tipo:'arbol_producto', estado:'sin_arbol', material: materialFinal, alt: altFinal } };
     }
     var idxComb = (args && typeof args.combinacion === 'number' && args.combinacion>=0 && args.combinacion<arboles.length) ? args.combinacion : 0;
-    var nodosObs = arboles[idxComb].map(function(n){
+    // Todas las etapas, ramas incluidas (vial y solvente de un kit…), con su nivel y el
+    // material que las consume, para que el modelo y la tarjeta puedan mostrar el árbol.
+    var nodosObs = api.aplanarArbol(arboles[idxComb]).map(function(n){
       return {
+        nivel: n.nivel, padre: n.padre, posEnPadre: n.posEnPadre, esInicioRama: !!n.esInicioRama,
         etapa: n.etapa, material: n.material, alt: n.alt, version: n.version, versionEsReal: n.versionEsReal,
         vfabBloqueada: n.vfabBloqueada, estado: n.estado, esFabricacion: n.esFabricacion, advertencias: (n.advertencias||[]).slice(0,3)
       };

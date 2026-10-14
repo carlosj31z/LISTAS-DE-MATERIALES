@@ -79,7 +79,7 @@ const HERRAMIENTAS = [
   {
     nombre: 'arbol_producto',
     args: '{ "material": "código exacto", "alt": "alternativa (opcional)", "combinacion": 0 }',
-    desc: 'Reconstruye la cadena Acondicionado -> Envase -> Fabricación de un producto y la dibuja en el chat. Si el material tiene varias alternativas y no se indica "alt", devuelve las opciones para que preguntes cuál.'
+    desc: 'Reconstruye la cadena Acondicionado -> Envase -> Fabricación de un producto (con sus ramas, si consume más de un material fabricado, como un kit vial + solvente) y la dibuja en el chat. Si el material tiene varias alternativas y no se indica "alt", devuelve las opciones para que preguntes cuál.'
   },
   {
     nombre: 'cambiar_pestana',
@@ -187,6 +187,8 @@ const BRIEFING = `CONTEXTO DEL NEGOCIO (planta farmacéutica peruana, equipo de 
 - Una LISTA DE MATERIALES se identifica por Material + Alternativa (columna "Lista mat.alternat.") + el id técnico de 8 dígitos (columna "Lista de materiales"). Cruzar solo por Material + Alternativa mezcla listas técnicas distintas.
 - Solo cuentan las filas con Utilización LMat = 1; el mismo material puede tener otras utilizaciones (p. ej. fórmula cuali-cuantitativa) que no son la lista real de producción.
 - ETAPAS de la cadena, de la más nueva a la más antigua: Acondicionado (el producto terminado) -> Envase -> a veces Recubrimiento/Inspección -> Fabricación. Se retrocede por el componente de la posición 0010 de cada lista.
+- RAMAS: si una lista consume además OTROS materiales fabricados (con lista propia; no envase/empaque ZMEE ni materia prima ZMPR), cada uno abre una rama con su propia cadena, como en la explosión multinivel de SAP. Ej.: un kit "vial + solvente" tiene dos semielaborados en Acondicionado (0010 el vial, 0020 la ampolla de agua). En la observación de arbol_producto cada nodo trae nivel (1 = Acondicionado), padre (material que lo consume), posEnPadre y esInicioRama.
+- Si una VFab tiene dígito 2 = 0 y el componente 0010 de su lista no tiene lista propia (materia prima, agua), esa etapa es simplemente la primera de su cadena: no es una incoherencia.
 - VERSIÓN DE FABRICACIÓN (VFab): código de 4 caracteres. Dígito 1 = la alternativa de Fabricación de la que desciende TODA la cadena, y debe ser el mismo en todas las etapas (si no, es una incoherencia real de SAP). Dígito 2 = la alternativa de la etapa previa (1-9 directas; C-Z son alternativas de conciliación 66-90, con C=66, D=67...; 0 = no hay etapa previa). Dígitos 3-4 = la alternativa propia de esa etapa, que debe coincidir con la alternativa registrada en su lista.
 - Alternativas 66-90: listas de CONCILIACIÓN. Alternativas 95-99: REACONDICIONADO, con VFab del tipo 00 + alternativa (0099) y sin etapa previa real.
 - ESTADOS DE MATERIAL en el Maestro: Z1/Z2 son bloqueos parciales y Z3 es bloqueo definitivo. Una lista con estado "Inactivo" sigue existiendo en SAP pero no debería usarse.

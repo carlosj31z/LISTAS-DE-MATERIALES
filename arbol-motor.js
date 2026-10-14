@@ -20,8 +20,17 @@
      BOM_ROWS, BOM_COLUMNS,           -- export de Listas de Materiales
      BOM_COMP_ROWS, BOM_COMP_COLUMNS, -- export de Componentes
      BOM_VFAB_ROWS, BOM_VFAB_COLUMNS, -- export de Versiones de Fabricación
-     MM_ESTADO_MAP                    -- { Material: "Estado mat.todos ce" }
+     MM_ESTADO_MAP,                   -- { Material: "Estado mat.todos ce" }
+     MM_TIPO_MAP                      -- { Material: "Tipo material" } (opcional)
    }
+
+   Forma del árbol: un array de nodos (la cadena PRINCIPAL, de Acondicionado hacia
+   Fabricación, siguiendo el componente de posición 0010 de cada lista). Un nodo cuya
+   lista consume además OTROS materiales fabricados (un kit "vial + solvente", un envase
+   que junta dos graneles…) trae nodo.ramas = [{ pos, componente, alt, nodos:[…] }]: una
+   cadena completa por cada uno, con la misma forma (y sus propias ramas si las hubiera).
+   aplanarArbol() devuelve todos los nodos en orden de lectura, cada uno con nivel (1 =
+   Acondicionado), padre (material que lo consume) y posEnPadre (posición en esa lista).
    ============================================================ */
 (function(root, factory){
   if(typeof module !== 'undefined' && module.exports){
@@ -322,6 +331,24 @@
       return null;
     }
 
+    function tieneListaPropia(material){
+      return (buildBomIndex().altsByMaterial[normMat(material)] || []).length > 0;
+    }
+
+    /* ¿Este componente abre una RAMA del árbol? Sí cuando es un material fabricado (tiene
+       su propia lista de materiales, igual que los que SAP explota en la CS12), salvo
+       material de envase y empaque (ZMEE: sus listas son de maquila de impresión, no etapas
+       del producto) y materia prima (ZMPR). Si el Maestro no está cargado o no conoce el
+       código, se decide por el prefijo: "1000…" (MP) y "1100…" (ME) no abren rama. */
+    var TIPOS_SIN_RAMA = ['ZMEE', 'ZMPR'];
+    function esComponenteDeRama(codigo){
+      var mat = normMat(codigo);
+      if(!mat || !tieneListaPropia(mat)) return false;
+      var tipo = datos.MM_TIPO_MAP ? String(datos.MM_TIPO_MAP[mat] || '').trim().toUpperCase() : '';
+      if(tipo) return TIPOS_SIN_RAMA.indexOf(tipo) === -1;
+      return !/^1/.test(mat);
+    }
+
     /* Devuelve TODOS los componentes de una lista (Material, Alt) — no solo el de posición
        0010 — con su estado de bloqueo Z resuelto, para el desplegable "ojo" de cada etapa. */
     var __allCompsIndexCache = { rowsRef: null, index: null };
@@ -498,7 +525,17 @@
           } else if(!compEntry.componente){
             nodo.advertencias.push('El componente de la posición ' + (compEntry.pos||'0010') + ' no tiene código de Material válido.');
             puedeRetroceder = false;
+          } else if(digito2Real !== null && String(digito2Real).trim() === '0' && !tieneListaPropia(compEntry.componente)){
+            // Dígito 2 = "0" significa "esta etapa no tiene etapa previa", y el componente de
+            // la posición 0010 lo confirma: es un material que se usa directo (materia prima,
+            // agua…), sin lista propia. Es el comienzo normal de la cadena, no una
+            // inconsistencia — antes se avisaba como si lo fuera.
+            nodo.componentePrevio = { pos: compEntry.pos, componente: compEntry.componente };
+            nodo.finNatural = true;
+            nodo.finNaturalInfo = 'Primera etapa de esta cadena (VFab ' + nodo.version + ', dígito 2 = "0"): su componente ' + (compEntry.pos || '0010') + ', ' + compEntry.componente + (compEntry.denominacion ? ' — ' + compEntry.denominacion : '') + ', se usa directo, sin lista propia.';
+            puedeRetroceder = false;
           } else {
+            nodo.componentePrevio = { pos: compEntry.pos, componente: compEntry.componente };
             var altEsperadaSiguiente, altEsperadaConfirmada;
             if(digito2Real !== null){
               var altDesdeDigito = altPreviaDesdeDigito2(digito2Real);
@@ -624,6 +661,175 @@
       return nodos;
     }
 
+    /* ---------- Ramas: otros materiales fabricados que consume una etapa ----------
+       La cadena principal sigue SOLO el componente de posición 0010. Pero una lista puede
+       consumir más de un material fabricado: un kit Acondicionado "vial + solvente" (0010 =
+       vial, 0020 = ampolla de agua, cada uno con su propia cadena), un Envase que junta dos
+       graneles, un pack con varios productos terminados… Cada uno de esos otros componentes
+       abre una rama con su cadena completa, como en la explosión multinivel de SAP (CS12). */
+
+    /* Componentes de la lista de este nodo que abren rama: fabricados (ver
+       esComponenteDeRama), distintos del propio material y del que ya sigue la cadena
+       principal. No se buscan ramas desde Fabricación (fin de la cadena, igual que el
+       retroceso principal) ni desde un reacondicionado (no tiene etapa previa). */
+    function componentesDeRama(nodo){
+      if(!nodo || nodo.esFabricacion || esReacondicionado(nodo.alt)) return [];
+      var previo = nodo.componentePrevio ? nodo.componentePrevio.componente : null;
+      var vistos = {};
+      var out = [];
+      buildAllCompsIndex().componentesDe(nodo.material, nodo.alt, nodo.listaTecnica).forEach(function(c){
+        var cod = c.componente;
+        if(!cod || cod === nodo.material || cod === previo || vistos[cod]) return;
+        if(!esComponenteDeRama(cod)) return;
+        vistos[cod] = true;
+        out.push(c);
+      });
+      return out;
+    }
+
+    /* Con qué Alternativa entra el material de una rama. El dígito 2 de la VFab real de la
+       etapa que lo consume indica la alternativa de su etapa previa: si este material la
+       tiene, es esa (en el kit 6000003544, VFab 1101 -> alternativa 1 para el vial Y para
+       el solvente). Si no, y el material tiene una sola, esa. Si no, la única cuya VFab real
+       empiece con el mismo dígito 1 de la cadena (la misma regla con que se elige la VFab de
+       cada etapa). Si tampoco, la misma de la etapa que lo consume, y en último caso la
+       primera — en esos dos casos sin confirmar. Las alternativas de reacondicionado (95-99)
+       solo se consideran si no hay otra. */
+    function elegirAltDeRama(codigo, nodoPadre, digito1){
+      var vistos = {};
+      var alts = [];
+      (buildBomIndex().altsByMaterial[normMat(codigo)] || []).forEach(function(e){
+        if(!vistos[e.alt]){ vistos[e.alt] = true; alts.push(e.alt); }
+      });
+      var normales = alts.filter(function(x){ return !esReacondicionado(x); });
+      var candidatas = normales.length ? normales : alts;
+      var version = nodoPadre && nodoPadre.versionEsReal ? String(nodoPadre.version || '') : '';
+      var porDigito = version.length >= 2 ? altPreviaDesdeDigito2(version.charAt(1)) : null;
+      if(porDigito && candidatas.indexOf(porDigito) !== -1) return { alt: porDigito, confirmada: true, opciones: candidatas };
+      if(candidatas.length === 1) return { alt: candidatas[0], confirmada: true, opciones: candidatas };
+      if(digito1){
+        var vfabIdx = buildVfabIndex();
+        var porDigito1 = candidatas.filter(function(x){
+          return (vfabIdx.byKey[keyOf(codigo, x)] || []).some(function(v){ return String(v.version || '').charAt(0) === digito1; });
+        });
+        if(porDigito1.length === 1) return { alt: porDigito1[0], confirmada: true, opciones: candidatas };
+      }
+      if(nodoPadre && candidatas.indexOf(nodoPadre.alt) !== -1) return { alt: nodoPadre.alt, confirmada: false, opciones: candidatas };
+      return { alt: candidatas[0], confirmada: false, opciones: candidatas };
+    }
+
+    function digito1DeCadena(nodos){
+      for(var i = 0; i < nodos.length; i++){
+        if(nodos[i].versionEsReal && String(nodos[i].version || '').length >= 1) return String(nodos[i].version).charAt(0);
+      }
+      return null;
+    }
+
+    /* Una rama es una sola cadena: misma reconstrucción paso a paso que la principal
+       (construirNodoIndividual + resolverEtapaPrevia + completarArbol), pero sin abrir una
+       combinación por cada VFab candidata — se elige sola, prefiriendo el mismo dígito 1 de
+       la cadena que la consume, o la que la persona fijó a mano en eleccionesForzadas. */
+    var MAX_PROFUNDIDAD_RAMAS = 6;
+    var MAX_ETAPAS_POR_CADENA = 40;
+    function construirCadenaDeRama(materialIni, altIni, visitadosBase, eleccionesForzadas, digito1Objetivo, profundidad){
+      var nodos = [];
+      var visitados = Object.assign({}, visitadosBase);
+      var mat = normMat(materialIni), alt = normAlt(altIni), d1 = digito1Objetivo || null;
+      for(var paso = 0; paso < MAX_ETAPAS_POR_CADENA; paso++){
+        var key = keyOf(mat, alt);
+        if(visitados[key]){
+          if(nodos.length) nodos[nodos.length-1].advertencias.push('Se detectó un ciclo (esta combinación Material+Alternativa ya apareció antes en la cadena) — se detiene el retroceso aquí para evitar un bucle infinito.');
+          break;
+        }
+        visitados[key] = true;
+        var forzado = eleccionesForzadas && eleccionesForzadas.hasOwnProperty(key) ? eleccionesForzadas[key] : null;
+        var r = construirNodoIndividual(mat, alt, visitados, forzado, d1);
+        nodos.push(r.nodo);
+        if(!d1 && r.nodo.versionEsReal && String(r.nodo.version || '').length >= 1) d1 = String(r.nodo.version).charAt(0);
+        if(!r.infoRetroceso) break;
+        var resuelto = resolverEtapaPrevia(r.nodo, r.infoRetroceso);
+        if(!resuelto) break;
+        mat = resuelto.siguiente.material;
+        alt = resuelto.siguiente.alt;
+      }
+      completarArbol(nodos);
+      agregarRamas(nodos, visitados, eleccionesForzadas, profundidad);
+      return nodos;
+    }
+
+    /* Busca y construye las ramas de cada nodo de una cadena ya completa. visitados lleva
+       las combinaciones Material+Alt de las cadenas que la contienen, para no volver a
+       explotar un material que ya está más arriba (un ciclo en los datos). */
+    function agregarRamas(nodos, visitados, eleccionesForzadas, profundidad){
+      if(profundidad >= MAX_PROFUNDIDAD_RAMAS) return;
+      var digito1 = digito1DeCadena(nodos);
+      var visitadosCadena = Object.assign({}, visitados);
+      nodos.forEach(function(n){ visitadosCadena[keyOf(n.material, n.alt)] = true; });
+      nodos.forEach(function(n){
+        var comps = componentesDeRama(n);
+        if(!comps.length) return;
+        var ramas = [];
+        comps.forEach(function(c){
+          var eleccion = elegirAltDeRama(c.componente, n, digito1);
+          if(visitadosCadena[keyOf(c.componente, eleccion.alt)]){
+            n.advertencias.push('El componente ' + c.componente + ' (posición ' + (c.pos || '—') + ') ya aparece más arriba en este árbol — no se vuelve a explotar para evitar un ciclo.');
+            return;
+          }
+          var cadena = construirCadenaDeRama(c.componente, eleccion.alt, visitadosCadena, eleccionesForzadas, digito1, profundidad + 1);
+          if(!cadena.length) return;
+          cadena[0].esInicioRama = true;
+          if(!eleccion.confirmada){
+            cadena[0].advertencias.push('Alternativa sin confirmar: ' + c.componente + ' tiene las alternativas ' + eleccion.opciones.join(', ') + ' y ni la Versión de Fabricación de ' + n.material + ' ni una alternativa única permiten saber con cuál entra — se usó la ' + eleccion.alt + '.');
+          }
+          ramas.push({ pos: c.pos, componente: c.componente, denominacion: c.denominacion, cantidad: c.cantidad, um: c.um, alt: eleccion.alt, nodos: cadena });
+        });
+        if(ramas.length) n.ramas = ramas;
+      });
+    }
+
+    /* Nivel (1 = la etapa de entrada), padre (material de la etapa que lo consume) y
+       posición dentro de la lista del padre, para quien recorra el árbol aplanado. */
+    function asignarNiveles(nodos, nivelInicial, padreInicial, posInicial){
+      nodos.forEach(function(n, i){
+        n.nivel = nivelInicial + i;
+        if(i === 0){
+          n.padre = padreInicial || null;
+          n.posEnPadre = posInicial || null;
+        } else {
+          n.padre = nodos[i-1].material;
+          n.posEnPadre = nodos[i-1].componentePrevio ? nodos[i-1].componentePrevio.pos : null;
+        }
+        (n.ramas || []).forEach(function(r){ asignarNiveles(r.nodos, n.nivel + 1, n.material, r.pos); });
+      });
+    }
+
+    /* Todos los nodos del árbol en orden de lectura (el mismo en que los dibuja "Árbol del
+       producto"): cada nodo, y cuando abre ramas, primero el resto de su propia cadena y
+       después cada rama en orden de posición. */
+    function aplanarArbol(nodos, out){
+      out = out || [];
+      for(var i = 0; i < nodos.length; i++){
+        var n = nodos[i];
+        out.push(n);
+        if(n.ramas && n.ramas.length){
+          aplanarArbol(nodos.slice(i+1), out);
+          n.ramas.forEach(function(r){ aplanarArbol(r.nodos, out); });
+          return out;
+        }
+      }
+      return out;
+    }
+
+    /* Última etapa de cada cadena (la principal y cada rama): ahí es donde se ve si cada
+       camino llegó a Fabricación / a un fin natural, o se detuvo antes. */
+    function finesDeArbol(nodos, out){
+      out = out || [];
+      if(!nodos || !nodos.length) return out;
+      out.push(nodos[nodos.length-1]);
+      nodos.forEach(function(n){ (n.ramas || []).forEach(function(r){ finesDeArbol(r.nodos, out); }); });
+      return out;
+    }
+
     /* Límite de seguridad al explorar combinaciones: evita que un caso con muchas etapas con
        múltiples VFab genere una explosión combinatoria impráctica de mostrar (ej. 4 etapas
        con 3 VFab cada una ya son 81 árboles). Por encima de este límite se avisa y se
@@ -642,6 +848,41 @@
        Acondicionado. Tiene su propio límite de seguridad para no explotar combinatoriamente
        ni entrar en bucles con datos inconsistentes. */
     var MAX_CAMINOS_AVANCE = 40;
+
+    /* Índice inverso de las ramas: componente -> listas {material, alt} que lo consumen como
+       rama (no en su posición 0010), con la alternativa con que entraría según
+       elegirAltDeRama — el camino exacto de agregarRamas, recorrido al revés. Usa la primera
+       VFab real de cada lista para leer su dígito 2, igual que el retroceso. */
+    var __usosRamaCache = { refs: null, index: null };
+    function buildUsosComoRamaIndex(){
+      var refs = [datos.BOM_ROWS, datos.BOM_COMP_ROWS, datos.BOM_VFAB_ROWS, datos.MM_TIPO_MAP];
+      if(__usosRamaCache.index && __usosRamaCache.refs.every(function(r, i){ return r === refs[i]; })){
+        return __usosRamaCache.index;
+      }
+      var bomIdx = buildBomIndex();
+      var compIdx = buildCompFirstPosIndex();
+      var vfabIdx = buildVfabIndex();
+      var index = {};
+      Object.keys(bomIdx.byKey).forEach(function(k){
+        var e = bomIdx.byKey[k];
+        var vfs = vfabIdx.byKey[k] || [];
+        var primero = compIdx.firstByKey[k];
+        var lista = {
+          material: e.material, alt: e.alt, listaTecnica: e.listaTecnica,
+          esFabricacion: esEtapaFabricacion(e.etapa),
+          componentePrevio: primero ? { pos: primero.pos, componente: primero.componente } : null,
+          version: vfs.length ? vfs[0].version : null, versionEsReal: vfs.length > 0
+        };
+        componentesDeRama(lista).forEach(function(c){
+          if(!index[c.componente]) index[c.componente] = [];
+          var d1 = lista.version ? String(lista.version).charAt(0) : null;
+          index[c.componente].push({ material: e.material, alt: e.alt, altRama: elegirAltDeRama(c.componente, lista, d1).alt });
+        });
+      });
+      __usosRamaCache = { refs: refs, index: index };
+      return index;
+    }
+
     function encontrarProductosTerminados(material, alt){
       var bomIdx = buildBomIndex();
       var compIdx = buildCompFirstPosIndex();
@@ -668,6 +909,12 @@
         // mismo criterio de "etapa alt.N -> etapa siguiente también resuelve a alt.N" que ya
         // usa el retroceso, ya que es la relación real registrada entre etapas.
         var candidatas = siguientes.filter(function(s){ return normAlt(s.alt) === altActual; });
+        // También las listas que lo consumen como RAMA (otra posición que la 0010), cuando
+        // entraría justo con esta alternativa — así un solvente o un segundo granel también
+        // llega a su producto terminado.
+        (buildUsosComoRamaIndex()[matActual] || []).forEach(function(u){
+          if(u.altRama === altActual) candidatas.push({ material: u.material, alt: u.alt });
+        });
 
         if(candidatas.length === 0){
           // No hay ninguna etapa posterior registrada que use este material -- puede que el
@@ -787,13 +1034,19 @@
       // ramificación (ej. Acondicionado) son el MISMO objeto compartido entre ramas — sin
       // este clonado, una advertencia añadida en un árbol "se filtraba" a los demás árboles
       // que comparten ese nodo, aunque no les correspondiera.
+      // Las ramas se arman aquí, sobre la copia de cada combinación (no durante la
+      // exploración), por el mismo motivo: así ninguna combinación comparte nodos de rama
+      // con otra.
       var arboles = arbolesCompletos.map(function(nodos){
         var copia = nodos.map(function(n){
           var c = Object.assign({}, n);
           c.advertencias = n.advertencias.slice();
           return c;
         });
-        return completarArbol(copia);
+        completarArbol(copia);
+        agregarRamas(copia, {}, eleccionesForzadas, 0);
+        asignarNiveles(copia, 1, null, null);
+        return copia;
       });
 
       // Se reordenan las combinaciones para que la(s) COHERENTE(S) — sin ninguna advertencia
@@ -804,7 +1057,7 @@
       // encontrarla — las demás (con datos incoherentes en SAP) siguen disponibles ahí por
       // si se necesita revisarlas. Dentro de cada grupo se preserva el orden de generación.
       function esCombinacionCoherente(nodos){
-        return !nodos.some(function(n){
+        return !aplanarArbol(nodos).some(function(n){
           return n.advertencias.some(function(w){ return w.indexOf('INCOHERENCIA')!==-1 || w.indexOf('INCONSISTENCIA')!==-1; });
         });
       }
@@ -870,6 +1123,8 @@
       encontrarProductosTerminados: encontrarProductosTerminados,
       construirTodosLosArboles: construirTodosLosArboles,
       construirArbol: construirArbol,
+      aplanarArbol: function(nodos){ return aplanarArbol(nodos || []); },
+      finesDeArbol: function(nodos){ return finesDeArbol(nodos || []); },
       isSuspendedCode: isSuspendedCode,
       isZ3Code: isZ3Code,
       MAX_ARBOLES_COMBINACIONES: MAX_ARBOLES_COMBINACIONES

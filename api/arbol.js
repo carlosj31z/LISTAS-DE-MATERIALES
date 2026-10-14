@@ -25,6 +25,10 @@
  * Respuesta: el mismo objeto "observacion" que ya arma toolArbolProducto en el navegador
  * (mismos campos "estado": ok | no_encontrado | alt_no_existe | ambiguo_alternativa |
  * multiples_productos | sin_producto_terminado | sin_arbol | sin_datos), como JSON plano.
+ * "nodos" trae TODAS las etapas, también las de las ramas (un kit vial + solvente tiene dos
+ * semielaborados en Acondicionado, cada uno con su cadena): cada nodo lleva nivel (1 =
+ * Acondicionado), padre (material que lo consume), posEnPadre (su posición en esa lista) y
+ * esInicioRama. Son campos agregados: quien solo lea nodos[].material sigue funcionando.
  *
  * Rendimiento: un consumidor externo real (otra página, fuera de este repo) reportó 503
  * por "sin tiempo suficiente" — el presupuesto de Vercel Hobby (~10s) no alcanzaba para
@@ -76,9 +80,14 @@ async function traerDatos() {
   const vfab = aColumnasYFilas(vfabDedup);
 
   const mmEstadoMap = {};
-  mmRaw.forEach((row) => { if (row && row['Material']) mmEstadoMap[String(row['Material'])] = row['Estado mat.todos ce']; });
+  const mmTipoMap = {};
+  mmRaw.forEach((row) => {
+    if (!row || !row['Material']) return;
+    mmEstadoMap[String(row['Material'])] = row['Estado mat.todos ce'];
+    mmTipoMap[String(row['Material'])] = row['Tipo material'] || '';
+  });
 
-  cacheDatos = { expira: Date.now() + CACHE_TTL_MS, bom, comp, vfab, mmEstadoMap };
+  cacheDatos = { expira: Date.now() + CACHE_TTL_MS, bom, comp, vfab, mmEstadoMap, mmTipoMap };
   return cacheDatos;
 }
 
@@ -138,7 +147,10 @@ function calcularArbol(motor, codigo, altPedida, combinacionPedida) {
   if (!arboles.length) return { estado: 'sin_arbol', material: materialFinal, alt: altFinal };
 
   const idxComb = (Number.isInteger(combinacionPedida) && combinacionPedida >= 0 && combinacionPedida < arboles.length) ? combinacionPedida : 0;
-  const nodos = arboles[idxComb].map((n) => ({
+  // Todas las etapas, ramas incluidas (vial y solvente de un kit, dos graneles…), en orden
+  // de lectura; nivel/padre/posEnPadre/esInicioRama dicen cómo se conectan.
+  const nodos = motor.aplanarArbol(arboles[idxComb]).map((n) => ({
+    nivel: n.nivel, padre: n.padre, posEnPadre: n.posEnPadre, esInicioRama: !!n.esInicioRama,
     etapa: n.etapa, material: n.material, alt: n.alt, version: n.version, versionEsReal: n.versionEsReal,
     vfabBloqueada: n.vfabBloqueada, estado: n.estado, esFabricacion: n.esFabricacion, advertencias: n.advertencias || []
   }));
@@ -182,12 +194,12 @@ module.exports = async (req, res) => {
       return;
     }
 
-    const { bom, comp, vfab, mmEstadoMap } = datos;
+    const { bom, comp, vfab, mmEstadoMap, mmTipoMap } = datos;
     const motor = crearMotorArbol({
       BOM_ROWS: bom.filas, BOM_COLUMNS: bom.columnas,
       BOM_COMP_ROWS: comp.filas, BOM_COMP_COLUMNS: comp.columnas,
       BOM_VFAB_ROWS: vfab.filas, BOM_VFAB_COLUMNS: vfab.columnas,
-      MM_ESTADO_MAP: mmEstadoMap
+      MM_ESTADO_MAP: mmEstadoMap, MM_TIPO_MAP: mmTipoMap
     });
 
     const observacion = calcularArbol(motor, codigo, alt, combinacion);

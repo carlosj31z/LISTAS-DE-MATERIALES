@@ -8296,10 +8296,11 @@ function formatFechaHoraCorta(d){
     var a = getApi();
 
     // Formato fijo acordado: una fila por CADA COMPONENTE de cada etapa (no una fila por
-    // etapa) — Centro, Material padre y VFab de entrada se repiten en todo el bloque del
-    // árbol; Etapa/Material hijo/VFab cambian según la etapa; luego el detalle del
-    // componente (posición, código, descripción, cantidad, unidad).
-    var headers = ['Centro','Material padre','VFab','Etapa','Material hijo','VFab','Posición','Componente','Descripción de componente','Cantidad','UM'];
+    // etapa) — Centro, Material padre (con su descripción) y VFab de entrada se repiten en
+    // todo el bloque del árbol; Etapa/Material hijo (con su descripción)/VFab cambian según
+    // la etapa; luego el detalle del componente (posición, código, descripción, cantidad,
+    // unidad).
+    var headers = ['Centro','Material padre','Descripción material padre','VFab','Etapa','Material hijo','Descripción material hijo','VFab','Posición','Componente','Descripción de componente','Cantidad','UM'];
     var aoa = [headers];
 
     // Metadatos por fila para poder aplicar color/comentario después de tener toda la
@@ -8324,7 +8325,7 @@ function formatFechaHoraCorta(d){
         if(comps.length === 0){
           // Etapa sin componentes cargados: igual se deja constancia de la etapa en una
           // fila (sin desglose), para no perder de vista que esa etapa existe en el árbol.
-          aoa.push([r.centro||'—', r.material, r.version, n.etapa||'—', n.material, n.version, '—', '—', '(sin componentes cargados)', '', '']);
+          aoa.push([r.centro||'—', r.material, r.descripcion||'', r.version, n.etapa||'—', n.material, n.descripcion||'', n.version, '—', '—', '(sin componentes cargados)', '', '']);
           rowMeta.push({ lmatBloqueada: lmatBloqueada, vfabBloqueada: vfabBloqueada, zTexto: null, inicioEtapa: true });
           return;
         }
@@ -8332,7 +8333,7 @@ function formatFechaHoraCorta(d){
         comps.forEach(function(c, ci){
           var estadoComp = a.estadoZDelMaterial(c.componente);
           aoa.push([
-            r.centro||'—', r.material, r.version, n.etapa||'—', n.material, n.version,
+            r.centro||'—', r.material, r.descripcion||'', r.version, n.etapa||'—', n.material, n.descripcion||'', n.version,
             c.pos||'—', c.componente||'—', c.denominacion||'', c.cantidad!==''&&c.cantidad!=null ? Number(c.cantidad)||c.cantidad : '', c.um||''
           ]);
           rowMeta.push({
@@ -8347,7 +8348,7 @@ function formatFechaHoraCorta(d){
 
     var ws = XLSX.utils.aoa_to_sheet(aoa);
     ws['!cols'] = [
-      {wch:9},{wch:15},{wch:8},{wch:16},{wch:16},{wch:8},{wch:11},{wch:13},{wch:43},{wch:13},{wch:7}
+      {wch:9},{wch:15},{wch:40},{wch:8},{wch:16},{wch:16},{wch:40},{wch:8},{wch:11},{wch:13},{wch:43},{wch:13},{wch:7}
     ];
     var lastCol = XLSX.utils.encode_col(headers.length-1);
     var lastRow = aoa.length;
@@ -8362,9 +8363,12 @@ function formatFechaHoraCorta(d){
     var FONT_NORMAL = { sz:10, name:'Calibri' };
     var FONT_BOLD = { sz:10, name:'Calibri', bold:true };
 
-    // Índices de columna (0-based) según el orden de "headers" — E=Material hijo (4),
-    // F=VFab (5), H=Componente (7).
-    var COL_MATERIAL_HIJO = 4, COL_VFAB = 5, COL_COMPONENTE = 7;
+    // Columnas que se marcan (amarillo + comentario), sacadas de "headers" por nombre para
+    // que no se corran si se agrega otra columna: Material hijo, la VFab de la etapa (la
+    // segunda "VFab"; la primera es la del material padre) y Componente.
+    var COL_MATERIAL_HIJO = headers.indexOf('Material hijo');
+    var COL_VFAB = headers.lastIndexOf('VFab');
+    var COL_COMPONENTE = headers.indexOf('Componente');
 
     function estilarEncabezado(hoja, totalColumnas){
       for(var c=0; c<totalColumnas; c++){
@@ -8446,7 +8450,7 @@ function formatFechaHoraCorta(d){
       ['Amarillo con comentario "BLOQUEO Z1 / Z2 / Z3" (sobre la columna "Componente") — ese componente figura con ese estado en el Maestro de Materiales.'],
       ['Los comentarios no tapan la hoja: la celda comentada muestra un triangulito rojo en la esquina y el texto aparece al pasar el cursor sobre ella.'],
       [''],
-      ['Nota: cada bloque de filas con el mismo "Material padre" + "VFab" (columnas B y C) corresponde a UN árbol completo, desglosado componente por componente en cada etapa. Si el material de partida tenía más de una Versión de Fabricación disponible, aparece un bloque completo por cada una, uno detrás del otro.'],
+      ['Nota: cada bloque de filas con el mismo "Material padre" + "VFab" (columnas B y D) corresponde a UN árbol completo, desglosado componente por componente en cada etapa. Si el material de partida tenía más de una Versión de Fabricación disponible, aparece un bloque completo por cada una, uno detrás del otro.'],
       ['Hoja RESUMEN: una fila por árbol generado, con hasta qué etapa llegó y su estado. Hoja NO RESUELTOS (si existe): códigos de la lista que no generaron árbol, con el motivo.'],
     ];
     var wsLegend = XLSX.utils.aoa_to_sheet(legendAoa);

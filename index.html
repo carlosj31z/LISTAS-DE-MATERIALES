@@ -2677,6 +2677,7 @@ function formatFechaHoraCorta(d){
     var estadoMap = {};
     var textoMap = {};
     var tipoMap = {};
+    var grupoArtMap = {};
     var inspeccionMap = {};
     var cat3Map = {}; // Material -> { nombreCat3Original, reformulado, fuente }
     state.rows.forEach(function(r){
@@ -2690,6 +2691,7 @@ function formatFechaHoraCorta(d){
         estadoMap[matKey] = r['Estado mat.todos ce'];
         textoMap[matKey] = r['Texto Material'] || r['Denom.estándar'] || '';
         tipoMap[matKey] = r['Tipo material'] || '';
+        grupoArtMap[matKey] = r['Denom. Grupo de artículos'] || '';
         var inspeccion = r['Texto de inspección'] || '';
         inspeccionMap[matKey] = inspeccion;
 
@@ -2709,6 +2711,9 @@ function formatFechaHoraCorta(d){
     window.MM_ESTADO_MAP = estadoMap;
     window.MM_TEXTO_MAP = textoMap;
     window.MM_TIPO_MAP = tipoMap;
+    // Material -> "Denom. Grupo de artículos" (p. ej. 1100008695 -> ENV-FRASCO GOTERO),
+    // para el exportado de Explosión masiva.
+    window.MM_GRUPO_ART_MAP = grupoArtMap;
     // Texto de inspección del Maestro de Materiales, publicado para que el exportado de
     // Listas de Materiales pueda incluirlo (solo para la lista/producto, no para cada
     // componente — ver uso en el exportador del BOM).
@@ -8299,9 +8304,12 @@ function formatFechaHoraCorta(d){
     // etapa) — Centro, Material padre (con su descripción) y VFab de entrada se repiten en
     // todo el bloque del árbol; Etapa/Material hijo (con su descripción)/VFab cambian según
     // la etapa; luego el detalle del componente (posición, código, descripción, cantidad,
-    // unidad).
-    var headers = ['Centro','Material padre','Descripción material padre','VFab','Etapa','Material hijo','Descripción material hijo','VFab','Posición','Componente','Descripción de componente','Cantidad','UM'];
+    // unidad). Junto a cada descripción, la "Denom. Grupo de artículos" de ese material en
+    // el Maestro de Materiales (vacía si el Maestro no está cargado o no lo tiene).
+    var headers = ['Centro','Material padre','Descripción material padre','Denom. Grupo de artículos padre','VFab','Etapa','Material hijo','Descripción material hijo','Denom. Grupo de artículos hijo','VFab','Posición','Componente','Descripción de componente','Denom. Grupo de artículos componente','Cantidad','UM'];
     var aoa = [headers];
+    var mapaGrupoArt = window.MM_GRUPO_ART_MAP || {};
+    function grupoArt(codigo){ return mapaGrupoArt[a.normMat(codigo)] || ''; }
 
     // Metadatos por fila para poder aplicar color/comentario después de tener toda la
     // hoja armada: qué celdas de esa fila deben marcarse y con qué texto de comentario.
@@ -8325,7 +8333,7 @@ function formatFechaHoraCorta(d){
         if(comps.length === 0){
           // Etapa sin componentes cargados: igual se deja constancia de la etapa en una
           // fila (sin desglose), para no perder de vista que esa etapa existe en el árbol.
-          aoa.push([r.centro||'—', r.material, r.descripcion||'', r.version, n.etapa||'—', n.material, n.descripcion||'', n.version, '—', '—', '(sin componentes cargados)', '', '']);
+          aoa.push([r.centro||'—', r.material, r.descripcion||'', grupoArt(r.material), r.version, n.etapa||'—', n.material, n.descripcion||'', grupoArt(n.material), n.version, '—', '—', '(sin componentes cargados)', '', '', '']);
           rowMeta.push({ lmatBloqueada: lmatBloqueada, vfabBloqueada: vfabBloqueada, zTexto: null, inicioEtapa: true });
           return;
         }
@@ -8333,8 +8341,8 @@ function formatFechaHoraCorta(d){
         comps.forEach(function(c, ci){
           var estadoComp = a.estadoZDelMaterial(c.componente);
           aoa.push([
-            r.centro||'—', r.material, r.descripcion||'', r.version, n.etapa||'—', n.material, n.descripcion||'', n.version,
-            c.pos||'—', c.componente||'—', c.denominacion||'', c.cantidad!==''&&c.cantidad!=null ? Number(c.cantidad)||c.cantidad : '', c.um||''
+            r.centro||'—', r.material, r.descripcion||'', grupoArt(r.material), r.version, n.etapa||'—', n.material, n.descripcion||'', grupoArt(n.material), n.version,
+            c.pos||'—', c.componente||'—', c.denominacion||'', grupoArt(c.componente), c.cantidad!==''&&c.cantidad!=null ? Number(c.cantidad)||c.cantidad : '', c.um||''
           ]);
           rowMeta.push({
             lmatBloqueada: lmatBloqueada,
@@ -8348,7 +8356,7 @@ function formatFechaHoraCorta(d){
 
     var ws = XLSX.utils.aoa_to_sheet(aoa);
     ws['!cols'] = [
-      {wch:9},{wch:15},{wch:40},{wch:8},{wch:16},{wch:16},{wch:40},{wch:8},{wch:11},{wch:13},{wch:43},{wch:13},{wch:7}
+      {wch:9},{wch:15},{wch:40},{wch:24},{wch:8},{wch:16},{wch:16},{wch:40},{wch:24},{wch:8},{wch:11},{wch:13},{wch:43},{wch:24},{wch:13},{wch:7}
     ];
     var lastCol = XLSX.utils.encode_col(headers.length-1);
     var lastRow = aoa.length;
@@ -8450,7 +8458,7 @@ function formatFechaHoraCorta(d){
       ['Amarillo con comentario "BLOQUEO Z1 / Z2 / Z3" (sobre la columna "Componente") — ese componente figura con ese estado en el Maestro de Materiales.'],
       ['Los comentarios no tapan la hoja: la celda comentada muestra un triangulito rojo en la esquina y el texto aparece al pasar el cursor sobre ella.'],
       [''],
-      ['Nota: cada bloque de filas con el mismo "Material padre" + "VFab" (columnas B y D) corresponde a UN árbol completo, desglosado componente por componente en cada etapa. Si el material de partida tenía más de una Versión de Fabricación disponible, aparece un bloque completo por cada una, uno detrás del otro.'],
+      ['Nota: cada bloque de filas con el mismo "Material padre" + "VFab" (columnas B y E) corresponde a UN árbol completo, desglosado componente por componente en cada etapa. Si el material de partida tenía más de una Versión de Fabricación disponible, aparece un bloque completo por cada una, uno detrás del otro.'],
       ['Hoja RESUMEN: una fila por árbol generado, con hasta qué etapa llegó y su estado. Hoja NO RESUELTOS (si existe): códigos de la lista que no generaron árbol, con el motivo.'],
     ];
     var wsLegend = XLSX.utils.aoa_to_sheet(legendAoa);

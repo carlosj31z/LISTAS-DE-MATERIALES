@@ -2411,13 +2411,18 @@ function formatFechaHoraCorta(d){
 /* ============================================================
    INICIO DE SESIÓN (Supabase Auth)
 
-   La cuenta vive en Supabase Auth: la contraseña nunca está escrita en este archivo. Solo
-   un correo puede entrar, y se compara por su huella SHA-256 para no dejarlo a la vista en
-   el código. Mientras no haya sesión, window.__auth.listo no se resuelve y ningún dato se
+   Las cuentas viven en Supabase Auth: las contraseñas nunca están escritas en este archivo.
+   Solo entran los correos de CORREOS_PERMITIDOS_SHA256, comparados por su huella SHA-256
+   para no dejarlos a la vista en el código. Mientras no haya sesión, window.__auth.listo no se resuelve y ningún dato se
    pide a Supabase (__sbFetchAll y __sbGetLastCargaDate lo esperan antes de consultar).
    ============================================================ */
 (function(){
-  var CORREO_PERMITIDO_SHA256 = '94e2e8af921cdcba26359d92eacfc9d2645851c2db10379f4f03b458db02fe83';
+  // Para dar acceso a otra persona: crear su usuario en Supabase Auth y agregar aquí
+  // sha256(correo en minúsculas).
+  var CORREOS_PERMITIDOS_SHA256 = [
+    '94e2e8af921cdcba26359d92eacfc9d2645851c2db10379f4f03b458db02fe83',
+    'd62f0d87fd1849be567a6816c1415fa0ebbcfb2ea89edc9138a4f200d368230f'
+  ];
   var overlay = document.getElementById('loginOverlay');
   var verificando = document.getElementById('loginVerificando');
   var form = document.getElementById('loginForm');
@@ -2439,7 +2444,7 @@ function formatFechaHoraCorta(d){
   }
   async function correoPermitido(correo){
     if(!correo || !window.crypto || !crypto.subtle) return false;
-    return (await huella(String(correo).trim().toLowerCase())) === CORREO_PERMITIDO_SHA256;
+    return CORREOS_PERMITIDOS_SHA256.indexOf(await huella(String(correo).trim().toLowerCase())) !== -1;
   }
 
   function mostrarError(msg, tipo){

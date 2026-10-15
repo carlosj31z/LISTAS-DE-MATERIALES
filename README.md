@@ -71,9 +71,10 @@ dato a Supabase hasta que hay sesión: `__sbFetchAll` y `__sbGetLastCargaDate`
 esperan `window.__auth.listo`.
 - La cuenta vive en **Supabase Auth** (Authentication → Users). La contraseña
   **nunca** se escribe en el código; se cambia desde Supabase.
-- Solo un correo puede entrar: el código guarda su huella SHA-256
-  (`CORREO_PERMITIDO_SHA256`), no el correo en claro. Para cambiarlo, calcular
-  `sha256(correo en minúsculas)` y reemplazar la constante.
+- Solo entran los correos de la lista `CORREOS_PERMITIDOS_SHA256` (su huella
+  SHA-256, no el correo en claro). Para dar acceso a alguien: crear su usuario
+  en Supabase Auth y agregar `sha256(correo en minúsculas)` a esa lista.
+  Usuarios actuales: 2.
 - Hay **dos clientes**: `window.__sb` (datos, clave pública, sin sesión — las
   tablas se leen y guardan exactamente como antes) y `window.__sbAuth` (solo
   login; guarda la sesión en el navegador con la clave `sb-listas-sesion`).

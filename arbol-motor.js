@@ -329,7 +329,10 @@
         byKey[key].push({
           version: version,
           centro: iCentro!==undefined ? row[iCentro] : '',
-          bloqueada: iBloqueo!==undefined && String(row[iBloqueo]||'').trim() === '1'
+          bloqueada: iBloqueo!==undefined && String(row[iBloqueo]||'').trim() === '1',
+          // Valor crudo: "1" = bloqueada; "2" = bloqueada para la selección automática (SAP
+          // no la elige al explotar); vacío/"0" = disponible.
+          bloqueo: iBloqueo!==undefined ? String(row[iBloqueo]||'').trim() : ''
         });
       });
       var result = { byKey: byKey };
@@ -359,9 +362,19 @@
        materia prima (ZMPR) no abre rama aunque tenga lista. Sin Maestro cargado, o si no
        conoce el código, se decide por el prefijo: "1000…" (MP) no abre rama. */
     var TIPOS_SIN_RAMA = ['ZMPR'];
-    function esComponenteDeRama(codigo){
+    /* centro (opcional): el de la etapa que lo consume. SAP explota un componente solo si
+       tiene lista en ese mismo centro (en 6000002959, centro 1020, las tapas 5000000155 y
+       5000000156 tienen su lista en 1021 y no se explotan). */
+    function tieneListaEnCentro(material, centro){
+      var c = String(centro || '').trim();
+      var alts = buildBomIndex().altsByMaterial[normMat(material)] || [];
+      if(!c) return alts.length > 0;
+      return alts.some(function(e){ var ce = String(e.centro || '').trim(); return !ce || ce === c; });
+    }
+    function esComponenteDeRama(codigo, centro){
       var mat = normMat(codigo);
       if(!mat || !tieneListaPropia(mat)) return false;
+      if(centro && !tieneListaEnCentro(mat, centro)) return false;
       var tipo = datos.MM_TIPO_MAP ? String(datos.MM_TIPO_MAP[mat] || '').trim().toUpperCase() : '';
       if(tipo) return TIPOS_SIN_RAMA.indexOf(tipo) === -1;
       return !/^1000/.test(mat);
@@ -540,9 +553,9 @@
          rama (única, o por dígito 1 de la cadena). */
       if(bomEntry && esFab && !esReacondicionado(altActual)){
         var compFab = compIdx.firstByKey[key];
-        if(compFab && compFab.componente && compFab.componente !== matActual && esComponenteDeRama(compFab.componente)){
+        if(compFab && compFab.componente && compFab.componente !== matActual && esComponenteDeRama(compFab.componente, nodo.centro)){
           var d1Fab = nodo.versionEsReal && String(nodo.version || '').length >= 1 ? String(nodo.version).charAt(0) : (digito1Objetivo || null);
-          var elecFab = elegirAltDeRama(compFab.componente, null, d1Fab);
+          var elecFab = elegirAltDeRama(compFab.componente, { centro: nodo.centro }, d1Fab);
           nodo.componentePrevio = { pos: compFab.pos, componente: compFab.componente };
           if(!elecFab.confirmada){
             nodo.advertencias.push('Alternativa sin confirmar: ' + compFab.componente + ' tiene las alternativas ' + elecFab.opciones.join(', ') + ' y nada permite saber con cuál entra en esta Fabricación — se usó la ' + elecFab.alt + '.');
@@ -563,8 +576,8 @@
              6300000089), que SAP explota completo. Si ese 0010 tiene lista propia, la cadena
              sigue hacia él con la alternativa elegida como en una rama. */
           var compReac = compIdx.firstByKey[key];
-          if(compReac && compReac.componente && compReac.componente !== matActual && esComponenteDeRama(compReac.componente)){
-            var elecReac = elegirAltDeRama(compReac.componente, null, null);
+          if(compReac && compReac.componente && compReac.componente !== matActual && esComponenteDeRama(compReac.componente, nodo.centro)){
+            var elecReac = elegirAltDeRama(compReac.componente, { centro: nodo.centro }, null);
             nodo.componentePrevio = { pos: compReac.pos, componente: compReac.componente };
             if(!elecReac.confirmada){
               nodo.advertencias.push('Alternativa sin confirmar: ' + compReac.componente + ' tiene las alternativas ' + elecReac.opciones.join(', ') + ' y un reacondicionado no indica con cuál entra — se usó la ' + elecReac.alt + '.');
@@ -599,7 +612,7 @@
             if(digito2Real !== null && String(digito2Real).trim() === '0' && esVfabMaquila){
               // VFab de maquila ("0001", "0002"…, típicas de envase impreso): no codifican la
               // alternativa previa, así que el material del 0010 entra como en una rama.
-              var elecMaq = elegirAltDeRama(compEntry.componente, null, null);
+              var elecMaq = elegirAltDeRama(compEntry.componente, { centro: nodo.centro }, null);
               altEsperadaSiguiente = elecMaq.alt;
               altEsperadaConfirmada = elecMaq.confirmada;
               if(!elecMaq.confirmada) nodo.advertencias.push('Alternativa sin confirmar: ' + compEntry.componente + ' tiene las alternativas ' + elecMaq.opciones.join(', ') + ' — se usó la ' + elecMaq.alt + '.');
@@ -750,7 +763,7 @@
       buildAllCompsIndex().componentesDe(nodo.material, nodo.alt, nodo.listaTecnica).forEach(function(c){
         var cod = c.componente;
         if(!cod || cod === nodo.material || cod === previo || vistos[cod]) return;
-        if(!esComponenteDeRama(cod)) return;
+        if(!esComponenteDeRama(cod, nodo.centro)) return;
         vistos[cod] = true;
         out.push(c);
       });
@@ -768,11 +781,33 @@
     function elegirAltDeRama(codigo, nodoPadre, digito1){
       var vistos = {};
       var alts = [];
-      (buildBomIndex().altsByMaterial[normMat(codigo)] || []).forEach(function(e){
+      var centro = nodoPadre && nodoPadre.centro ? String(nodoPadre.centro).trim() : '';
+      var entradas = buildBomIndex().altsByMaterial[normMat(codigo)] || [];
+      var delCentro = centro ? entradas.filter(function(e){ var ce = String(e.centro || '').trim(); return !ce || ce === centro; }) : entradas;
+      // Si en ese centro solo hay reacondicionados (95-99), se usan todas las del material.
+      var base = delCentro.some(function(e){ return !esReacondicionado(normAlt(e.alt)); }) ? delCentro : entradas;
+      base.forEach(function(e){
         if(!vistos[e.alt]){ vistos[e.alt] = true; alts.push(e.alt); }
       });
       var normales = alts.filter(function(x){ return !esReacondicionado(x); });
       var candidatas = normales.length ? normales : alts;
+      /* Material de maquila (todas sus VFab son "00xx", p. ej. tapas y envases impresos): su
+         VFab no se deriva de la del padre. Se toma, como SAP al explotar, la única
+         alternativa con una VFab disponible (sin bloqueo "1" ni "2"). En 6000002959 la tapa
+         1100001750 tiene 0001-0005 y solo la 0002 está libre. */
+      if(candidatas.length > 1){
+        var vfabIdxM = buildVfabIndex();
+        var conVfab = candidatas.filter(function(x){ return (vfabIdxM.byKey[keyOf(codigo, x)] || []).length; });
+        var todasMaquila = conVfab.length === candidatas.length && conVfab.every(function(x){
+          return vfabIdxM.byKey[keyOf(codigo, x)].every(function(v){ return /^00/.test(String(v.version || '')); });
+        });
+        if(todasMaquila){
+          var libres = candidatas.filter(function(x){
+            return vfabIdxM.byKey[keyOf(codigo, x)].some(function(v){ return v.bloqueo !== '1' && v.bloqueo !== '2'; });
+          });
+          if(libres.length === 1) return { alt: libres[0], confirmada: true, opciones: candidatas };
+        }
+      }
       var version = nodoPadre && nodoPadre.versionEsReal ? String(nodoPadre.version || '') : '';
       var porDigito = version.length >= 2 ? altPreviaDesdeDigito2(version.charAt(1)) : null;
       if(porDigito && candidatas.indexOf(porDigito) !== -1) return { alt: porDigito, confirmada: true, opciones: candidatas };
@@ -938,7 +973,7 @@
         var vfs = vfabIdx.byKey[k] || [];
         var primero = compIdx.firstByKey[k];
         var lista = {
-          material: e.material, alt: e.alt, listaTecnica: e.listaTecnica,
+          material: e.material, alt: e.alt, listaTecnica: e.listaTecnica, centro: e.centro,
           esFabricacion: esEtapaFabricacion(e.etapa),
           componentePrevio: primero ? { pos: primero.pos, componente: primero.componente } : null,
           version: vfs.length ? vfs[0].version : null, versionEsReal: vfs.length > 0

@@ -62,7 +62,10 @@ grep -n "APP [0-9] —" index.html
    columnas (o apiladas si son muchas). Una Fabricación cuyo 0010 es otro
    semielaborado fabricado (polvo efervescente a partir de granulado) sigue la
    cadena un nivel más; las etapas MAQUILA con VFab "00xx" no se validan con la
-   regla de dígitos 1-2. Soporta múltiples combinaciones cuando
+   regla de dígitos 1-2. Una rama solo se abre si el componente tiene lista en
+   el MISMO centro que la etapa que lo consume (igual que la CS12 por centro), y
+   en materiales de maquila se elige la alternativa cuya VFab está libre
+   (bloqueo distinto de "1" y "2"). Soporta múltiples combinaciones cuando
    hay ambigüedad de Versión de Fabricación.
 4. **Explosión masiva** — corre el mismo motor del Árbol del producto sobre
    una lista de materiales sin límite de cantidad (pegada desde Excel en un

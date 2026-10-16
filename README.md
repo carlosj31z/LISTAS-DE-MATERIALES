@@ -42,7 +42,16 @@ grep -n "APP [0-9] —" index.html
 2. **Listas de Materiales** — el BOM (Bill of Materials): listas, componentes,
    Versiones de Fabricación (VFab), exportadores a Excel con formato, y el
    nuevo **botón flotante de Auditoría de incoherencias** (esquina inferior
-   izquierda).
+   izquierda). El botón **"Varios códigos"** de la barra abre un panel para
+   pegar muchos códigos de material a la vez (uno por línea, separados por
+   coma/espacio o una columna de Excel) y, opcionalmente, un componente: la
+   tabla queda filtrada a esas listas (respetando los demás filtros), cada fila
+   se marca "Tiene / No tiene / Sin datos", y el panel resume cuántas no lo
+   tienen (vistas No lo tienen / Lo tienen / Todas), qué códigos no tienen
+   lista, cuáles usan el código antiguo (o vigente) del mismo material según
+   el Maestro, permite copiar los códigos y exportar el resultado a Excel.
+   Cruce por Material + Lista mat.alternat. contra los componentes cargados
+   (estado `multiBusqueda`, funciones `*Multi` del módulo APP 2).
 3. **Árbol del producto** — reconstruye la cadena Acondicionado → Envase →
    Recubrimiento/Inspección → Fabricación de un producto terminado,
    retrocediendo por los componentes de posición 0010 de cada lista. Si una

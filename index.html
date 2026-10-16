@@ -291,6 +291,48 @@ window.__conXLSX = async function(){
   .filter-option .opt-label{flex:1; overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
   .filter-option .opt-count{color:var(--ink-faint); font-family:var(--mono); font-size:11px;}
 
+  /* ================= Reescalar una lista por cantidad base ================= */
+  .reesc-overlay{ position:fixed; inset:0; z-index:9600; background:rgba(18,33,50,0.45); display:flex; align-items:center; justify-content:center; padding:20px 16px; }
+  .reesc-overlay[hidden]{ display:none; }
+  .reesc-card{ background:var(--surface); border-radius:16px; box-shadow:var(--shadow-lg); width:min(980px, 100%); max-height:calc(100vh - 40px); display:flex; flex-direction:column; overflow:hidden; }
+  .reesc-head{ padding:18px 22px 12px; border-bottom:1px solid var(--border-soft); display:flex; gap:12px; justify-content:space-between; align-items:flex-start; }
+  .reesc-head h3{ font-family:var(--display); font-size:18px; margin:0 0 4px; color:var(--ink); }
+  .reesc-head p{ margin:0; font-size:12.5px; color:var(--ink-soft); }
+  .reesc-head .mono{ font-family:var(--mono); color:var(--navy-deep); font-weight:600; }
+  .reesc-x{ border:none; background:transparent; font-size:24px; line-height:1; color:var(--ink-faint); cursor:pointer; padding:2px 6px; border-radius:6px; }
+  .reesc-x:hover{ background:var(--surface-alt); color:var(--ink); }
+  .reesc-ctrl{ padding:14px 22px; display:flex; flex-wrap:wrap; gap:14px 22px; align-items:flex-end; background:var(--bg); border-bottom:1px solid var(--border-soft); }
+  .reesc-campo{ display:flex; flex-direction:column; gap:4px; }
+  .reesc-campo label{ font-size:11px; text-transform:uppercase; letter-spacing:0.05em; color:var(--ink-faint); font-family:var(--mono); }
+  .reesc-valor{ font-family:var(--mono); font-size:16px; color:var(--ink); padding:7px 0; }
+  .reesc-campo input{ width:170px; font-family:var(--mono); font-size:15px; padding:7px 10px; border:1px solid var(--border); border-radius:var(--radius); background:#fff; color:var(--ink); }
+  .reesc-campo input:focus{ outline:none; border-color:var(--teal); box-shadow:0 0 0 3px rgba(14,124,123,0.12); }
+  .reesc-um{ font-family:var(--mono); font-size:13px; color:var(--ink-soft); margin-left:6px; }
+  .reesc-factor{ font-family:var(--mono); font-size:13px; padding:6px 10px; border-radius:999px; background:var(--surface-alt); color:var(--ink); }
+  .reesc-factor.sube{ background:var(--teal-soft); color:#0A5352; }
+  .reesc-factor.baja{ background:var(--amber-soft); color:var(--amber); }
+  .reesc-cuerpo{ overflow:auto; padding:0 22px; flex:1; }
+  .reesc-tabla{ width:100%; min-width:0; border-collapse:collapse; font-size:12.5px; margin:10px 0; }
+  .reesc-tabla th{ position:sticky; top:0; background:var(--navy); color:#fff; font-family:var(--mono); font-size:10.5px; text-transform:uppercase; letter-spacing:0.04em; padding:8px; text-align:left; white-space:nowrap; }
+  .reesc-tabla th.num, .reesc-tabla td.num{ text-align:right; }
+  .reesc-tabla td{ padding:7px 8px; border-bottom:1px solid var(--border-soft); vertical-align:top; }
+  .reesc-tabla td.num{ font-family:var(--mono); white-space:nowrap; }
+  .reesc-tabla td.cod{ font-family:var(--mono); font-weight:600; color:var(--navy-deep); white-space:nowrap; }
+  .reesc-tabla td.nueva{ font-weight:700; color:var(--ink); }
+  .reesc-tabla td.mas{ color:#0A5352; }
+  .reesc-tabla td.menos{ color:var(--brick); }
+  .reesc-tag{ display:inline-block; font-size:10px; font-weight:600; padding:1px 6px; border-radius:6px; background:var(--violet-soft); color:var(--violet); margin-left:6px; }
+  .reesc-pie{ padding:12px 22px 16px; border-top:1px solid var(--border-soft); display:flex; flex-wrap:wrap; gap:10px 16px; align-items:center; justify-content:space-between; }
+  .reesc-nota{ font-size:11.5px; color:var(--ink-soft); max-width:600px; line-height:1.5; }
+  .reesc-botones{ display:flex; gap:8px; }
+  .arbol-reesc-btn{ margin-left:6px; }
+  @media (max-width: 720px){
+    .reesc-overlay{ padding:0; align-items:stretch; }
+    .reesc-card{ border-radius:0; max-height:none; height:100%; }
+    .reesc-tabla th:nth-child(3), .reesc-tabla td:nth-child(3){ display:none; }
+    .reesc-campo input{ width:140px; }
+  }
+
   /* ================= Búsqueda de varias listas por código ================= */
   .filter-btn .count[hidden]{ display:none; }
   .multi-panel{
@@ -1738,6 +1780,35 @@ window.__conXLSX = async function(){
 
 <!-- Avisos no bloqueantes (resultados de carga) -->
 <div class="avisos-pila" id="avisosPila" aria-live="polite"></div>
+<div class="reesc-overlay" id="reescOverlay" role="dialog" aria-modal="true" aria-labelledby="reescTitulo" hidden>
+  <div class="reesc-card">
+    <div class="reesc-head">
+      <div>
+        <h3 id="reescTitulo">Cambiar la cantidad base</h3>
+        <p id="reescSub"></p>
+      </div>
+      <button type="button" class="reesc-x" id="reescCerrar" aria-label="Cerrar">&times;</button>
+    </div>
+    <div class="reesc-ctrl">
+      <div class="reesc-campo"><label>Cantidad base actual</label><div class="reesc-valor" id="reescBaseActual">—</div></div>
+      <div class="reesc-campo"><label for="reescBaseNueva">Nueva cantidad base</label><div><input type="text" inputmode="decimal" id="reescBaseNueva" autocomplete="off"><span class="reesc-um" id="reescUM"></span></div></div>
+      <div class="reesc-campo"><label>Factor</label><span class="reesc-factor" id="reescFactor">× 1</span></div>
+    </div>
+    <div class="reesc-cuerpo">
+      <table class="reesc-tabla">
+        <thead><tr><th>Pos.</th><th>Componente</th><th>Descripción</th><th class="num">Cantidad actual</th><th class="num">Cantidad estimada</th><th class="num">Diferencia</th><th>UM</th></tr></thead>
+        <tbody id="reescTbody"></tbody>
+      </table>
+    </div>
+    <div class="reesc-pie">
+      <div class="reesc-nota">Regla de 3 simple: <b>cantidad estimada = cantidad actual × (nueva base ÷ base actual)</b>. Los componentes con "Cantidad fija" en SAP no cambian. Es un estimado: no considera mermas, redondeos ni lotes mínimos.</div>
+      <div class="reesc-botones">
+        <button type="button" class="btn btn-ghost btn-compact" id="reescCopiar">Copiar tabla</button>
+        <button type="button" class="btn btn-primary btn-compact" id="reescExportar">Exportar Excel</button>
+      </div>
+    </div>
+  </div>
+</div>
 
 <!-- ========================= ARCHIVOS CARGADOS ========================= -->
 <div class="cargas-panel" id="cargasPanel" role="dialog" aria-labelledby="cargasTitulo" hidden>
@@ -2237,6 +2308,10 @@ window.__conXLSX = async function(){
     <button type="button" class="drawer-tree-btn" id="bomDrawerTreeBtn" title="Ver este material en el Árbol del producto" style="display:none;">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="4" r="2"/><circle cx="6" cy="14" r="2"/><circle cx="18" cy="14" r="2"/><circle cx="12" cy="21" r="2"/><path d="M12 6v3M12 9L6 12M12 9l6 3M8 15.5L11 19M16 15.5L13 19"/></svg>
       <span>Ver en Árbol del producto</span>
+    </button>
+    <button type="button" class="drawer-tree-btn" id="bomDrawerReescalarBtn" title="Estimar las cantidades de los componentes con otra cantidad base (regla de 3 simple)" style="display:none;">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 20h16M7 16V9M12 16V5M17 16v-4"/></svg>
+      <span>Cambiar cantidad base</span>
     </button>
   </div>
   <div class="drawer-body" id="bomDrawerBody"></div>
@@ -3026,6 +3101,132 @@ function formatFechaHoraCorta(d){
 
   render();
   refrescarTodo();
+})();
+</script>
+
+<script>
+/* ============================================================
+   CAMBIAR LA CANTIDAD BASE DE UNA LISTA (estimado por regla de 3 simple)
+
+   window.__reescalarLista(info) abre la ventana. info = { material, alt, descripcion,
+   etapa, centro, cantidadBase, umBase, componentes:[{ pos, componente, denominacion,
+   cantidad, um, fija }] }. Cada componente se estima como cantidad × (nueva ÷ actual),
+   salvo los de "Cantidad fija", que se quedan igual. La usan "Árbol del producto" (cada
+   etapa) y el detalle de una lista en "Listas de Materiales".
+   ============================================================ */
+(function(){
+  var overlay = document.getElementById('reescOverlay');
+  var sub = document.getElementById('reescSub');
+  var baseActualEl = document.getElementById('reescBaseActual');
+  var input = document.getElementById('reescBaseNueva');
+  var umEl = document.getElementById('reescUM');
+  var factorEl = document.getElementById('reescFactor');
+  var tbody = document.getElementById('reescTbody');
+  var actual = null, filas = [];
+
+  function num(v){
+    if(v === null || v === undefined || v === '') return NaN;
+    if(typeof v === 'number') return v;
+    var s = String(v).trim().replace(/\s/g, '');
+    // "1.234,5" -> 1234.5 ; "1,234.5" -> 1234.5 ; "1234,5" -> 1234.5
+    if(s.indexOf(',') !== -1 && s.indexOf('.') !== -1){
+      s = s.lastIndexOf(',') > s.lastIndexOf('.') ? s.replace(/\./g, '').replace(',', '.') : s.replace(/,/g, '');
+    } else if(s.indexOf(',') !== -1){ s = s.replace(',', '.'); }
+    return parseFloat(s);
+  }
+  function fmt(n){
+    if(isNaN(n)) return '—';
+    return n.toLocaleString('es-PE', { minimumFractionDigits: 0, maximumFractionDigits: 3 });
+  }
+  function esc(t){ return String(t === null || t === undefined ? '' : t).replace(/[&<>"]/g, function(c){ return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' }[c]; }); }
+
+  function calcular(){
+    var base = num(actual.cantidadBase), nueva = num(input.value);
+    var valido = base > 0 && nueva > 0;
+    var factor = valido ? nueva / base : NaN;
+    factorEl.className = 'reesc-factor' + (valido && factor > 1 ? ' sube' : (valido && factor < 1 ? ' baja' : ''));
+    factorEl.textContent = valido ? '× ' + factor.toLocaleString('es-PE', { maximumFractionDigits: 4 }) + ' (' + (factor >= 1 ? '+' : '') + ((factor - 1) * 100).toLocaleString('es-PE', { maximumFractionDigits: 1 }) + ' %)' : (base > 0 ? 'Escribe la nueva base' : 'La lista no tiene cantidad base');
+    filas = (actual.componentes || []).map(function(c){
+      var q = num(c.cantidad);
+      var nuevaQ = isNaN(q) ? NaN : (c.fija || !valido ? q : q * factor);
+      return { c: c, actual: q, nueva: nuevaQ, dif: isNaN(q) ? NaN : nuevaQ - q };
+    });
+    tbody.innerHTML = filas.length ? filas.map(function(f){
+      var cls = !isNaN(f.dif) && Math.abs(f.dif) > 1e-9 ? (f.dif > 0 ? ' mas' : ' menos') : '';
+      return '<tr><td class="num" style="text-align:left">' + esc(f.c.pos || '') + '</td>' +
+        '<td class="cod">' + esc(f.c.componente || '—') + '</td>' +
+        '<td>' + esc(f.c.denominacion || '') + (f.c.fija ? '<span class="reesc-tag" title="Cantidad fija en SAP: no depende de la cantidad base">fija</span>' : '') + '</td>' +
+        '<td class="num">' + fmt(f.actual) + '</td>' +
+        '<td class="num nueva">' + fmt(f.nueva) + '</td>' +
+        '<td class="num' + cls + '">' + (isNaN(f.dif) ? '—' : (f.dif > 0 ? '+' : '') + fmt(f.dif)) + '</td>' +
+        '<td>' + esc(f.c.um || '') + '</td></tr>';
+    }).join('') : '<tr><td colspan="7" style="color:var(--ink-faint)">Esta lista no tiene componentes cargados.</td></tr>';
+  }
+
+  window.__reescalarLista = function(info){
+    actual = info || {};
+    var partes = [actual.material, actual.alt ? 'Alt. ' + actual.alt : '', actual.etapa, actual.centro ? 'Centro ' + actual.centro : ''].filter(Boolean);
+    sub.innerHTML = '<span class="mono">' + esc(partes.shift() || '') + '</span> · ' + esc(partes.join(' · ')) + (actual.descripcion ? '<br>' + esc(actual.descripcion) : '');
+    var base = num(actual.cantidadBase);
+    baseActualEl.textContent = isNaN(base) ? '—' : fmt(base) + ' ' + (actual.umBase || '');
+    umEl.textContent = actual.umBase || '';
+    input.value = isNaN(base) ? '' : String(base);
+    overlay.hidden = false;
+    calcular();
+    setTimeout(function(){ input.focus(); input.select(); }, 30);
+  };
+
+  function cerrar(){ overlay.hidden = true; }
+  input.addEventListener('input', calcular);
+  document.getElementById('reescCerrar').addEventListener('click', cerrar);
+  overlay.addEventListener('mousedown', function(e){ if(e.target === overlay) cerrar(); });
+  document.addEventListener('keydown', function(e){ if(e.key === 'Escape' && !overlay.hidden) cerrar(); });
+
+  function tablaTexto(){
+    var lineas = [['Pos.', 'Componente', 'Descripción', 'Cantidad actual', 'Cantidad estimada', 'Diferencia', 'UM', 'Cantidad fija'].join('\t')];
+    filas.forEach(function(f){
+      lineas.push([f.c.pos || '', f.c.componente || '', f.c.denominacion || '', isNaN(f.actual) ? '' : String(+f.actual.toFixed(3)).replace('.', ','),
+        isNaN(f.nueva) ? '' : String(+f.nueva.toFixed(3)).replace('.', ','), isNaN(f.dif) ? '' : String(+f.dif.toFixed(3)).replace('.', ','), f.c.um || '', f.c.fija ? 'Sí' : ''].join('\t'));
+    });
+    return lineas.join('\n');
+  }
+  document.getElementById('reescCopiar').addEventListener('click', async function(){
+    var t = tablaTexto(), ok = false;
+    try{ await navigator.clipboard.writeText(t); ok = true; }catch(e){
+      var ta = document.createElement('textarea'); ta.value = t; ta.style.cssText = 'position:fixed;opacity:0;';
+      document.body.appendChild(ta); ta.select(); try{ ok = document.execCommand('copy'); }catch(_){} document.body.removeChild(ta);
+    }
+    if(window.__aviso) window.__aviso(ok ? 'Tabla copiada: pégala en Excel.' : 'No se pudo copiar al portapapeles.', ok ? '' : 'error', 3500);
+  });
+  document.getElementById('reescExportar').addEventListener('click', async function(){
+    if(!await window.__conXLSX()) return;
+    var base = num(actual.cantidadBase), nueva = num(input.value);
+    var aoa = [
+      ['Lista', actual.material || '', 'Alt. ' + (actual.alt || ''), actual.etapa || '', actual.descripcion || ''],
+      ['Cantidad base actual', isNaN(base) ? '' : base, actual.umBase || ''],
+      ['Nueva cantidad base', isNaN(nueva) ? '' : nueva, actual.umBase || ''],
+      ['Factor', base > 0 && nueva > 0 ? +(nueva / base).toFixed(6) : ''],
+      [],
+      ['Pos.', 'Componente', 'Descripción', 'Cantidad actual', 'Cantidad estimada', 'Diferencia', 'UM', 'Cantidad fija']
+    ];
+    filas.forEach(function(f){
+      aoa.push([f.c.pos || '', f.c.componente || '', f.c.denominacion || '', isNaN(f.actual) ? '' : +f.actual.toFixed(3),
+        isNaN(f.nueva) ? '' : +f.nueva.toFixed(3), isNaN(f.dif) ? '' : +f.dif.toFixed(3), f.c.um || '', f.c.fija ? 'Sí' : '']);
+    });
+    var ws = XLSX.utils.aoa_to_sheet(aoa);
+    ws['!cols'] = [{wch:20},{wch:14},{wch:42},{wch:16},{wch:17},{wch:13},{wch:7},{wch:13}];
+    for(var c = 0; c < 8; c++){
+      var a = XLSX.utils.encode_cell({ r:5, c:c });
+      if(ws[a]) ws[a].s = { fill:{ patternType:'solid', fgColor:{ rgb:'1F3B57' } }, font:{ bold:true, color:{ rgb:'FFFFFF' }, sz:11, name:'Calibri' }, alignment:{ horizontal:'center', wrapText:true } };
+    }
+    for(var r = 6; r < aoa.length; r++){
+      var e = XLSX.utils.encode_cell({ r:r, c:4 });
+      if(ws[e]) ws[e].s = { font:{ bold:true, sz:10, name:'Calibri' }, fill:{ patternType:'solid', fgColor:{ rgb:'DEF0EF' } } };
+    }
+    var wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'CANTIDAD BASE');
+    XLSX.writeFile(wb, 'cantidad_base_' + (actual.material || 'lista') + '_alt' + (actual.alt || '') + '.xlsx');
+  });
 })();
 </script>
 
@@ -6470,6 +6671,32 @@ function formatFechaHoraCorta(d){
       }
     }
 
+    const reescBtn = document.getElementById('bomDrawerReescalarBtn');
+    if(reescBtn){
+      const matR = iMaterial !== -1 ? row[iMaterial] : '';
+      const altR = iAlt !== -1 ? row[iAlt] : '';
+      const compsR = matR ? getComponentsFor(matR, altR) : [];
+      if(compsR.length){
+        const iFija = COMP_IDX['Cantidad fija'] ?? -1;
+        reescBtn.style.display = 'inline-flex';
+        reescBtn.onclick = function(){
+          window.__reescalarLista({
+            material: String(matR).trim(), alt: String(altR||'1').trim(), descripcion: iDesc !== -1 ? row[iDesc] : '',
+            etapa: iTexto !== -1 ? row[iTexto] : '', centro: iCentro !== -1 ? row[iCentro] : '',
+            cantidadBase: iCant !== -1 ? row[iCant] : '', umBase: iUM !== -1 ? row[iUM] : '',
+            componentes: compsR.map(c => ({
+              pos: cPos !== -1 ? String(c[cPos]||'').trim() : '', componente: String(c[cComponente]||'').trim(),
+              denominacion: cDenom !== -1 ? c[cDenom] : '', cantidad: cCantidad !== -1 ? c[cCantidad] : '',
+              um: cUM !== -1 ? c[cUM] : '', fija: iFija !== -1 && String(c[iFija]||'').trim() !== ''
+            }))
+          });
+        };
+      } else {
+        reescBtn.style.display = 'none';
+        reescBtn.onclick = null;
+      }
+    }
+
     const pendingHv1 = hasHv1Pending(row);
     const pendingConc = hasConciliacionPending(row);
     const materialCode = iMaterial !== -1 ? row[iMaterial] : '';
@@ -8389,6 +8616,11 @@ function formatFechaHoraCorta(d){
       '</button>' : '';
     var panelHtml = tieneComponentes ?
       '<div class="arbol-comp-panel" id="'+panelId+'" data-loaded="0"></div>' : '';
+    if(tieneComponentes){
+      toggleHtml += '<button type="button" class="arbol-toggle-comp arbol-reesc-btn" id="arbolReesc'+index+'" title="Estimar las cantidades de los componentes con otra cantidad base (regla de 3 simple)">'+
+        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 20h16M7 16V9M12 16V5M17 16v-4"/></svg>'+
+        '<span>Cantidad base'+(nodo.cantidadBase!==''&&nodo.cantidadBase!=null ? ' '+esc(Number(nodo.cantidadBase).toLocaleString('es-PE'))+' '+esc(nodo.umBase||'') : '')+'</span></button>';
+    }
 
     return '<div class="arbol-nodo '+cls+'" data-etapa-tipo="'+tipoDeEtapa(nodo.etapa)+'">'+
       flagsHtml+
@@ -8552,6 +8784,12 @@ function formatFechaHoraCorta(d){
           toggleBtn.classList.toggle('open', !isOpen);
         });
       }
+
+      var reescBtn = document.getElementById('arbolReesc'+i);
+      if(reescBtn) reescBtn.addEventListener('click', function(){
+        window.__reescalarLista({ material: nodo.material, alt: nodo.alt, descripcion: nodo.descripcion, etapa: nodo.etapa,
+          centro: nodo.centro, cantidadBase: nodo.cantidadBase, umBase: nodo.umBase, componentes: nodo.componentes });
+      });
 
       // Selector de Versión de Fabricación de esta etapa (solo si hay más de una real
       // registrada): al cambiar, se fija esa elección y se reconstruye el árbol completo

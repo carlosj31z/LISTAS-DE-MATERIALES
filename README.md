@@ -81,6 +81,14 @@ grep -n "APP [0-9] —" index.html
    filtrado de las tablas con preguntas en lenguaje natural, vía Gemini. Ver
    sección 5 — **tiene un bug pendiente sin resolver**.
 
+### Cambiar la cantidad base (estimado por regla de 3)
+Botón "Cantidad base" en cada etapa del Árbol del producto y "Cambiar cantidad
+base" en el detalle de una lista (Listas de Materiales): abre
+`window.__reescalarLista(info)`, que estima cada componente como
+cantidad × (nueva base ÷ base actual), deja igual los de "Cantidad fija"
+(columna del export de Componentes; el motor la expone como `c.fija`) y permite
+copiar o exportar la tabla.
+
 ### Inicio de sesión
 La app abre con una pantalla de login (correo + contraseña) y no pide ningún
 dato a Supabase hasta que hay sesión: `__sbFetchAll` y `__sbGetLastCargaDate`

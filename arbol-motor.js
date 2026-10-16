@@ -196,6 +196,8 @@
       var iCentro = idx['Centro-instalación'];
       var iUtil = idx['Utilización LMat'];
       var iListaTec = idx['Lista de materiales'];
+      var iCantBase = idx['Cantidad base'];
+      var iUMBase = idx['Unidad medida base'];
 
       var byKey = {};
       var altsByMaterial = {};
@@ -216,7 +218,10 @@
           estado: iEstado!==undefined ? row[iEstado] : '',
           etapa: iTexto!==undefined ? row[iTexto] : '',
           centro: iCentro!==undefined ? row[iCentro] : '',
-          listaTecnica: iListaTec!==undefined ? String(row[iListaTec]||'').trim() : ''
+          listaTecnica: iListaTec!==undefined ? String(row[iListaTec]||'').trim() : '',
+          // Tamaño de lote de la lista: la "Cantidad base" y su unidad.
+          cantidadBase: iCantBase!==undefined ? row[iCantBase] : '',
+          umBase: iUMBase!==undefined ? String(row[iUMBase]||'').trim() : ''
         };
         byKey[key] = entry;
         if(!altsByMaterial[mat]) altsByMaterial[mat] = [];
@@ -453,6 +458,8 @@
         estado: bomEntry ? bomEntry.estado : '',
         centro: bomEntry ? bomEntry.centro : '',
         listaTecnica: bomEntry ? bomEntry.listaTecnica : '',
+        cantidadBase: bomEntry ? bomEntry.cantidadBase : '',
+        umBase: bomEntry ? bomEntry.umBase : '',
         esFabricacion: esFab || !bomEntry,
         version: null,
         versionEsReal: false,

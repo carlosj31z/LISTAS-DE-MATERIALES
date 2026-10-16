@@ -87,6 +87,18 @@
     function esEtapaFabricacion(etapaTexto){
       return normEtapa(etapaTexto).indexOf(ETAPA_FABRICACION) !== -1;
     }
+    /* Etapa de maquila (MAQUILA P1/P2: típicamente envase impreso) con VFab "00xx": esas
+       versiones no siguen la codificación de 4 dígitos (dígito 1 = alternativa de
+       Fabricación, dígito 2 = alternativa previa), así que no se les aplican esas reglas. */
+    function esEtapaMaquilaConVfab00(n){
+      return !!n && n.versionEsReal && /^00/.test(String(n.version || '')) && normEtapa(n.etapa).indexOf('MAQUILA') !== -1;
+    }
+    /* ¿La VFab real de esta etapa sirve para fijar el dígito 1 de la cadena? No las de
+       reacondicionado (00XX) ni las de maquila (00xx): no codifican la alternativa de
+       Fabricación, y tomarlas haría preferir VFab "0…" en el resto de la cadena. */
+    function aportaDigito1(n){
+      return !!n && n.versionEsReal && String(n.version || '').length >= 1 && !esReacondicionado(n.alt) && !esEtapaMaquilaConVfab00(n);
+    }
 
     var ETAPA_ACONDICIONADO = 'ACONDICIONADO';
     /* Un "producto terminado" es un material cuya lista está en etapa Acondicionado — es el
@@ -340,18 +352,19 @@
       return (buildBomIndex().altsByMaterial[normMat(material)] || []).length > 0;
     }
 
-    /* ¿Este componente abre una RAMA del árbol? Sí cuando es un material fabricado (tiene
-       su propia lista de materiales, igual que los que SAP explota en la CS12), salvo
-       material de envase y empaque (ZMEE: sus listas son de maquila de impresión, no etapas
-       del producto) y materia prima (ZMPR). Si el Maestro no está cargado o no conoce el
-       código, se decide por el prefijo: "1000…" (MP) y "1100…" (ME) no abren rama. */
-    var TIPOS_SIN_RAMA = ['ZMEE', 'ZMPR'];
+    /* ¿Este componente abre una RAMA del árbol? Sí cuando tiene su propia lista de
+       materiales, igual que los que SAP explota en la CS12 — incluido el material de envase
+       y empaque (ZMEE) que se fabrica a partir de otro (p. ej. el PALUPOL impreso
+       1100001009, lista MAQUILA P2 a partir del PALUPOL 1100002656, en 6300000234). Solo la
+       materia prima (ZMPR) no abre rama aunque tenga lista. Sin Maestro cargado, o si no
+       conoce el código, se decide por el prefijo: "1000…" (MP) no abre rama. */
+    var TIPOS_SIN_RAMA = ['ZMPR'];
     function esComponenteDeRama(codigo){
       var mat = normMat(codigo);
       if(!mat || !tieneListaPropia(mat)) return false;
       var tipo = datos.MM_TIPO_MAP ? String(datos.MM_TIPO_MAP[mat] || '').trim().toUpperCase() : '';
       if(tipo) return TIPOS_SIN_RAMA.indexOf(tipo) === -1;
-      return !/^1/.test(mat);
+      return !/^1000/.test(mat);
     }
 
     /* Devuelve TODOS los componentes de una lista (Material, Alt) — no solo el de posición
@@ -519,10 +532,48 @@
       var puedeRetroceder = !!bomEntry && !esFab;
       var infoRetroceso = null; // { codigoPrevio, altEsperada, altConfirmada, compEntry }
 
+      /* Una Fabricación normalmente es el comienzo de la cadena, pero puede consumir en su
+         0010 otro semielaborado fabricado (en 6300000234: el polvo efervescente 5000001209
+         se fabrica a partir del granulado 5000000168, también FABRICACION). SAP lo explota
+         como un nivel más, así que la cadena sigue hacia él. Su VFab propia tiene dígito 2
+         = "0" (no indica la alternativa previa): la alternativa se elige igual que en una
+         rama (única, o por dígito 1 de la cadena). */
+      if(bomEntry && esFab && !esReacondicionado(altActual)){
+        var compFab = compIdx.firstByKey[key];
+        if(compFab && compFab.componente && compFab.componente !== matActual && esComponenteDeRama(compFab.componente)){
+          var d1Fab = nodo.versionEsReal && String(nodo.version || '').length >= 1 ? String(nodo.version).charAt(0) : (digito1Objetivo || null);
+          var elecFab = elegirAltDeRama(compFab.componente, null, d1Fab);
+          nodo.componentePrevio = { pos: compFab.pos, componente: compFab.componente };
+          if(!elecFab.confirmada){
+            nodo.advertencias.push('Alternativa sin confirmar: ' + compFab.componente + ' tiene las alternativas ' + elecFab.opciones.join(', ') + ' y nada permite saber con cuál entra en esta Fabricación — se usó la ' + elecFab.alt + '.');
+          }
+          infoRetroceso = {
+            codigoPrevio: compFab.componente,
+            denominacionPrevio: compFab.denominacion,
+            altEsperada: elecFab.alt,
+            altConfirmada: elecFab.confirmada
+          };
+        }
+      }
+
       if(puedeRetroceder){
         if(esReacondicionado(altActual)){
-          nodo.finNatural = true;
-          nodo.finNaturalInfo = 'Esta es una alternativa de reacondicionado (' + altActual + ') — no tiene una etapa previa de Fabricación/Envase asociada en este árbol, así que el retroceso se detiene aquí.';
+          /* Un reacondicionado no tiene etapa previa en la codificación de la VFab (00XX),
+             pero su 0010 suele ser el propio producto terminado (en 6300000234 alt. 99: el
+             6300000089), que SAP explota completo. Si ese 0010 tiene lista propia, la cadena
+             sigue hacia él con la alternativa elegida como en una rama. */
+          var compReac = compIdx.firstByKey[key];
+          if(compReac && compReac.componente && compReac.componente !== matActual && esComponenteDeRama(compReac.componente)){
+            var elecReac = elegirAltDeRama(compReac.componente, null, null);
+            nodo.componentePrevio = { pos: compReac.pos, componente: compReac.componente };
+            if(!elecReac.confirmada){
+              nodo.advertencias.push('Alternativa sin confirmar: ' + compReac.componente + ' tiene las alternativas ' + elecReac.opciones.join(', ') + ' y un reacondicionado no indica con cuál entra — se usó la ' + elecReac.alt + '.');
+            }
+            infoRetroceso = { codigoPrevio: compReac.componente, denominacionPrevio: compReac.denominacion, altEsperada: elecReac.alt, altConfirmada: elecReac.confirmada };
+          } else {
+            nodo.finNatural = true;
+            nodo.finNaturalInfo = 'Esta es una alternativa de reacondicionado (' + altActual + ') y su componente 0010 no tiene lista propia — el retroceso se detiene aquí.';
+          }
           puedeRetroceder = false;
         } else {
           var compEntry = compIdx.firstByKey[key];
@@ -544,7 +595,15 @@
           } else {
             nodo.componentePrevio = { pos: compEntry.pos, componente: compEntry.componente };
             var altEsperadaSiguiente, altEsperadaConfirmada;
-            if(digito2Real !== null){
+            var esVfabMaquila = esEtapaMaquilaConVfab00(nodo);
+            if(digito2Real !== null && String(digito2Real).trim() === '0' && esVfabMaquila){
+              // VFab de maquila ("0001", "0002"…, típicas de envase impreso): no codifican la
+              // alternativa previa, así que el material del 0010 entra como en una rama.
+              var elecMaq = elegirAltDeRama(compEntry.componente, null, null);
+              altEsperadaSiguiente = elecMaq.alt;
+              altEsperadaConfirmada = elecMaq.confirmada;
+              if(!elecMaq.confirmada) nodo.advertencias.push('Alternativa sin confirmar: ' + compEntry.componente + ' tiene las alternativas ' + elecMaq.opciones.join(', ') + ' — se usó la ' + elecMaq.alt + '.');
+            } else if(digito2Real !== null){
               var altDesdeDigito = altPreviaDesdeDigito2(digito2Real);
               if(altDesdeDigito === null){
                 nodo.advertencias.push('La Versión de Fabricación real de esta etapa (' + nodo.version + ') indica que no debería tener etapa previa (dígito 2 = "0"), pero su componente de posición 0010 apunta a otro material (' + compEntry.componente + '). Se usa la misma alternativa (' + altActual + ') como respaldo, sin confirmar.');
@@ -629,6 +688,9 @@
       // Versión de Fabricación real, se lee su propio dígito 1 directamente de ahí; si no,
       // se usa su alternativa propia (que es lo que ese dígito 1 debería representar).
       var nodoFabricacion = nodos[nodos.length-1];
+      // Si la última etapa es de maquila o reacondicionado (VFab 00xx), el dígito 1 sale de la
+      // última que sí lo codifica.
+      for(var iu = nodos.length-1; iu >= 0; iu--){ if(aportaDigito1(nodos[iu])){ nodoFabricacion = nodos[iu]; break; } }
       var digito1Raiz = '1';
       if(nodoFabricacion){
         if(nodoFabricacion.versionEsReal && String(nodoFabricacion.version||'').length>=1){
@@ -647,7 +709,7 @@
             n.advertencias.push('No se encontró una Versión de Fabricación registrada para este Material+Alternativa en el archivo cargado — se muestra un valor ESTIMADO con la fórmula (' + n.version + '), a confirmar en SAP.');
           }
         } else {
-          if(!n.esFabricacion){
+          if(!n.esFabricacion && !esEtapaMaquilaConVfab00(n) && !esReacondicionado(n.alt)){
             // Validación de coherencia: la Versión de Fabricación REAL de esta etapa debería
             // empezar con el mismo dígito 1 que la etapa Fabricación de la cadena — si no
             // coincide, es una señal de que esta combinación de VFabs registradas en SAP no es
@@ -680,7 +742,8 @@
        principal. No se buscan ramas desde Fabricación (fin de la cadena, igual que el
        retroceso principal) ni desde un reacondicionado (no tiene etapa previa). */
     function componentesDeRama(nodo){
-      if(!nodo || nodo.esFabricacion || esReacondicionado(nodo.alt)) return [];
+      // También desde Fabricación y desde un reacondicionado, como en la CS12 de SAP.
+      if(!nodo) return [];
       var previo = nodo.componentePrevio ? nodo.componentePrevio.componente : null;
       var vistos = {};
       var out = [];
@@ -727,7 +790,7 @@
 
     function digito1DeCadena(nodos){
       for(var i = 0; i < nodos.length; i++){
-        if(nodos[i].versionEsReal && String(nodos[i].version || '').length >= 1) return String(nodos[i].version).charAt(0);
+        if(aportaDigito1(nodos[i])) return String(nodos[i].version).charAt(0);
       }
       return null;
     }
@@ -752,7 +815,7 @@
         var forzado = eleccionesForzadas && eleccionesForzadas.hasOwnProperty(key) ? eleccionesForzadas[key] : null;
         var r = construirNodoIndividual(mat, alt, visitados, forzado, d1);
         nodos.push(r.nodo);
-        if(!d1 && r.nodo.versionEsReal && String(r.nodo.version || '').length >= 1) d1 = String(r.nodo.version).charAt(0);
+        if(!d1 && aportaDigito1(r.nodo)) d1 = String(r.nodo.version).charAt(0);
         if(!r.infoRetroceso) break;
         var resuelto = resolverEtapaPrevia(r.nodo, r.infoRetroceso);
         if(!resuelto) break;
@@ -1005,7 +1068,7 @@
         // rama de la exploración lleva su propia copia de este valor (parámetro, no
         // variable compartida), para no mezclar el dígito 1 de una combinación con otra.
         var digito1ParaSiguientes = digito1Objetivo;
-        if(!digito1ParaSiguientes && nodo.versionEsReal && String(nodo.version||'').length>=1){
+        if(!digito1ParaSiguientes && aportaDigito1(nodo)){
           digito1ParaSiguientes = String(nodo.version).charAt(0);
         }
 

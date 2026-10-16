@@ -291,6 +291,73 @@ window.__conXLSX = async function(){
   .filter-option .opt-label{flex:1; overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
   .filter-option .opt-count{color:var(--ink-faint); font-family:var(--mono); font-size:11px;}
 
+  /* ================= Búsqueda de varias listas por código ================= */
+  .filter-btn .count[hidden]{ display:none; }
+  .multi-panel{
+    background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-lg);
+    box-shadow:var(--shadow-sm); padding:16px 18px; margin-bottom:16px;
+  }
+  .multi-panel[hidden]{ display:none; }
+  .multi-head{ display:flex; justify-content:space-between; gap:12px; align-items:flex-start; margin-bottom:12px; }
+  .multi-head h3{ font-family:var(--display); font-size:16px; margin:0 0 3px; color:var(--ink); }
+  .multi-head p{ margin:0; font-size:12.5px; color:var(--ink-soft); max-width:720px; line-height:1.45; }
+  .multi-cerrar{ border:none; background:transparent; color:var(--ink-faint); font-size:22px; line-height:1; cursor:pointer; padding:2px 6px; border-radius:6px; }
+  .multi-cerrar:hover{ background:var(--surface-alt); color:var(--ink); }
+  .multi-form{ display:grid; grid-template-columns:minmax(0,1.4fr) minmax(0,1fr); gap:16px; }
+  .multi-campo{ display:flex; flex-direction:column; gap:5px; min-width:0; }
+  .multi-campo label{ font-size:11px; text-transform:uppercase; letter-spacing:0.05em; color:var(--ink-faint); font-family:var(--mono); }
+  .multi-opc{ text-transform:none; letter-spacing:0; font-family:var(--body); color:var(--ink-faint); font-style:italic; }
+  .multi-campo textarea, .multi-campo input{
+    width:100%; border:1px solid var(--border); border-radius:var(--radius); background:var(--surface-alt); color:var(--ink);
+    font-family:var(--mono); font-size:13px; padding:8px 10px; transition:border-color .15s var(--ease), background .15s var(--ease), box-shadow .15s var(--ease);
+  }
+  .multi-campo textarea{ resize:vertical; min-height:92px; line-height:1.45; }
+  .multi-campo textarea:focus, .multi-campo input:focus{ background:#fff; border-color:var(--teal); outline:none; box-shadow:0 0 0 3px rgba(14,124,123,0.12); }
+  .multi-ayuda{ font-size:12px; color:var(--ink-soft); min-height:17px; line-height:1.45; }
+  .multi-ayuda .aviso-t{ color:var(--amber); }
+  .multi-ayuda .error-t{ color:var(--brick); }
+  .multi-ayuda b{ font-family:var(--mono); color:var(--ink); }
+  .multi-botones{ display:flex; gap:8px; margin-top:6px; flex-wrap:wrap; }
+  .multi-res{ margin-top:14px; padding-top:14px; border-top:1px dashed var(--border); display:flex; flex-direction:column; gap:10px; font-size:12.5px; color:var(--ink-soft); }
+  .multi-res[hidden]{ display:none; }
+  .multi-linea{ display:flex; flex-wrap:wrap; gap:6px 14px; align-items:baseline; }
+  .multi-linea b{ color:var(--ink); font-family:var(--mono); }
+  .multi-mono{ font-family:var(--mono); color:var(--ink); word-break:break-word; }
+  .multi-faltan{ background:var(--amber-soft); color:var(--amber); border-radius:var(--radius); padding:8px 10px; line-height:1.5; }
+  .multi-faltan .multi-mono{ color:var(--amber); }
+  .multi-link{ border:none; background:none; padding:0; color:var(--teal); font:inherit; font-weight:600; cursor:pointer; text-decoration:underline; }
+  .multi-vistas{ display:flex; flex-wrap:wrap; gap:6px; }
+  .multi-vista{
+    display:inline-flex; align-items:center; gap:7px; padding:7px 11px; border-radius:999px; border:1px solid var(--border);
+    background:var(--surface-alt); color:var(--ink); font-size:12.5px; cursor:pointer; transition:background .15s var(--ease), border-color .15s var(--ease);
+  }
+  .multi-vista .n{ font-family:var(--mono); font-size:11.5px; padding:0 7px; border-radius:10px; background:rgba(24,36,48,0.08); }
+  .multi-vista:hover{ border-color:var(--ink-faint); }
+  .multi-vista.activa{ background:var(--navy); border-color:var(--navy); color:#fff; }
+  .multi-vista.activa .n{ background:rgba(255,255,255,0.18); }
+  .multi-vista.sin:not(.activa){ border-color:var(--brick); color:var(--brick); background:var(--brick-soft); }
+  .multi-vista.sin.activa{ background:var(--brick); border-color:var(--brick); }
+  .multi-vista.con:not(.activa){ border-color:var(--teal); color:#0A5352; background:var(--teal-soft); }
+  .multi-vista.con.activa{ background:var(--teal); border-color:var(--teal); }
+  .multi-respuesta{ font-size:13.5px; color:var(--ink); line-height:1.5; }
+  .multi-respuesta.ok{ color:#0A5352; }
+  .multi-respuesta.mal{ color:var(--brick); }
+  .multi-pie{ display:flex; flex-wrap:wrap; gap:8px 14px; align-items:center; font-size:11.5px; color:var(--ink-faint); }
+  /* Marca en la celda Material de la tabla. El texto va en un pseudo-elemento para que no
+     se cuele al copiar celdas con Ctrl+C. */
+  .multi-marca{ display:inline-block; margin-left:6px; vertical-align:middle; }
+  .multi-marca::after{
+    content:attr(data-txt); font-family:var(--body); font-size:10px; font-weight:600; letter-spacing:0.02em;
+    padding:1px 6px; border-radius:6px; white-space:nowrap;
+  }
+  .multi-marca.sin::after{ background:var(--brick-soft); color:var(--brick); border:1px solid rgba(150,59,50,0.35); }
+  .multi-marca.con::after{ background:var(--teal-soft); color:#0A5352; border:1px solid rgba(14,124,123,0.3); }
+  .multi-marca.sindatos::after{ background:var(--surface-alt); color:var(--ink-soft); border:1px solid var(--border); }
+  @media (max-width: 720px){
+    .multi-panel{ padding:14px; }
+    .multi-form{ grid-template-columns:1fr; gap:12px; }
+  }
+
   .toolbar-meta{ margin-top:10px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; font-size:12.5px; color:var(--ink-soft); }
   .toolbar-meta strong{color:var(--ink); font-family:var(--mono); font-weight:600;}
 
@@ -770,6 +837,7 @@ window.__conXLSX = async function(){
 
     .pagination{ justify-content:center; }
     .pagination .pg-controls button{ padding:8px 10px; }
+    .pagination .pg-controls{ flex-wrap:wrap; justify-content:center; }
 
     .global-loading-card{ min-width:0; width:82vw; padding:26px 22px; }
 
@@ -1848,6 +1916,10 @@ window.__conXLSX = async function(){
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
         <input type="text" id="bomSearchInput" placeholder="Buscar por material, descripción, categoría o usuario…">
       </div>
+      <button id="bomMultiBtn" class="filter-btn filter-btn-compact" type="button" aria-expanded="false" aria-controls="bomMultiPanel" title="Buscar varias listas de materiales a la vez por su código y ver cuáles tienen (o no) un componente">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true" style="width:14px;height:14px;"><path d="M9 6h11M9 12h11M9 18h11"/><path d="M4 6h.01M4 12h.01M4 18h.01"/></svg>
+        Varios códigos<span class="count" id="bomMultiCount" hidden></span>
+      </button>
 
       <input type="file" id="bomFileInput" accept=".xlsx,.xls,.csv">
       <button class="btn btn-success btn-compact carga-btn" id="bomLoadExcelBtn" data-carga-btn="bom" data-carga-label="Listas" title="Cargar el export de SAP de Listas de Materiales">
@@ -1898,6 +1970,36 @@ window.__conXLSX = async function(){
   </div>
 
   <main class="view-main">
+    <section class="multi-panel" id="bomMultiPanel" aria-labelledby="bomMultiTitulo" hidden>
+      <div class="multi-head">
+        <div>
+          <h3 id="bomMultiTitulo">Buscar varias listas por código</h3>
+          <p>Pega los códigos de material de las listas que quieres revisar. Si además indicas un componente, te digo cuáles de esas listas no lo tienen.</p>
+        </div>
+        <button type="button" class="multi-cerrar" id="bomMultiCerrar" aria-label="Ocultar el panel (la búsqueda sigue aplicada)" title="Ocultar el panel (la búsqueda sigue aplicada)">&times;</button>
+      </div>
+      <div class="multi-form">
+        <div class="multi-campo">
+          <label for="bomMultiCodigos">Códigos de las listas</label>
+          <textarea id="bomMultiCodigos" rows="4" spellcheck="false" placeholder="6000003544&#10;6000001732&#10;Uno por línea, o separados por coma o espacio. Sirve copiar una columna de Excel."></textarea>
+          <div class="multi-ayuda" id="bomMultiCodigosInfo"></div>
+        </div>
+        <div class="multi-campo">
+          <label for="bomMultiComp">Componente a buscar en ellas <span class="multi-opc">opcional</span></label>
+          <input type="text" id="bomMultiComp" spellcheck="false" autocomplete="off" placeholder="p. ej. 1100008695">
+          <div class="multi-ayuda" id="bomMultiCompInfo"></div>
+          <div class="multi-botones">
+            <button type="button" class="btn btn-primary btn-compact" id="bomMultiBuscar">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+              Buscar
+            </button>
+            <button type="button" class="btn btn-ghost btn-compact" id="bomMultiQuitar" disabled>Quitar búsqueda</button>
+          </div>
+        </div>
+      </div>
+      <div class="multi-res" id="bomMultiRes" aria-live="polite" hidden></div>
+    </section>
+
     <div class="table-wrap" id="bomTableWrap">
       <table id="bomDataTable">
         <thead><tr id="bomHeaderRow"></tr></thead>
@@ -4222,6 +4324,10 @@ function formatFechaHoraCorta(d){
   let PROGRAMA_PT = []; // [{codigo, producto, hojas:[...]}] — un PT único por código, del Programa de Producción
   let PROGRAMA_PT_SET = new Set(); // códigos de PROGRAMA_PT, para lookup O(1) en matchesFilters
   let COMPONENTE_LISTAS_SET = new Set(); // claves normKey(material,alt) que contienen componenteFiltroCodigo
+  /* Búsqueda de varias listas por código (panel "Varios códigos"): códigos de material en el
+     orden en que se pegaron, el componente a verificar en ellas (opcional) y qué parte del
+     resultado muestra la tabla: 'todas' | 'sin' (no lo tienen) | 'con' | 'sinDatos'. */
+  let multiBusqueda = { activa:false, lista:[], codigos:new Set(), comp:'', vista:'todas' };
   let sortCol = null;
   let sortDir = 1;
   let currentPage = 1;
@@ -5513,6 +5619,7 @@ function formatFechaHoraCorta(d){
     document.getElementById('bomProgramaToggleSolo').checked = false;
     filterContieneComponente = false;
     document.getElementById('bomProgramaToggleComponente').checked = false;
+    limpiarMultiBusqueda();
     sortCol = null;
     sortDir = 1;
     currentPage = 1;
@@ -5700,6 +5807,12 @@ function formatFechaHoraCorta(d){
   }
 
   function matchesFilters(row, exceptKey = null) {
+    if(multiBusqueda.activa){
+      if(iMaterial === -1 || !multiBusqueda.codigos.has(normCodigoMulti(row[iMaterial]))) return false;
+      if(multiBusqueda.comp && multiBusqueda.vista !== 'todas' && exceptKey !== 'multiVista'){
+        if(estadoCompMulti(row).estado !== multiBusqueda.vista) return false;
+      }
+    }
     if(filterMM && iDesc !== -1) {
       const desc = String(row[iDesc] || '').toUpperCase();
       if(!desc.includes('MM')) return false;
@@ -5831,7 +5944,8 @@ function formatFechaHoraCorta(d){
         // La columna Material permite copiar el código con un clic, sin abrir el drawer
         // de detalle (el listener de fila ignora los clics sobre esta celda).
         const copyAttr = col.i===iMaterial ? ` data-copy-code="${esc(String(row[col.i]??''))}"` : '';
-        return `<td class="${col.cls||''}"${copyAttr} data-r="${ri}" data-c="${ci}">${renderCell(col,row)}</td>`;
+        const marca = (col.i===iMaterial && multiBusqueda.activa && multiBusqueda.comp) ? marcaMultiHtml(row) : '';
+        return `<td class="${col.cls||''}"${copyAttr} data-r="${ri}" data-c="${ci}">${renderCell(col,row)}${marca}</td>`;
       }).join('');
       const hasComp = COMP_MAP.size>0 && getComponentsFor(row[iMaterial], iAlt!==-1?row[iAlt]:'').length>0;
       const suspendido = isRowSuspendida(row);
@@ -6008,6 +6122,7 @@ function formatFechaHoraCorta(d){
     document.getElementById('bomMetaOfAll').textContent = sorted.length!==ROWS.length ? `(de ${ROWS.length.toLocaleString('es-PE')} totales)` : '';
 
     window.__bomLastFiltered = sorted;
+    renderMultiResumen();
   }
 
   const drawer = document.getElementById('bomDrawer');
@@ -7277,6 +7392,7 @@ function formatFechaHoraCorta(d){
     document.getElementById('bomProgramaToggleSolo').checked = false;
     filterContieneComponente = false;
     document.getElementById('bomProgramaToggleComponente').checked = false;
+    limpiarMultiBusqueda();
     currentPage=1;
     updateAll();
   }
@@ -7392,6 +7508,384 @@ function formatFechaHoraCorta(d){
         currentPage = 1;
         updateAll();
       }, 350);
+    });
+  })();
+
+  /* ---------- Búsqueda de varias listas por código + verificación de un componente ----------
+     El usuario pega varios códigos de material (las listas a revisar) y, opcionalmente, el
+     código de un componente. La tabla queda filtrada a esas listas (respetando el resto de
+     filtros activos), cada fila se marca con "Tiene" / "No tiene" / "Sin datos", y el panel
+     resume cuántas no lo tienen, qué códigos no tienen lista y permite exportarlo.
+
+     El cruce es el mismo del resto de la app: Material + Lista mat.alternat. contra los
+     componentes cargados (solo los relevantes para fabricación). Una lista que usa el código
+     ANTIGUO del componente (o el vigente, si se buscó por el antiguo) no lo tiene, pero se
+     avisa: suele ser una lista pendiente de actualizar. */
+  function normCodigoMulti(v){ return String(v===null||v===undefined?'':v).trim().toUpperCase(); }
+  function escAttrMulti(v){ return esc(v).replace(/"/g,'&quot;'); }
+
+  // Una línea por código; si viene de Excel con varias columnas (tabulaciones) se toma la
+  // primera; si no, se separa por coma, punto y coma o espacios. Solo cuentan los textos con
+  // algún dígito, para que un encabezado ("Material") o una descripción no pasen por código.
+  function parsearCodigosMulti(texto){
+    const lista = [], vistos = new Set();
+    let repetidos = 0;
+    String(texto||'').replace(/\r/g,'').split('\n').forEach(linea=>{
+      if(!linea.trim()) return;
+      const partes = linea.indexOf('\t') !== -1 ? [linea.split('\t')[0]] : linea.split(/[;,\s]+/);
+      partes.forEach(t=>{
+        const c = normCodigoMulti(t);
+        if(!c || !/\d/.test(c)) return;
+        if(vistos.has(c)){ repetidos++; return; }
+        vistos.add(c);
+        lista.push(c);
+      });
+    });
+    return { lista, repetidos };
+  }
+
+  let multiIdxCache = { rowsRef:null, porMaterial:new Map() };
+  function filasPorMaterialMulti(){
+    if(multiIdxCache.rowsRef !== ROWS){
+      const m = new Map();
+      if(iMaterial !== -1){
+        ROWS.forEach(r=>{
+          const k = normCodigoMulti(r[iMaterial]);
+          if(!m.has(k)) m.set(k, []);
+          m.get(k).push(r);
+        });
+      }
+      multiIdxCache = { rowsRef:ROWS, porMaterial:m };
+    }
+    return multiIdxCache.porMaterial;
+  }
+
+  // Código -> 'antiguo' | 'vigente': el mismo material en otra generación de código, según
+  // el "Nro. antiguo de material" del Maestro de Materiales.
+  function codigosEquivalentesMulti(codigo){
+    const eq = new Map();
+    const mapa = window.MM_OLDCODE_MAP || {};
+    (mapa[codigo] || []).forEach(m=>{
+      const c = normCodigoMulti(m.material);
+      if(c && c !== codigo) eq.set(c, 'vigente');
+    });
+    Object.keys(mapa).forEach(antiguo=>{
+      if((mapa[antiguo] || []).some(m => normCodigoMulti(m.material) === codigo)){
+        const c = normCodigoMulti(antiguo);
+        if(c && c !== codigo) eq.set(c, 'antiguo');
+      }
+    });
+    return eq;
+  }
+
+  let multiEstadoCache = { compMapRef:null, oldRef:null, comp:null, porKey:new Map(), equivalentes:new Map() };
+  function estadoCompMulti(row){
+    const comp = multiBusqueda.comp;
+    if(multiEstadoCache.compMapRef !== COMP_MAP || multiEstadoCache.comp !== comp || multiEstadoCache.oldRef !== window.MM_OLDCODE_MAP){
+      multiEstadoCache = { compMapRef:COMP_MAP, oldRef:window.MM_OLDCODE_MAP, comp, porKey:new Map(), equivalentes: comp ? codigosEquivalentesMulti(comp) : new Map() };
+    }
+    const key = normKey(row[iMaterial], iAlt!==-1 ? row[iAlt] : '');
+    let e = multiEstadoCache.porKey.get(key);
+    if(e) return e;
+    const comps = COMP_MAP.get(key) || [];
+    const propios = comps.filter(c => normCodigoMulti(c[cComponente]) === comp);
+    if(!comps.length){
+      e = { estado:'sinDatos' };
+    } else if(propios.length){
+      e = { estado:'con', detalle: propios.map(c=>{
+        const pos = cPos!==-1 ? String(c[cPos]||'').trim() : '';
+        const cant = cCantidad!==-1 && c[cCantidad]!=='' && c[cCantidad]!==null && c[cCantidad]!==undefined ? Number(c[cCantidad]).toLocaleString('es-PE') : '';
+        const um = cUM!==-1 ? String(c[cUM]||'').trim() : '';
+        return [pos ? 'Pos. ' + pos : '', [cant, um].filter(Boolean).join(' ')].filter(Boolean).join(' · ');
+      }).filter(Boolean).join(' | ') };
+    } else {
+      const eq = comps.find(c => multiEstadoCache.equivalentes.has(normCodigoMulti(c[cComponente])));
+      const codEq = eq ? normCodigoMulti(eq[cComponente]) : '';
+      e = { estado:'sin', equivalente: codEq, tipoEquivalente: codEq ? multiEstadoCache.equivalentes.get(codEq) : '' };
+    }
+    multiEstadoCache.porKey.set(key, e);
+    return e;
+  }
+
+  function marcaMultiHtml(row){
+    const e = estadoCompMulti(row);
+    const comp = multiBusqueda.comp;
+    if(e.estado === 'con') return `<span class="multi-marca con" data-txt="Tiene" title="${escAttrMulti('Tiene el componente ' + comp + (e.detalle ? ' (' + e.detalle + ')' : ''))}"></span>`;
+    if(e.estado === 'sinDatos') return `<span class="multi-marca sindatos" data-txt="Sin datos" title="Esta lista no tiene componentes cargados: no se puede verificar"></span>`;
+    const nota = e.equivalente ? ' — usa el código ' + e.tipoEquivalente + ' ' + e.equivalente : '';
+    return `<span class="multi-marca sin" data-txt="No tiene" title="${escAttrMulti('No tiene el componente ' + comp + nota)}"></span>`;
+  }
+
+  // Descripción del componente para confirmar que es el que se quería buscar.
+  function descripcionCompMulti(comp){
+    const texto = window.MM_TEXTO_MAP && window.MM_TEXTO_MAP[comp];
+    if(texto) return String(texto);
+    const keys = COMP_BY_CODE_MAP.get(comp);
+    if(keys && cDenom !== -1){
+      for(const k of keys){
+        const c = (COMP_MAP.get(k) || []).find(x => normCodigoMulti(x[cComponente]) === comp);
+        if(c && c[cDenom]) return String(c[cDenom]);
+      }
+    }
+    return '';
+  }
+
+  function limpiarMultiBusqueda(){
+    multiBusqueda = { activa:false, lista:[], codigos:new Set(), comp:'', vista:'todas' };
+  }
+
+  // Filas de las listas buscadas que pasan el resto de filtros (sin aplicar la vista).
+  function filasMultiVisibles(){
+    const idx = filasPorMaterialMulti();
+    const todas = [];
+    multiBusqueda.lista.forEach(c => (idx.get(c) || []).forEach(r => todas.push(r)));
+    return { todas, visibles: todas.filter(r => matchesFilters(r, 'multiVista')) };
+  }
+
+  function renderMultiResumen(){
+    const res = document.getElementById('bomMultiRes');
+    const count = document.getElementById('bomMultiCount');
+    const btn = document.getElementById('bomMultiBtn');
+    const quitar = document.getElementById('bomMultiQuitar');
+    if(!res) return;
+    if(!multiBusqueda.activa){
+      res.hidden = true; res.innerHTML = '';
+      count.hidden = true; btn.classList.remove('active'); quitar.disabled = true;
+      return;
+    }
+    btn.classList.add('active');
+    count.hidden = false; count.textContent = multiBusqueda.lista.length.toLocaleString('es-PE');
+    quitar.disabled = false;
+
+    const n = v => Number(v).toLocaleString('es-PE');
+    const idx = filasPorMaterialMulti();
+    const sinLista = multiBusqueda.lista.filter(c => !idx.has(c));
+    const { todas, visibles } = filasMultiVisibles();
+    const ocultas = todas.length - visibles.length;
+    const conLista = multiBusqueda.lista.length - sinLista.length;
+
+    const deCuantos = conLista === multiBusqueda.lista.length
+      ? `para ${multiBusqueda.lista.length === 1 ? 'el código buscado' : 'los <b>' + n(conLista) + '</b> códigos buscados'}`
+      : `para <b>${n(conLista)}</b> de los <b>${n(multiBusqueda.lista.length)}</b> códigos buscados`;
+    let html = `<div class="multi-linea"><span><b>${n(visibles.length)}</b> lista(s) de materiales ${deCuantos}</span>` +
+      (ocultas ? `<span>· ${n(ocultas)} oculta(s) por otros filtros activos <button type="button" class="multi-link" data-multi-accion="limpiarOtros">quitar los otros filtros</button></span>` : '') + `</div>`;
+    if(sinLista.length){
+      html += `<div class="multi-faltan"><b>${n(sinLista.length)} código(s) sin lista de materiales:</b> <span class="multi-mono">${esc(sinLista.join(', '))}</span> · <button type="button" class="multi-link" data-multi-copiar="sinLista">copiar</button></div>`;
+    }
+
+    const comp = multiBusqueda.comp;
+    if(comp){
+      const g = { sin:[], con:[], sinDatos:[] };
+      visibles.forEach(r => g[estadoCompMulti(r).estado].push(r));
+      const conEquivalente = g.sin.filter(r => estadoCompMulti(r).equivalente);
+      const desc = descripcionCompMulti(comp);
+      const vista = multiBusqueda.vista;
+      const boton = (v, cls, txt, cuenta) => `<button type="button" class="multi-vista ${cls}${vista===v?' activa':''}" data-multi-vista="${v}" aria-pressed="${vista===v}">${txt} <span class="n">${n(cuenta)}</span></button>`;
+
+      let respuesta;
+      if(COMP_MAP.size === 0) respuesta = `<div class="multi-respuesta mal">Carga el archivo de Componentes para poder verificar el componente.</div>`;
+      else if(!visibles.length) respuesta = '';
+      else if(g.sin.length) respuesta = `<div class="multi-respuesta mal"><b>${n(g.sin.length)}</b> de ${n(visibles.length)} lista(s) <b>no tienen</b> el componente <span class="multi-mono">${esc(comp)}</span>${desc ? ' · ' + esc(desc) : ''}.</div>`;
+      else respuesta = `<div class="multi-respuesta ok">Todas las listas encontradas${g.sinDatos.length ? ' con componentes cargados' : ''} tienen el componente <span class="multi-mono">${esc(comp)}</span>${desc ? ' · ' + esc(desc) : ''}.</div>`;
+      html += respuesta;
+      if(visibles.length){
+        html += `<div class="multi-vistas" role="group" aria-label="Qué listas mostrar en la tabla">` +
+          boton('sin', 'sin', 'No lo tienen', g.sin.length) +
+          boton('con', 'con', 'Lo tienen', g.con.length) +
+          (g.sinDatos.length ? boton('sinDatos', '', 'Sin componentes cargados', g.sinDatos.length) : '') +
+          boton('todas', '', 'Todas', visibles.length) + `</div>`;
+      }
+      if(conEquivalente.length){
+        const ejemplos = Array.from(new Set(conEquivalente.map(r => { const e = estadoCompMulti(r); return e.tipoEquivalente + ' ' + e.equivalente; })));
+        html += `<div class="multi-faltan">${n(conEquivalente.length)} de las que no lo tienen usan el código ${esc(ejemplos.join(', '))} del mismo material — probablemente pendientes de actualizar.</div>`;
+      }
+      if(g.sin.length) html += `<div class="multi-linea"><button type="button" class="multi-link" data-multi-copiar="sin">Copiar los códigos de las listas que no lo tienen</button></div>`;
+    }
+    html += `<div class="multi-pie"><button type="button" class="btn btn-primary btn-compact" data-multi-accion="exportar">` +
+      `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>Exportar resultado</button>` +
+      (comp ? `<span>Según los componentes cargados (los relevantes para fabricación), por Material + Lista alternativa.</span>` : '') + `</div>`;
+    res.innerHTML = html;
+    res.hidden = false;
+  }
+
+  async function copiarTextoMulti(texto){
+    try{ await navigator.clipboard.writeText(texto); return true; }
+    catch(e){
+      const ta = document.createElement('textarea');
+      ta.value = texto; ta.style.cssText = 'position:fixed;top:0;left:0;opacity:0;';
+      document.body.appendChild(ta); ta.select();
+      let ok = false; try{ ok = document.execCommand('copy'); }catch(_){}
+      document.body.removeChild(ta);
+      return ok;
+    }
+  }
+
+  async function exportarMulti(){
+    if(!await window.__conXLSX()) return;
+    const comp = multiBusqueda.comp;
+    const desc = comp ? descripcionCompMulti(comp) : '';
+    const idx = filasPorMaterialMulti();
+    const headers = ['Código buscado','Material','Descripción de la lista','Lista alt.','Centro','Estado'];
+    if(comp) headers.push('Componente buscado','¿Tiene el componente?','Detalle');
+    const filas = [];  // { valores, tipo }
+    multiBusqueda.lista.forEach(codigo=>{
+      const delCodigo = idx.get(codigo);
+      if(!delCodigo){
+        const v = [codigo, '', 'Sin lista de materiales', '', '', ''];
+        if(comp) v.push(comp, '—', '');
+        filas.push({ valores:v, tipo:'sinLista' });
+        return;
+      }
+      delCodigo.filter(r => matchesFilters(r, 'multiVista')).forEach(r=>{
+        const v = [codigo, String(r[iMaterial]??''), iDesc!==-1 ? String(r[iDesc]??'') : '', iAlt!==-1 ? String(r[iAlt]??'') : '',
+          iCentro!==-1 ? String(r[iCentro]??'') : '', iEstado!==-1 ? String(r[iEstado]??'') : ''];
+        let tipo = '';
+        if(comp){
+          const e = estadoCompMulti(r);
+          tipo = e.estado;
+          if(e.estado === 'con') v.push(comp, 'Sí', e.detalle || '');
+          else if(e.estado === 'sinDatos') v.push(comp, 'Sin componentes cargados', 'No se puede verificar');
+          else v.push(comp, 'No', e.equivalente ? 'Usa el código ' + e.tipoEquivalente + ' ' + e.equivalente : '');
+        }
+        filas.push({ valores:v, tipo });
+      });
+    });
+
+    const titulo = comp
+      ? 'Búsqueda de ' + multiBusqueda.lista.length + ' código(s) · componente ' + comp + (desc ? ' — ' + desc : '')
+      : 'Búsqueda de ' + multiBusqueda.lista.length + ' código(s)';
+    const aoa = [[titulo], headers].concat(filas.map(f => f.valores));
+    const ws = XLSX.utils.aoa_to_sheet(aoa);
+    ws['!merges'] = [{ s:{ r:0, c:0 }, e:{ r:0, c:headers.length-1 } }];
+    ws['!cols'] = [{wch:15},{wch:14},{wch:42},{wch:9},{wch:12},{wch:12}].concat(comp ? [{wch:15},{wch:22},{wch:34}] : []);
+    const ultimaCol = XLSX.utils.encode_col(headers.length-1);
+    ws['!autofilter'] = { ref: 'A2:' + ultimaCol + (filas.length + 2) };
+
+    const BORDE = { style:'thin', color:{ rgb:'D8DEE1' } };
+    const BORDES = { top:BORDE, bottom:BORDE, left:BORDE, right:BORDE };
+    const FUENTE = { sz:10, name:'Calibri' };
+    ws['A1'].s = { font:{ bold:true, sz:12, name:'Calibri', color:{ rgb:'122132' } } };
+    for(let c=0; c<headers.length; c++){
+      const a = XLSX.utils.encode_cell({ r:1, c });
+      ws[a].s = { fill:{ patternType:'solid', fgColor:{ rgb:'1F3B57' } }, font:{ bold:true, color:{ rgb:'FFFFFF' }, sz:11, name:'Calibri' }, alignment:{ vertical:'center', horizontal:'center', wrapText:true }, border:BORDES };
+    }
+    const ESTILO = {
+      sin:      { fill:{ patternType:'solid', fgColor:{ rgb:'F5E7E5' } }, font:{ sz:10, name:'Calibri', bold:true, color:{ rgb:'963B32' } } },
+      con:      { fill:{ patternType:'solid', fgColor:{ rgb:'DEF0EF' } }, font:{ sz:10, name:'Calibri', bold:true, color:{ rgb:'0A5352' } } },
+      sinDatos: { fill:{ patternType:'solid', fgColor:{ rgb:'E8EDEE' } }, font:{ sz:10, name:'Calibri', color:{ rgb:'5C6B77' } } },
+      sinLista: { fill:{ patternType:'solid', fgColor:{ rgb:'F3EBD3' } }, font:{ sz:10, name:'Calibri', color:{ rgb:'8A6D1E' } } }
+    };
+    const colEstado = headers.indexOf('¿Tiene el componente?');
+    filas.forEach((f, i)=>{
+      for(let c=0; c<headers.length; c++){
+        const a = XLSX.utils.encode_cell({ r:i+2, c });
+        if(!ws[a]) ws[a] = { t:'s', v:'' };
+        const resaltar = f.tipo === 'sinLista' ? (c === 2) : (c === colEstado);
+        ws[a].s = resaltar && ESTILO[f.tipo] ? Object.assign({ border:BORDES }, ESTILO[f.tipo]) : { font:FUENTE, border:BORDES };
+      }
+    });
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'BUSQUEDA');
+    XLSX.writeFile(wb, 'busqueda_listas' + (comp ? '_comp_' + comp : '') + '_' + new Date().toISOString().slice(0,10) + '.xlsx');
+  }
+
+  (function(){
+    const btn = document.getElementById('bomMultiBtn');
+    const panel = document.getElementById('bomMultiPanel');
+    const taCodigos = document.getElementById('bomMultiCodigos');
+    const infoCodigos = document.getElementById('bomMultiCodigosInfo');
+    const inComp = document.getElementById('bomMultiComp');
+    const infoComp = document.getElementById('bomMultiCompInfo');
+    const res = document.getElementById('bomMultiRes');
+    if(!btn || !panel) return;
+    const n = v => Number(v).toLocaleString('es-PE');
+
+    function abrir(){
+      panel.hidden = false;
+      btn.setAttribute('aria-expanded', 'true');
+      actualizarInfoCodigos(); actualizarInfoComp();
+      if(!taCodigos.value.trim()) taCodigos.focus();
+    }
+    function ocultar(){ panel.hidden = true; btn.setAttribute('aria-expanded', 'false'); }
+    btn.addEventListener('click', ()=>{ if(panel.hidden) abrir(); else ocultar(); });
+    document.getElementById('bomMultiCerrar').addEventListener('click', ocultar);
+
+    function actualizarInfoCodigos(){
+      const p = parsearCodigosMulti(taCodigos.value);
+      if(!p.lista.length){ infoCodigos.innerHTML = ''; return; }
+      const partes = ['<b>' + n(p.lista.length) + '</b> código(s)'];
+      if(p.repetidos) partes.push(n(p.repetidos) + ' repetido(s), se toman una vez');
+      if(ROWS.length){
+        const idx = filasPorMaterialMulti();
+        const faltan = p.lista.filter(c => !idx.has(c)).length;
+        if(faltan) partes.push('<span class="aviso-t">' + n(faltan) + ' sin lista de materiales</span>');
+      }
+      infoCodigos.innerHTML = partes.join(' · ');
+    }
+    function actualizarInfoComp(){
+      const comp = normCodigoMulti(inComp.value);
+      if(!comp){ infoComp.innerHTML = ''; return; }
+      if(COMP_MAP.size === 0){ infoComp.innerHTML = '<span class="aviso-t">Aún no hay componentes cargados.</span>'; return; }
+      const desc = descripcionCompMulti(comp);
+      const listas = COMP_BY_CODE_MAP.get(comp);
+      infoComp.innerHTML = (desc ? esc(desc) + ' · ' : '') + (listas && listas.size
+        ? 'figura en ' + n(listas.size) + ' lista(s) en total'
+        : '<span class="aviso-t">no figura como componente en ninguna lista cargada</span>');
+    }
+    let t1 = null, t2 = null;
+    taCodigos.addEventListener('input', ()=>{ clearTimeout(t1); t1 = setTimeout(actualizarInfoCodigos, 160); });
+    inComp.addEventListener('input', ()=>{ clearTimeout(t2); t2 = setTimeout(actualizarInfoComp, 160); });
+
+    function buscar(){
+      const p = parsearCodigosMulti(taCodigos.value);
+      if(!p.lista.length){
+        infoCodigos.innerHTML = '<span class="error-t">Pega al menos un código de material.</span>';
+        taCodigos.focus();
+        return;
+      }
+      multiBusqueda = { activa:true, lista:p.lista, codigos:new Set(p.lista), comp:normCodigoMulti(inComp.value), vista:'todas' };
+      // Con componente, la tabla muestra de entrada lo que se preguntó: las que NO lo tienen.
+      if(multiBusqueda.comp && COMP_MAP.size){
+        const { visibles } = filasMultiVisibles();
+        if(visibles.some(r => estadoCompMulti(r).estado === 'sin')) multiBusqueda.vista = 'sin';
+      }
+      currentPage = 1;
+      updateAll();
+    }
+    document.getElementById('bomMultiBuscar').addEventListener('click', buscar);
+    taCodigos.addEventListener('keydown', e=>{ if(e.key === 'Enter' && (e.ctrlKey || e.metaKey)){ e.preventDefault(); buscar(); } });
+    inComp.addEventListener('keydown', e=>{ if(e.key === 'Enter'){ e.preventDefault(); buscar(); } });
+    document.getElementById('bomMultiQuitar').addEventListener('click', ()=>{
+      limpiarMultiBusqueda();
+      currentPage = 1;
+      updateAll();
+    });
+
+    res.addEventListener('click', async e=>{
+      const v = e.target.closest('[data-multi-vista]');
+      if(v){ multiBusqueda.vista = v.getAttribute('data-multi-vista'); currentPage = 1; updateAll(); return; }
+      const acc = e.target.closest('[data-multi-accion]');
+      if(acc && acc.getAttribute('data-multi-accion') === 'exportar'){ exportarMulti(); return; }
+      if(acc && acc.getAttribute('data-multi-accion') === 'limpiarOtros'){
+        // Quita los demás filtros pero conserva esta búsqueda.
+        const guardada = multiBusqueda;
+        clearAllFilters();
+        multiBusqueda = guardada;
+        updateAll();
+        return;
+      }
+      const cp = e.target.closest('[data-multi-copiar]');
+      if(cp){
+        let codigos;
+        if(cp.getAttribute('data-multi-copiar') === 'sinLista'){
+          const idx = filasPorMaterialMulti();
+          codigos = multiBusqueda.lista.filter(c => !idx.has(c));
+        } else {
+          codigos = Array.from(new Set(filasMultiVisibles().visibles.filter(r => estadoCompMulti(r).estado === 'sin').map(r => String(r[iMaterial]).trim())));
+        }
+        const ok = await copiarTextoMulti(codigos.join('\n'));
+        if(window.__aviso) window.__aviso(ok ? n(codigos.length) + ' código(s) copiados: pégalos donde los necesites.' : 'No se pudo copiar al portapapeles.', ok ? '' : 'error', 4000);
+      }
     });
   })();
 

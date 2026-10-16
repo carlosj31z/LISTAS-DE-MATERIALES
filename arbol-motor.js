@@ -399,6 +399,7 @@
       var iCantidad = idx['Cantidad componente'];
       var iUM = idx['Un.medida componente'];
       var iListaTec = idx['Lista de materiales'];
+      var iFija = idx['Cantidad fija'];
 
       // Índice por Material+Alt+ListaTecnica (clave completa, sin ambigüedad — evita mezclar
       // componentes de dos listas técnicas distintas que comparten el mismo Material+Alt,
@@ -418,7 +419,9 @@
           componente: iComponente!==undefined ? normMat(row[iComponente]) : '',
           denominacion: iDenom!==undefined ? row[iDenom] : '',
           cantidad: iCantidad!==undefined ? row[iCantidad] : '',
-          um: iUM!==undefined ? row[iUM] : ''
+          um: iUM!==undefined ? row[iUM] : '',
+          // "Cantidad fija" marcada: no se escala con la cantidad base de la lista.
+          fija: iFija!==undefined && String(row[iFija]||'').trim() !== ''
         };
         if(listaTec){
           var keyCompleta = keySimple + '||' + listaTec;

@@ -55,11 +55,14 @@ grep -n "APP [0-9] —" index.html
 3. **Árbol del producto** — reconstruye la cadena Acondicionado → Envase →
    Recubrimiento/Inspección → Fabricación de un producto terminado,
    retrocediendo por los componentes de posición 0010 de cada lista. Si una
-   lista consume además otros materiales fabricados (con lista propia; no
-   envase/empaque ZMEE ni materia prima ZMPR) — un kit vial + solvente, un
+   lista consume además otros materiales fabricados (con lista propia, incluido
+   envase/empaque ZMEE de maquila; no materia prima ZMPR) — un kit vial + solvente, un
    envase con dos graneles, un pack de productos —, cada uno abre una rama con
    su propia cadena, como la explosión multinivel CS12 de SAP; se dibujan en
-   columnas (o apiladas si son muchas). Soporta múltiples combinaciones cuando
+   columnas (o apiladas si son muchas). Una Fabricación cuyo 0010 es otro
+   semielaborado fabricado (polvo efervescente a partir de granulado) sigue la
+   cadena un nivel más; las etapas MAQUILA con VFab "00xx" no se validan con la
+   regla de dígitos 1-2. Soporta múltiples combinaciones cuando
    hay ambigüedad de Versión de Fabricación.
 4. **Explosión masiva** — corre el mismo motor del Árbol del producto sobre
    una lista de materiales sin límite de cantidad (pegada desde Excel en un

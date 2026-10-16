@@ -67,7 +67,8 @@ grep -n "APP [0-9] —" index.html
    B = VFab opcional). Los materiales con varias VFab se resuelven en bloque
    ("generar todas" / "primera no bloqueada"); los árboles se generan por tramos
    con barra de progreso; los resultados se filtran por estado y se buscan.
-   Exporta a Excel con formato "EXPLOSION" (una fila por componente, celdas
+   Exporta a Excel con formato "EXPLOSION" (una fila por componente, con el
+   tamaño de lote —Cantidad base y su unidad— de la lista de cada etapa; celdas
    amarillas en bloqueos con comentarios ocultos —triangulito rojo, texto al
    pasar el cursor—) más hojas RESUMEN (una fila por árbol) y NO RESUELTOS.
 5. **Chat con IA** (botón flotante, esquina inferior derecha, en MM y BOM) —
@@ -90,6 +91,16 @@ esperan `window.__auth.listo`.
 - El login es una barrera de la interfaz: las tablas siguen siendo legibles
   con la clave pública (también las usa `/api/arbol`). Cerrarlas de verdad
   requeriría reglas RLS en Supabase y ajustar `/api/arbol`.
+
+### Guardado en Supabase y fechas
+- Todas las cargas insertan con `window.__sbInsertAll(tabla, filas, onAvance)`:
+  bloques de 200 que se parten a la mitad si Supabase corta por
+  `statement timeout` (y reintentos ante errores de red). `__sbDeleteAll`
+  hace lo mismo al borrar la carga anterior.
+- Fechas: `window.__fechaPartes / __ordenFechas / __fechaDMY / __fechaISO`
+  aceptan dd/mm/aaaa, m/d/aa (formato de celda de Excel), ISO y número de
+  serie. El Maestro normaliza sus columnas de fecha a dd/mm/aaaa al cargar
+  (`normalizarFechasMM`) y el filtro "Creado el" del BOM compara en ISO.
 
 ### Registro de cargas ("Archivos" en la barra superior)
 `window.__cargas` sabe, para cada archivo (Maestro, Listas, Componentes, VFab,

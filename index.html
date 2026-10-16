@@ -2459,6 +2459,45 @@ function formatFechaHoraCorta(d){
     return all;
   };
 
+  /* Inserta muchas filas por bloques. Supabase corta cualquier sentencia que pase de su
+     statement_timeout ("canceling statement due to statement timeout"); con filas anchas
+     (Componentes trae decenas de columnas en `data`) o con otra carga guardando a la vez,
+     un bloque de 500 llegaba a pasarse. Ahora se parte en bloques de 200 y, si uno se pasa
+     del tiempo, se reintenta partido a la mitad (hasta 25 filas); ante un error de red se
+     reintenta igual con espera. Solo devuelve error si ni así entra.
+     onAvance(filasGuardadas) informa el progreso. Devuelve {error}. */
+  function esTimeout(err){
+    var t = String((err && (err.message || err.details)) || '') + ' ' + String(err && err.code || '');
+    return /statement timeout|57014|timeout|timed out/i.test(t);
+  }
+  function esperar(ms){ return new Promise(function(r){ setTimeout(r, ms); }); }
+  window.__sbInsertAll = async function(table, records, onAvance){
+    if(!window.__sb) return { error: null };
+    var hechos = 0, tam = 200, MIN = 25;
+    while(hechos < records.length){
+      if(onAvance) onAvance(hechos);
+      var chunk = records.slice(hechos, hechos + tam);
+      var res, intento = 0;
+      while(true){
+        try{ res = await window.__sb.from(table).insert(chunk); }
+        catch(e){ res = { error: e }; }
+        if(!res.error) break;
+        if(esTimeout(res.error) && chunk.length > MIN){
+          // Bloque demasiado pesado: se prueba con la mitad (y se sigue con ese tamaño).
+          tam = Math.max(MIN, Math.floor(chunk.length / 2));
+          chunk = records.slice(hechos, hechos + tam);
+          await esperar(400);
+          continue;
+        }
+        if(++intento > 3) return { error: res.error };
+        await esperar(800 * intento);
+      }
+      hechos += chunk.length;
+    }
+    if(onAvance) onAvance(hechos);
+    return { error: null };
+  };
+
   /* Borra TODAS las filas de una tabla, pero en bloques pequeños en vez de un único
      DELETE masivo: un "DELETE FROM tabla WHERE ..." sobre decenas de miles de filas en una
      sola sentencia puede exceder el statement_timeout de Postgres/Supabase ("canceling
@@ -2467,15 +2506,24 @@ function formatFechaHoraCorta(d){
      (null si todo salió bien) para que el llamador decida cómo informar al usuario. */
   window.__sbDeleteAll = async function(table){
     if(!window.__sb) return { error: null };
-    var batchSize = 500;
+    var batchSize = 500, fallos = 0;
     try{
       while(true){
         var selRes = await window.__sb.from(table).select('id').limit(batchSize);
-        if(selRes.error) return { error: selRes.error };
+        if(selRes.error){
+          if(++fallos > 4) return { error: selRes.error };
+          await esperar(800 * fallos); continue;
+        }
         var ids = (selRes.data || []).map(function(r){ return r.id; });
         if(ids.length === 0) break;
         var delRes = await window.__sb.from(table).delete().in('id', ids);
-        if(delRes.error) return { error: delRes.error };
+        if(delRes.error){
+          // Igual que al insertar: si se pasa del tiempo se borra en bloques más chicos.
+          if(esTimeout(delRes.error) && batchSize > 50){ batchSize = Math.max(50, Math.floor(batchSize / 2)); await esperar(400); continue; }
+          if(++fallos > 4) return { error: delRes.error };
+          await esperar(800 * fallos); continue;
+        }
+        fallos = 0;
         if(ids.length < batchSize) break;
       }
       return { error: null };
@@ -2506,6 +2554,51 @@ function formatFechaHoraCorta(d){
       return null;
     }
   };
+})();
+</script>
+
+<script>
+/* ============================================================
+   FECHAS DE LOS EXPORTS DE SAP
+   Según el equipo y la versión de Excel, una misma columna de fecha llega como "15/10/2024",
+   "10/15/24" (mes/día/año corto), "2024-10-15", un número de serie de Excel o un objeto Date.
+   window.__fechaPartes(v, orden) devuelve {d,m,y} (orden 'dmy' por defecto o 'mdy' para
+   textos con barras) y window.__ordenFechas(valores) adivina el orden de una columna entera:
+   si algún primer número pasa de 12 es día/mes, si algún segundo pasa de 12 es mes/día.
+   ============================================================ */
+(function(){
+  var RE_BARRAS = /^(\d{1,2})[\/.\-](\d{1,2})[\/.\-](\d{2,4})(?:\D|$)/;
+  var RE_ISO = /^(\d{4})-(\d{1,2})-(\d{1,2})/;
+  function anio(y){ y = +y; return y < 100 ? 2000 + y : y; }
+  function valida(d, m, y){ return (m >= 1 && m <= 12 && d >= 1 && d <= 31 && y > 1900) ? { d:d, m:m, y:y } : null; }
+  window.__fechaPartes = function(v, orden){
+    if(v === null || v === undefined || v === '') return null;
+    if(v instanceof Date) return isNaN(v) ? null : valida(v.getDate(), v.getMonth()+1, v.getFullYear());
+    var s = String(v).trim(), r;
+    if((r = RE_ISO.exec(s))) return valida(+r[3], +r[2], +r[1]);
+    if((r = RE_BARRAS.exec(s))){
+      var a = +r[1], b = +r[2], y = anio(r[3]);
+      return orden === 'mdy' ? valida(b, a, y) : valida(a, b, y);
+    }
+    if(/^\d{5}(\.\d+)?$/.test(s)){
+      var n = parseFloat(s);
+      if(n > 20000 && n < 80000){ var dt = new Date(Math.round((n - 25569) * 86400000)); return valida(dt.getUTCDate(), dt.getUTCMonth()+1, dt.getUTCFullYear()); }
+    }
+    return null;
+  };
+  window.__ordenFechas = function(valores){
+    var mdy = false;
+    for(var i = 0; i < valores.length; i++){
+      var r = RE_BARRAS.exec(String(valores[i] === null || valores[i] === undefined ? '' : valores[i]).trim());
+      if(!r) continue;
+      if(+r[1] > 12) return 'dmy';
+      if(+r[2] > 12) mdy = true;
+    }
+    return mdy ? 'mdy' : 'dmy';
+  };
+  function dos(n){ return (n < 10 ? '0' : '') + n; }
+  window.__fechaDMY = function(p){ return p ? dos(p.d) + '/' + dos(p.m) + '/' + p.y : ''; };
+  window.__fechaISO = function(p){ return p ? p.y + '-' + dos(p.m) + '-' + dos(p.d) : ''; };
 })();
 </script>
 
@@ -3329,6 +3422,16 @@ function formatFechaHoraCorta(d){
         var data = new Uint8Array(e.target.result);
         var wb = XLSX.read(data, {type:'array', cellDates:true});
         var sheet = wb.Sheets[wb.SheetNames[0]];
+        // Las celdas de fecha traen su propio formato de Excel (p. ej. m/d/yy), que manda sobre
+        // dateNF: se reescribe su texto como dd/mm/aaaa para que no dependa del equipo.
+        Object.keys(sheet).forEach(function(addr){
+          var c = sheet[addr];
+          if(addr.charAt(0) !== '!' && c && c.t === 'd' && c.v instanceof Date && !isNaN(c.v)){
+            // +1 h: SheetJS a veces deja la fecha unos segundos antes de medianoche.
+            var f = new Date(c.v.getTime() + 3600000);
+            c.w = window.__fechaDMY({ d:f.getDate(), m:f.getMonth()+1, y:f.getFullYear() });
+          }
+        });
         var rowsArr = XLSX.utils.sheet_to_json(sheet, {header:1, defval:'', raw:false, dateNF:'dd/mm/yyyy'});
         if(!rowsArr.length){ errorCargaMM('El archivo no contiene filas legibles.'); return; }
         var headers = rowsArr[0].map(function(h){ return String(h).trim(); });
@@ -3354,6 +3457,7 @@ function formatFechaHoraCorta(d){
           rows.push(obj);
         }
 
+        normalizarFechasMM(rows);
         state.headers = headers.filter(function(h){ return EXCLUDE.indexOf(h)===-1; });
         state.rows = rows;
         // Al cargar un archivo nuevo se limpian todos los filtros por columna y de fecha,
@@ -3545,15 +3649,13 @@ function formatFechaHoraCorta(d){
           carga_id: cargaId
         };
       });
-      for(var i=0; i<records.length; i+=500){
-        window.__cargas.paso('mm', 'Guardando ' + i.toLocaleString('es-PE') + ' de ' + records.length.toLocaleString('es-PE') + ' materiales…', i / records.length);
-        var chunk = records.slice(i, i+500);
-        var res = await window.__sb.from('mm_materiales').insert(chunk);
-        if(res.error){
-          console.error('Supabase insert mm_materiales error', res.error);
-          alert('Se limpió el Maestro de Materiales anterior en Supabase, pero ocurrió un error guardando el nuevo (quedó incompleto). Vuelve a cargar el archivo. Detalle: ' + res.error.message);
-          return { ok:false };
-        }
+      const res = await window.__sbInsertAll('mm_materiales', records, function(hechos){
+        window.__cargas.paso('mm', 'Guardando ' + hechos.toLocaleString('es-PE') + ' de ' + records.length.toLocaleString('es-PE') + ' materiales…', hechos / records.length);
+      });
+      if(res.error){
+        console.error('Supabase insert mm_materiales error', res.error);
+        alert('Se limpió el Maestro de Materiales anterior en Supabase, pero ocurrió un error guardando el nuevo (quedó incompleto). Vuelve a cargar el archivo. Detalle: ' + res.error.message);
+        return { ok:false };
       }
       return { ok:true, fecha: new Date(ahora) };
     }catch(e){
@@ -3625,6 +3727,7 @@ function formatFechaHoraCorta(d){
         if(!(key in seen)){ seen[key] = rows.length; rows.push(r); }
         else { rows[seen[key]] = r; }
       });
+      normalizarFechasMM(rows);
       state.headers = Object.keys(rows[0]);
       state.rows = rows;
       onDataLoaded('Datos guardados en Supabase', {skipSave:true});
@@ -3651,11 +3754,37 @@ function formatFechaHoraCorta(d){
     $('mmStatSuspendidos').textContent = suspendidos.toLocaleString('es');
   }
 
+  // Las fechas del Maestro se normalizan a dd/mm/aaaa al cargarlas (normalizarFechasMM), así
+  // que aquí basta el orden día/mes; igual acepta ISO, año corto y número de serie de Excel.
   function parseDMY(str){
-    if(!str) return null;
-    var m = /^(\d{2})\/(\d{2})\/(\d{4})/.exec(str);
-    if(!m) return null;
-    return new Date(+m[3], +m[2]-1, +m[1]);
+    var p = window.__fechaPartes(str, 'dmy');
+    return p ? new Date(p.y, p.m-1, p.d) : null;
+  }
+
+  /* Deja todas las columnas de fecha del Maestro como dd/mm/aaaa. Hacía falta porque Excel
+     entrega la fecha con el formato de la celda (p. ej. "10/15/24", mes/día/año corto): el
+     filtro de fechas no la reconocía y descartaba esas filas (en todas las páginas). Se
+     detectan como fecha las columnas cuyos valores no vacíos tienen todos forma de fecha. */
+  function normalizarFechasMM(rows){
+    if(!rows.length) return;
+    var columnas = Object.keys(rows[0]).filter(function(h){
+      var vistos = 0;
+      for(var i = 0; i < rows.length && vistos < 200; i++){
+        var v = rows[i][h];
+        if(v === '' || v === null || v === undefined) continue;
+        if(typeof v !== 'string' && !(v instanceof Date)) return false;
+        if(!(v instanceof Date) && !/^\d{1,4}[\/.\-]\d{1,2}[\/.\-]\d{1,4}$/.test(String(v).trim())) return false;
+        vistos++;
+      }
+      return vistos > 0;
+    });
+    columnas.forEach(function(h){
+      var orden = window.__ordenFechas(rows.map(function(r){ return r[h]; }));
+      rows.forEach(function(r){
+        var p = window.__fechaPartes(r[h], orden);
+        if(p) r[h] = window.__fechaDMY(p);
+      });
+    });
   }
 
   /* Estado de filtros por columna (checkbox multi-selección), igual patrón que usa Listas
@@ -4964,15 +5093,13 @@ function formatFechaHoraCorta(d){
         data: row,
         carga_id: cargaId
       }));
-      for(let i=0; i<records.length; i+=500){
-        window.__cargas.paso('bom', 'Guardando ' + i.toLocaleString('es-PE') + ' de ' + records.length.toLocaleString('es-PE') + ' registros…', i / records.length);
-        const chunk = records.slice(i, i+500);
-        const res = await window.__sb.from('mm_bom').insert(chunk);
-        if(res.error){
-          console.error('Supabase insert mm_bom error', res.error);
-          alert('Se limpió Listas de Materiales anterior en Supabase, pero ocurrió un error guardando el nuevo (quedó incompleto). Vuelve a cargar el archivo. Detalle: ' + res.error.message);
-          return { ok:false };
-        }
+      const res = await window.__sbInsertAll('mm_bom', records, function(hechos){
+        window.__cargas.paso('bom', 'Guardando ' + hechos.toLocaleString('es-PE') + ' de ' + records.length.toLocaleString('es-PE') + ' registros…', hechos / records.length);
+      });
+      if(res.error){
+        console.error('Supabase insert mm_bom error', res.error);
+        alert('Se limpió Listas de Materiales anterior en Supabase, pero ocurrió un error guardando el nuevo (quedó incompleto). Vuelve a cargar el archivo. Detalle: ' + res.error.message);
+        return { ok:false };
       }
       return { ok:true, fecha: new Date(ahora) };
     }catch(e){
@@ -5039,15 +5166,13 @@ function formatFechaHoraCorta(d){
         data: row,
         carga_id: cargaId
       }));
-      for(let i=0; i<records.length; i+=500){
-        window.__cargas.paso('comp', 'Guardando ' + i.toLocaleString('es-PE') + ' de ' + records.length.toLocaleString('es-PE') + ' componentes…', i / records.length);
-        const chunk = records.slice(i, i+500);
-        const res = await window.__sb.from('mm_bom_componentes').insert(chunk);
-        if(res.error){
-          console.error('Supabase insert mm_bom_componentes error', res.error);
-          alert('Se limpió Componentes anterior en Supabase, pero ocurrió un error guardando el nuevo (quedó incompleto). Vuelve a cargar el archivo. Detalle: ' + res.error.message);
-          return { ok:false };
-        }
+      const res = await window.__sbInsertAll('mm_bom_componentes', records, function(hechos){
+        window.__cargas.paso('comp', 'Guardando ' + hechos.toLocaleString('es-PE') + ' de ' + records.length.toLocaleString('es-PE') + ' componentes…', hechos / records.length);
+      });
+      if(res.error){
+        console.error('Supabase insert mm_bom_componentes error', res.error);
+        alert('Se limpió Componentes anterior en Supabase, pero ocurrió un error guardando el nuevo (quedó incompleto). Vuelve a cargar el archivo. Detalle: ' + res.error.message);
+        return { ok:false };
       }
       return { ok:true, fecha: new Date(ahora) };
     }catch(e){
@@ -5137,15 +5262,13 @@ function formatFechaHoraCorta(d){
         data: row,
         carga_id: cargaId
       }));
-      for(let i=0; i<records.length; i+=500){
-        window.__cargas.paso('vfab', 'Guardando ' + i.toLocaleString('es-PE') + ' de ' + records.length.toLocaleString('es-PE') + ' versiones…', i / records.length);
-        const chunk = records.slice(i, i+500);
-        const res = await window.__sb.from('mm_vfab').insert(chunk);
-        if(res.error){
-          console.error('Supabase insert mm_vfab error', res.error);
-          alert('Se limpió Versiones de Fabricación anterior en Supabase, pero ocurrió un error guardando el nuevo (quedó incompleto). Vuelve a cargar el archivo. Detalle: ' + res.error.message);
-          return { ok:false };
-        }
+      const res = await window.__sbInsertAll('mm_vfab', records, function(hechos){
+        window.__cargas.paso('vfab', 'Guardando ' + hechos.toLocaleString('es-PE') + ' de ' + records.length.toLocaleString('es-PE') + ' versiones…', hechos / records.length);
+      });
+      if(res.error){
+        console.error('Supabase insert mm_vfab error', res.error);
+        alert('Se limpió Versiones de Fabricación anterior en Supabase, pero ocurrió un error guardando el nuevo (quedó incompleto). Vuelve a cargar el archivo. Detalle: ' + res.error.message);
+        return { ok:false };
       }
       return { ok:true, fecha: new Date(ahora) };
     }catch(e){
@@ -5332,15 +5455,13 @@ function formatFechaHoraCorta(d){
       // Esta tabla no tiene columna carga_id: la fecha de carga se guarda dentro de cada
       // fila para que el registro de cargas pueda mostrar cuándo se cargó el programa.
       const records = entries.map(e => ({ data: Object.assign({}, e, { _cargadoEn: fecha.toISOString() }) }));
-      for(let i=0; i<records.length; i+=500){
-        window.__cargas.paso('prog', 'Guardando ' + i.toLocaleString('es-PE') + ' de ' + records.length.toLocaleString('es-PE') + ' PT…', i / records.length);
-        const chunk = records.slice(i, i+500);
-        const res = await window.__sb.from('mm_programa_produccion').insert(chunk);
-        if(res.error){
-          console.error('Supabase insert mm_programa_produccion error', res.error);
-          alert('Se limpió el Programa de Producción anterior en Supabase, pero ocurrió un error guardando el nuevo (quedó incompleto). Vuelve a cargar el archivo. Detalle: ' + res.error.message);
-          return { ok:false };
-        }
+      const res = await window.__sbInsertAll('mm_programa_produccion', records, function(hechos){
+        window.__cargas.paso('prog', 'Guardando ' + hechos.toLocaleString('es-PE') + ' de ' + records.length.toLocaleString('es-PE') + ' PT…', hechos / records.length);
+      });
+      if(res.error){
+        console.error('Supabase insert mm_programa_produccion error', res.error);
+        alert('Se limpió el Programa de Producción anterior en Supabase, pero ocurrió un error guardando el nuevo (quedó incompleto). Vuelve a cargar el archivo. Detalle: ' + res.error.message);
+        return { ok:false };
       }
       return { ok:true, fecha: fecha };
     }catch(e){
@@ -5770,6 +5891,14 @@ function formatFechaHoraCorta(d){
     return Number(v).toLocaleString('es-PE');
   }
 
+  let ordenFechaBomCache = { rowsRef:null, orden:'dmy' };
+  function fechaISOBom(v){
+    if(ordenFechaBomCache.rowsRef !== ROWS){
+      ordenFechaBomCache = { rowsRef:ROWS, orden: iCreadoEl !== -1 ? window.__ordenFechas(ROWS.map(r => r[iCreadoEl])) : 'dmy' };
+    }
+    return window.__fechaISO(window.__fechaPartes(v, ordenFechaBomCache.orden));
+  }
+
   function esc(v){
     if(v===null||v===undefined) return '';
     return String(v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
@@ -5840,13 +5969,13 @@ function formatFechaHoraCorta(d){
       const v = row[def.i]===''||row[def.i]===null||row[def.i]===undefined ? '(vacío)' : String(row[def.i]);
       if(!set.has(v)) return false;
     }
-    if(dateDesde && iCreadoEl !== -1) {
-      const v = row[iCreadoEl];
-      if(!v || String(v) < dateDesde) return false;
-    }
-    if(dateHasta && iCreadoEl !== -1) {
-      const v = row[iCreadoEl];
-      if(!v || String(v) > dateHasta) return false;
+    // Se compara en aaaa-mm-dd: la columna puede venir como dd/mm/aaaa, número de serie de
+    // Excel o ISO, y comparar el texto tal cual dejaba fuera filas válidas.
+    if((dateDesde || dateHasta) && iCreadoEl !== -1) {
+      const iso = fechaISOBom(row[iCreadoEl]);
+      if(!iso) return false;
+      if(dateDesde && iso < dateDesde) return false;
+      if(dateHasta && iso > dateHasta) return false;
     }
     if(searchTerm) {
       const hay = COLUMNS.map((_, i) => String(row[i] || '')).join(' ').toLowerCase();
@@ -9450,8 +9579,16 @@ function formatFechaHoraCorta(d){
     // la etapa; luego el detalle del componente (posición, código, descripción, cantidad,
     // unidad). Junto a la descripción del COMPONENTE (solo ahí), su "Denom. Grupo de
     // artículos" del Maestro de Materiales (vacía si el Maestro no está cargado o no lo tiene).
-    var headers = ['Centro','Material padre','Descripción material padre','VFab','Etapa','Material hijo','Descripción material hijo','VFab','Posición','Componente','Descripción de componente','Denom. Grupo de artículos','Cantidad','UM'];
+    // "Tamaño de lote" / "UM lote": la Cantidad base de la lista de la etapa (Material hijo)
+    // y su unidad, tal como figuran en Listas de Materiales.
+    var headers = ['Centro','Material padre','Descripción material padre','VFab','Etapa','Material hijo','Descripción material hijo','VFab','Tamaño de lote','UM lote','Posición','Componente','Descripción de componente','Denom. Grupo de artículos','Cantidad','UM'];
     var aoa = [headers];
+    function lote(n){
+      var v = n.cantidadBase;
+      if(v === '' || v === null || v === undefined) return '';
+      var num = Number(String(v).replace(',', '.'));
+      return isNaN(num) ? v : num;
+    }
     var mapaGrupoArt = window.MM_GRUPO_ART_MAP || {};
     function grupoArt(codigo){ return mapaGrupoArt[a.normMat(codigo)] || ''; }
 
@@ -9477,7 +9614,7 @@ function formatFechaHoraCorta(d){
         if(comps.length === 0){
           // Etapa sin componentes cargados: igual se deja constancia de la etapa en una
           // fila (sin desglose), para no perder de vista que esa etapa existe en el árbol.
-          aoa.push([r.centro||'—', r.material, r.descripcion||'', r.version, n.etapa||'—', n.material, n.descripcion||'', n.version, '—', '—', '(sin componentes cargados)', '', '', '']);
+          aoa.push([r.centro||'—', r.material, r.descripcion||'', r.version, n.etapa||'—', n.material, n.descripcion||'', n.version, lote(n), n.umBase||'', '—', '—', '(sin componentes cargados)', '', '', '']);
           rowMeta.push({ lmatBloqueada: lmatBloqueada, vfabBloqueada: vfabBloqueada, zTexto: null, inicioEtapa: true });
           return;
         }
@@ -9486,6 +9623,7 @@ function formatFechaHoraCorta(d){
           var estadoComp = a.estadoZDelMaterial(c.componente);
           aoa.push([
             r.centro||'—', r.material, r.descripcion||'', r.version, n.etapa||'—', n.material, n.descripcion||'', n.version,
+            lote(n), n.umBase||'',
             c.pos||'—', c.componente||'—', c.denominacion||'', grupoArt(c.componente), c.cantidad!==''&&c.cantidad!=null ? Number(c.cantidad)||c.cantidad : '', c.um||''
           ]);
           rowMeta.push({
@@ -9500,7 +9638,7 @@ function formatFechaHoraCorta(d){
 
     var ws = XLSX.utils.aoa_to_sheet(aoa);
     ws['!cols'] = [
-      {wch:9},{wch:15},{wch:40},{wch:8},{wch:16},{wch:16},{wch:40},{wch:8},{wch:11},{wch:13},{wch:43},{wch:24},{wch:13},{wch:7}
+      {wch:9},{wch:15},{wch:40},{wch:8},{wch:16},{wch:16},{wch:40},{wch:8},{wch:12},{wch:8},{wch:11},{wch:13},{wch:43},{wch:24},{wch:13},{wch:7}
     ];
     var lastCol = XLSX.utils.encode_col(headers.length-1);
     var lastRow = aoa.length;

@@ -77,7 +77,14 @@ grep -n "APP [0-9] —" index.html
    tamaño de lote —Cantidad base y su unidad— de la lista de cada etapa; celdas
    amarillas en bloqueos con comentarios ocultos —triangulito rojo, texto al
    pasar el cursor—) más hojas RESUMEN (una fila por árbol) y NO RESUELTOS.
-5. **Chat con IA** (botón flotante, esquina inferior derecha, en MM y BOM) —
+5. **Nomenclatura** — propone el Texto Material (máx. 40), el Texto de datos
+   básicos, el Texto de inspección y el Texto de insp. VI de un material nuevo
+   (producto terminado, granel, envase y empaque o materia prima) con la misma
+   estructura que los últimos creados en el Maestro. Interpreta el pedido escrito
+   libremente, avisa si ya existe un material con ese texto y muestra los más
+   parecidos como modelo. Reglas en `nomenclatura.js` (sin DOM; se puede probar
+   con node).
+6. **Chat con IA** (botón flotante, esquina inferior derecha, en MM y BOM) —
    filtrado de las tablas con preguntas en lenguaje natural, vía Gemini. Ver
    sección 5 — **tiene un bug pendiente sin resolver**.
 

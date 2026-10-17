@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>SAP MM & LM</title>
+<title>Datos Maestros · Materiales y Listas</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
@@ -130,6 +130,18 @@ window.__conXLSX = async function(){
   }
   .suite-eyebrow .dot{width:6px;height:6px;border-radius:50%;background:#4FD1C5; box-shadow:0 0 0 3px rgba(79,209,197,0.18);}
   .suite-tabs{ display:flex; gap:4px; }
+  /* Marca de la aplicación: tres capas (producto, etapas, componentes) en vez de un rótulo. */
+  .marca{ display:flex; align-items:center; gap:10px; }
+  .marca-ico{ width:26px; height:26px; flex:none; }
+  .marca-ico rect:nth-child(1){ fill:#4FD1C5; }
+  .marca-ico rect:nth-child(2){ fill:#4FD1C5; opacity:.7; }
+  .marca-ico rect:nth-child(3){ fill:#4FD1C5; opacity:.45; }
+  .marca-txt{ display:flex; flex-direction:column; line-height:1.15; }
+  .marca-txt b{ font-family:var(--display); font-size:15px; font-weight:700; color:#F3F7F8; letter-spacing:-0.01em; }
+  .marca-txt span{ font-family:var(--mono); font-size:9.5px; letter-spacing:.12em; text-transform:uppercase; color:#7FBBBA; }
+  .marca-login{ margin:0 0 18px; }
+  .marca-login .marca-txt b{ color:var(--ink); }
+  .marca-login .marca-txt span{ color:var(--teal); }
   .suite-tab{
     font-family:var(--display); font-weight:600; font-size:14.5px; color:#B7C6CE;
     background:transparent; border:none; border-bottom:2px solid transparent;
@@ -290,6 +302,76 @@ window.__conXLSX = async function(){
   .filter-option input{margin:0; accent-color:var(--teal);}
   .filter-option .opt-label{flex:1; overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
   .filter-option .opt-count{color:var(--ink-faint); font-family:var(--mono); font-size:11px;}
+
+  /* ================= Nomenclatura ================= */
+  .nom-layout{ display:grid; grid-template-columns:minmax(0,1.05fr) minmax(0,1fr); gap:16px; max-width:1240px; margin:0 auto; align-items:start; }
+  .nom-col{ min-width:0; }
+  .nom-card{ max-width:none; margin-left:0; margin-right:0; }
+  .nom-ancho{ max-width:1240px; margin-left:auto; margin-right:auto; }
+  .nom-col-resultado{ position:sticky; top:16px; }
+  .nom-pedido{ width:100%; min-height:96px; resize:vertical; border:1px solid var(--border); border-radius:var(--radius); background:var(--surface-alt); padding:10px 12px; font-family:var(--body); font-size:13.5px; line-height:1.5; color:var(--ink); }
+  .nom-pedido:focus, .nom-f input:focus, .nom-f select:focus{ outline:none; background:#fff; border-color:var(--teal); box-shadow:0 0 0 3px rgba(14,124,123,0.12); }
+  .nom-acciones{ display:flex; gap:8px; margin-top:10px; flex-wrap:wrap; }
+  .nom-tipos{ display:grid; grid-template-columns:repeat(4, minmax(0,1fr)); gap:6px; margin:6px 0 16px; }
+  .nom-tipo{ border:1px solid var(--border); background:var(--surface-alt); border-radius:var(--radius); padding:9px 8px; font-size:12.5px; color:var(--ink); cursor:pointer; text-align:left; line-height:1.25; transition:border-color .15s var(--ease), background .15s var(--ease); }
+  .nom-tipo small{ display:block; font-family:var(--mono); font-size:10.5px; color:var(--ink-faint); margin-top:2px; }
+  .nom-tipo:hover{ border-color:var(--ink-faint); }
+  .nom-tipo.activo{ background:var(--navy); border-color:var(--navy); color:#fff; }
+  .nom-tipo.activo small{ color:#9FB4C2; }
+  .nom-grid{ display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:12px 14px; }
+  .nom-f{ display:flex; flex-direction:column; gap:4px; min-width:0; }
+  .nom-f[hidden], .nom-checks[hidden], .nom-checks label[hidden]{ display:none; }
+  .nom-f-ancho{ grid-column:1 / -1; }
+  .nom-f > span{ font-size:11px; text-transform:uppercase; letter-spacing:0.05em; color:var(--ink-faint); font-family:var(--mono); }
+  .nom-f input, .nom-f select{ width:100%; border:1px solid var(--border); border-radius:var(--radius); background:var(--surface-alt); padding:8px 10px; font-size:13px; color:var(--ink); font-family:var(--body); }
+  .nom-f input{ font-family:var(--mono); }
+  .nom-checks{ grid-column:1 / -1; display:flex; gap:18px; flex-wrap:wrap; font-size:13px; color:var(--ink); }
+  .nom-checks label{ display:flex; gap:7px; align-items:center; cursor:pointer; }
+  .nom-checks input{ accent-color:var(--teal); width:15px; height:15px; }
+  .nom-salida-item{ border:1px solid var(--border-soft); border-radius:var(--radius); padding:10px 12px; margin-top:10px; background:var(--bg); }
+  .nom-salida-cab{ display:flex; justify-content:space-between; gap:10px; align-items:baseline; }
+  .nom-salida-cab b{ font-size:12.5px; color:var(--ink); }
+  .nom-salida-cab span{ font-family:var(--mono); font-size:10.5px; color:var(--ink-faint); }
+  .nom-salida-cab .excede{ color:var(--brick); font-weight:600; }
+  .nom-salida-txt{ display:flex; gap:8px; align-items:center; margin-top:6px; }
+  .nom-salida-txt output{ flex:1; font-family:var(--mono); font-size:13.5px; color:var(--navy-deep); font-weight:600; word-break:break-word; min-height:20px; }
+  .nom-salida-txt output:empty::before{ content:'—'; color:var(--ink-faint); font-weight:400; }
+  .nom-copiar{ border:1px solid var(--border); background:#fff; border-radius:6px; padding:4px 9px; font-size:11.5px; color:var(--ink-soft); cursor:pointer; flex:none; }
+  .nom-copiar:hover{ border-color:var(--teal); color:var(--teal); }
+  .nom-nota{ display:block; font-size:12px; line-height:1.45; color:var(--amber); background:var(--amber-soft); border-radius:var(--radius); padding:8px 10px; margin-top:10px; }
+  .nom-nota.dup{ color:var(--brick); background:var(--brick-soft); }
+  .nom-sub{ font-size:12px; color:var(--ink-faint); }
+  .nom-tabla-wrap{ overflow-x:auto; border:1px solid var(--border-soft); border-radius:var(--radius); }
+  .nom-tabla{ width:100%; min-width:900px; border-collapse:collapse; font-size:12px; }
+  .nom-tabla th{ background:var(--navy); color:#fff; font-family:var(--mono); font-size:10.5px; letter-spacing:0.04em; text-transform:uppercase; text-align:left; padding:8px 10px; position:static; }
+  .nom-tabla td{ padding:7px 10px; border-bottom:1px solid var(--border-soft); vertical-align:top; color:var(--ink); }
+  .nom-tabla td.cod{ font-family:var(--mono); font-weight:600; color:var(--navy-deep); white-space:nowrap; }
+  .nom-tabla td.tm{ font-family:var(--mono); }
+  .nom-tabla td small{ display:block; color:var(--ink-faint); font-family:var(--mono); font-size:10.5px; }
+  .nom-tabla tr:last-child td{ border-bottom:none; }
+  .nom-vacio{ color:var(--ink-faint); padding:14px 10px !important; }
+  .nom-usar{ border:1px solid var(--border); background:#fff; border-radius:6px; padding:4px 8px; font-size:11.5px; cursor:pointer; white-space:nowrap; color:var(--ink-soft); }
+  .nom-usar:hover{ border-color:var(--teal); color:var(--teal); }
+  .nom-reglas summary{ cursor:pointer; font-family:var(--display); font-size:16px; color:var(--ink); list-style:none; display:flex; align-items:center; gap:8px; }
+  .nom-reglas summary::-webkit-details-marker{ display:none; }
+  .nom-reglas summary::before{ content:''; width:7px; height:7px; border-right:2px solid var(--ink-soft); border-bottom:2px solid var(--ink-soft); transform:rotate(-45deg); transition:transform .15s; }
+  .nom-reglas[open] summary::before{ transform:rotate(45deg); }
+  .nom-reglas-grid{ display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:14px 22px; margin-top:14px; }
+  .nom-reglas h4{ margin:0 0 6px; font-size:13px; color:var(--navy-deep); }
+  .nom-reglas dl{ margin:0; font-size:12px; }
+  .nom-reglas dt{ font-family:var(--mono); font-size:10.5px; text-transform:uppercase; letter-spacing:0.04em; color:var(--ink-faint); margin-top:8px; }
+  .nom-reglas dd{ margin:2px 0 0; color:var(--ink); line-height:1.5; }
+  .nom-reglas code{ font-family:var(--mono); font-size:11.5px; background:var(--surface-alt); padding:1px 5px; border-radius:4px; }
+  .nom-reglas dd span{ font-family:var(--mono); font-size:11.5px; color:var(--teal); }
+  .nom-reglas-pie{ font-size:12px; color:var(--ink-soft); line-height:1.5; margin:14px 0 0; }
+  @media (max-width: 980px){
+    .nom-layout{ grid-template-columns:1fr; }
+    .nom-col-resultado{ position:static; }
+  }
+  @media (max-width: 720px){
+    .nom-tipos{ grid-template-columns:repeat(2, minmax(0,1fr)); }
+    .nom-grid, .nom-reglas-grid{ grid-template-columns:1fr; }
+  }
 
   /* ================= Reescalar una lista por cantidad base ================= */
   .reesc-overlay{ position:fixed; inset:0; z-index:9600; background:rgba(18,33,50,0.45); display:flex; align-items:center; justify-content:center; padding:20px 16px; }
@@ -1751,7 +1833,7 @@ window.__conXLSX = async function(){
 <!-- ========================= INICIO DE SESIÓN ========================= -->
 <div class="login-overlay" id="loginOverlay">
   <div class="login-card" role="dialog" aria-labelledby="loginTitulo">
-    <p class="login-eyebrow"><span class="dot"></span>SAP · Maestro de Materiales &amp; Listas</p>
+    <div class="marca marca-login"><svg class="marca-ico" viewBox="0 0 32 32" aria-hidden="true"><rect x="3" y="4" width="26" height="6" rx="2"/><rect x="7" y="13" width="18" height="6" rx="2"/><rect x="11" y="22" width="10" height="6" rx="2"/></svg><div class="marca-txt"><b>Datos Maestros</b><span>Materiales · Listas · SAP</span></div></div>
     <h1 id="loginTitulo">Iniciar sesión</h1>
     <p class="login-sub">Ingresa con tu correo y contraseña para ver y cargar la información.</p>
     <div class="login-verificando" id="loginVerificando">
@@ -1834,7 +1916,7 @@ window.__conXLSX = async function(){
 <!-- ========================= BARRA DE PESTAÑAS DE LA SUITE ========================= -->
 <div class="suite-bar">
   <div class="suite-top">
-    <p class="suite-eyebrow"><span class="dot"></span>SAP · Maestro de Materiales &amp; Listas de materiales</p>
+    <div class="marca"><svg class="marca-ico" viewBox="0 0 32 32" aria-hidden="true"><rect x="3" y="4" width="26" height="6" rx="2"/><rect x="7" y="13" width="18" height="6" rx="2"/><rect x="11" y="22" width="10" height="6" rx="2"/></svg><div class="marca-txt"><b>Datos Maestros</b><span>Materiales · Listas de materiales · Versiones de fabricación</span></div></div>
     <div class="suite-acciones">
       <button type="button" class="suite-chip" id="cargasBtn" title="Ver qué archivos están cargados y cuándo se cargó cada uno">
         <span class="cargas-dot" id="cargasDot"></span>Archivos <span class="cargas-resumen" id="cargasResumen"></span>
@@ -1851,6 +1933,7 @@ window.__conXLSX = async function(){
     <button class="suite-tab" data-tab="bom" id="tabBtnBOM">Listas de Materiales <span class="tab-badge" id="tabBadgeBOM">0</span></button>
     <button class="suite-tab" data-tab="arbol" id="tabBtnArbol">Árbol del producto</button>
     <button class="suite-tab" data-tab="explosion" id="tabBtnExplosion">Explosión masiva</button>
+    <button class="suite-tab" data-tab="nomenclatura" id="tabBtnNomenclatura">Nomenclatura</button>
   </div>
 </div>
 
@@ -1937,7 +2020,6 @@ window.__conXLSX = async function(){
       </div>
     </div>
 
-    <footer class="page-footer">MAESTRO DE MATERIALES — Datos según exportación de SAP</footer>
   </main>
 
 </section>
@@ -2079,7 +2161,7 @@ window.__conXLSX = async function(){
       <div class="empty-state" id="bomEmptyState">
         <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18"/><path d="M8 4v5"/><path d="M9 13h2M9 17h6"/></svg>
         <h3>Sin datos</h3>
-        <p>Haz clic en "Cargar Excel" para empezar a explorar tus listas de materiales.</p>
+        <p>Carga el export de SAP de Listas de Materiales para empezar.</p>
         <button class="btn btn-success" id="bomEmptyStateLoadBtn">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
           Cargar Excel
@@ -2106,7 +2188,6 @@ window.__conXLSX = async function(){
       </div>
     </div>
 
-    <footer class="page-footer">LISTAS DE MATERIALES — Datos según exportación de SAP</footer>
   </main>
 
   <button type="button" class="audit-fab" id="bomExportAuditoria" title="Auditoría de incoherencias — Excel con Listas de Materiales y Versiones de Fabricación">
@@ -2201,12 +2282,112 @@ window.__conXLSX = async function(){
 
     <div id="arbolResultado" style="display:none;"></div>
 
-    <footer class="page-footer">ÁRBOL DEL PRODUCTO — Reconstruido a partir de Listas de Materiales y Componentes</footer>
   </main>
 
 </section>
 
 <!-- ========================= VISTA 4: EXPLOSIÓN MASIVA ========================= -->
+<section class="app-view" id="view-nomenclatura">
+  <header class="top top-collapsed" id="nomenclaturaHeaderTop">
+    <button class="header-toggle" id="nomenclaturaHeaderToggle" title="Mostrar/ocultar detalles del encabezado" aria-label="Mostrar/ocultar detalles del encabezado">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M6 9l6 6 6-6"/></svg>
+    </button>
+    <p class="eyebrow"><span class="dot"></span>SAP · CREACIÓN DE MATERIALES</p>
+    <h1 class="title">Nomenclatura</h1>
+    <p class="subtitle">Propone el Texto Material, el Texto de datos básicos y los textos de inspección de un material nuevo con la misma estructura que los últimos materiales creados en el Maestro.</p>
+  </header>
+
+  <main class="view-main">
+    <div class="nom-layout">
+      <div class="nom-col">
+        <section class="expl-card nom-card">
+          <div class="expl-card-header"><h2>Pedido de creación</h2></div>
+          <p class="expl-hint">Pega el pedido tal como te llegó (correo, formato de creación, nombre del arte). Se reconocen el nombre, la concentración, la forma farmacéutica, el envase, la presentación, muestra médica y la versión.</p>
+          <textarea id="nomPedido" class="nom-pedido" spellcheck="false" placeholder="Ej.: Ferrosil 50 mg/5 mL solución oral, frasco x 100 mL, caja x 1&#10;Ej.: Folleto Gaseovet 80 mg tabletas masticables Humanova v.2"></textarea>
+          <div class="nom-acciones">
+            <button type="button" class="btn btn-primary btn-compact" id="nomInterpretar">Interpretar pedido</button>
+            <button type="button" class="btn btn-ghost btn-compact" id="nomLimpiar">Empezar de nuevo</button>
+          </div>
+        </section>
+
+        <section class="expl-card nom-card">
+          <div class="expl-card-header"><h2>Datos del material</h2></div>
+          <div class="nom-tipos" role="radiogroup" aria-label="Tipo de material">
+            <button type="button" class="nom-tipo" data-tipo="ZTER" role="radio">Producto terminado<small>ZTER</small></button>
+            <button type="button" class="nom-tipo" data-tipo="ZSEB" role="radio">Granel / semielaborado<small>ZSEB</small></button>
+            <button type="button" class="nom-tipo" data-tipo="ZMEE" role="radio">Envase y empaque<small>ZMEE</small></button>
+            <button type="button" class="nom-tipo" data-tipo="ZMPR" role="radio">Materia prima<small>ZMPR</small></button>
+          </div>
+          <div class="nom-grid" id="nomCampos">
+            <label class="nom-f" data-tipos="ZMEE"><span>Componente</span><select data-campo="componente"></select></label>
+            <label class="nom-f" data-tipos="ZMEE"><span>Medida</span><input data-campo="medida" placeholder="232mm · 300um x 234mm"></label>
+            <label class="nom-f nom-f-ancho" data-tipos="ZTER ZSEB ZMEE ZMPR"><span>Nombre comercial o DCI</span><input data-campo="nombre" placeholder="FERROSIL"></label>
+            <label class="nom-f nom-f-ancho" data-tipos="ZTER ZSEB ZMPR"><span data-etiqueta-generico>Nombre completo para inspección</span><input data-campo="generico" placeholder="Si se deja vacío, se usa el nombre"></label>
+            <label class="nom-f" data-tipos="ZMPR"><span>Calidad, grado o proveedor</span><input data-campo="calidad" placeholder="MICRONIZADA · (COS) · -N"></label>
+            <label class="nom-f" data-tipos="ZTER ZSEB ZMEE"><span>Concentración</span><input data-campo="concentracion" placeholder="50mg/5mL · 10mg+4mg · 20%"></label>
+            <label class="nom-f" data-tipos="ZTER ZSEB ZMEE"><span>Forma farmacéutica</span><select data-campo="forma"></select></label>
+            <label class="nom-f" data-tipos="ZTER ZSEB"><span>Envase primario</span><select data-campo="envase"></select></label>
+            <label class="nom-f" data-tipos="ZTER ZSEB"><span>Material del envase</span><select data-campo="material"><option value="">—</option><option value="PEBD">PEBD</option><option value="vidrio">Vidrio</option></select></label>
+            <label class="nom-f" data-tipos="ZTER ZSEB"><span>Contenido</span><input data-campo="contenido" placeholder="100mL · 5g"></label>
+            <label class="nom-f" data-tipos="ZTER ZSEB"><span>Blíster / tira</span><input data-campo="blister" placeholder="B10 · F10 · T5"></label>
+            <label class="nom-f" data-tipos="ZTER"><span>Unidades por caja</span><input data-campo="cantidad" inputmode="numeric" placeholder="30"></label>
+            <label class="nom-f" data-tipos="ZTER"><span>Mercado o cliente</span><input data-campo="sufijo" placeholder="EEMM · LATAM BO · EC · CDI"></label>
+            <label class="nom-f" data-tipos="ZMEE"><span>Presentación</span><input data-campo="presentacion" placeholder="B10 x 30 · CJA x 10"></label>
+            <label class="nom-f" data-tipos="ZMEE"><span>Versión de arte</span><input data-campo="version" inputmode="numeric" placeholder="1"></label>
+            <label class="nom-f nom-f-ancho" data-tipos="ZTER ZSEB ZMEE ZMPR"><span>Detalle adicional</span><input data-campo="extra" placeholder="(DM14959E) · INS · (T)"></label>
+            <div class="nom-checks" data-tipos="ZTER ZSEB ZMEE">
+              <label><input type="checkbox" data-campo="mm"> Muestra médica (MM)</label>
+              <label data-tipos="ZMEE"><input type="checkbox" data-campo="humanova"> Arte Humanova (H v.)</label>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <aside class="nom-col nom-col-resultado">
+        <section class="expl-card nom-card nom-resultado">
+          <div class="expl-card-header">
+            <h2>Textos propuestos</h2>
+            <button type="button" class="btn btn-ghost btn-compact" id="nomCopiarTodo">Copiar los cuatro</button>
+          </div>
+          <div id="nomSalida"></div>
+          <div id="nomNotas"></div>
+        </section>
+      </aside>
+    </div>
+
+    <section class="expl-card nom-card nom-ancho">
+      <div class="expl-card-header"><h2>Materiales parecidos ya creados</h2><span class="nom-sub" id="nomParecidosInfo"></span></div>
+      <p class="expl-hint">Los más cercanos por nombre y tipo, los más recientes primero. Úsalos para confirmar abreviaturas y el orden de cada texto.</p>
+      <div class="nom-tabla-wrap"><table class="nom-tabla"><thead><tr><th>Material</th><th>Creado</th><th>Texto Material</th><th>Datos básicos</th><th>Inspección</th><th>Insp. VI</th><th></th></tr></thead><tbody id="nomParecidos"></tbody></table></div>
+    </section>
+
+    <section class="expl-card nom-card nom-ancho">
+      <details class="nom-reglas">
+        <summary>Reglas de nomenclatura que se están aplicando</summary>
+        <div class="nom-reglas-grid">
+          <div><h4>Producto terminado · ZTER</h4>
+            <dl><dt>Texto Material · máx. 40</dt><dd><code>NOMBRE dosis FF contenido CJAxN [MM] [mercado]</code><br><span>FERROSIL 50mg/5mL SOL 100mL CJAx1</span></dd>
+            <dt>Datos básicos</dt><dd><code>NOMBRE dosis FF [PEBD] ENVASEcontenido CJA x N [MM] [mercado]</code><br><span>FERROSIL 50mg/5mL SOL FCO100mL CJA x 1</span></dd>
+            <dt>Inspección</dt><dd><code>NOMBRE COMPLETO dosis espaciada FORMA FARMACÉUTICA</code><br><span>FERROSIL 50 mg/5 mL SOLUCION ORAL</span></dd>
+            <dt>Insp. VI</dt><dd><code>[MM: ]Caja con N Envase(s) [de PEBD] x contenido</code><br><span>Caja con 1 Frasco x 100 mL · Caja con 30 Tabletas</span></dd></dl></div>
+          <div><h4>Granel / semielaborado · ZSEB</h4>
+            <dl><dt>Texto Material / Datos básicos</dt><dd>Igual que el producto, sin la caja.<br><span>FERROSIL 50mg/5mL SOL FCO100mL</span></dd>
+            <dt>Inspección</dt><dd>Igual que el producto terminado.</dd>
+            <dt>Insp. VI</dt><dd><span>BULK</span></dd></dl></div>
+          <div><h4>Envase y empaque · ZMEE</h4>
+            <dl><dt>Texto Material · máx. 40</dt><dd><code>TIPO medida NOMBRE dosis(sin unidad) FF presentación [MM] Hv.N</code><br><span>CJA GASEOVET 80 TAB B10 x30 Hv.2</span></dd>
+            <dt>Datos básicos</dt><dd><code>TIPO medida NOMBRE dosis FF presentación [MM] H v.N</code><br><span>CJA GASEOVET 80mg TAB B10 x 30 H v.2</span></dd>
+            <dt>Inspección</dt><dd>Tipo completo (CAJA, ALUMINIO, ETIQUETA ADHESIVA…), sin versión.<br><span>CAJA GASEOVET 80mg TAB B10 x 30</span></dd></dl></div>
+          <div><h4>Materia prima · ZMPR</h4>
+            <dl><dt>Texto Material / Datos básicos</dt><dd><code>NOMBRE (calidad / grado / proveedor)</code><br><span>CLARITROMICINA MICRONIZADA · TEXAPON N-70 (COS)</span></dd>
+            <dt>Inspección</dt><dd>Solo el nombre genérico.<br><span>CLARITROMICINA · SODIUM LAURETH SULFATE</span></dd></dl></div>
+        </div>
+        <p class="nom-reglas-pie">Si el Texto Material pasa de 40 caracteres se compacta en este orden: presentación pegada ("CJAx30MM"), nombre abreviado (CLOR SOD, GLUCONATO Ca, SULFATO FERR…), dosis sin unidades, "CJ" en vez de "CJA" y, por último, sin forma farmacéutica. Las abreviaturas salen de materiales ya creados; si un caso no encaja, revisa los parecidos.</p>
+      </details>
+    </section>
+  </main>
+</section>
+
 <section class="app-view" id="view-explosion">
 
   <header class="top top-collapsed" id="explosionHeaderTop">
@@ -2292,7 +2473,6 @@ window.__conXLSX = async function(){
       <p>Pega arriba los Materiales a explotar (uno por línea) y presiona "Ejecutar explosión masiva".</p>
     </div>
 
-    <footer class="page-footer">EXPLOSIÓN MASIVA — Árboles generados en lote a partir de Listas de Materiales, Componentes y Versiones de Fabricación</footer>
   </main>
 
 </section>
@@ -2398,8 +2578,12 @@ function formatFechaHoraCorta(d){
   var viewBOM = document.getElementById('view-bom');
   var viewArbol = document.getElementById('view-arbol');
   var viewExplosion = document.getElementById('view-explosion');
+  var tabBtnNomenclatura = document.getElementById('tabBtnNomenclatura');
+  var viewNomenclatura = document.getElementById('view-nomenclatura');
 
   function activate(tab){
+    tabBtnNomenclatura.classList.toggle('active', tab==='nomenclatura');
+    viewNomenclatura.classList.toggle('active', tab==='nomenclatura');
     tabBtnMM.classList.toggle('active', tab==='mm');
     tabBtnBOM.classList.toggle('active', tab==='bom');
     tabBtnArbol.classList.toggle('active', tab==='arbol');
@@ -2413,13 +2597,14 @@ function formatFechaHoraCorta(d){
   tabBtnBOM.addEventListener('click', function(){ activate('bom'); });
   tabBtnArbol.addEventListener('click', function(){ activate('arbol'); });
   tabBtnExplosion.addEventListener('click', function(){ activate('explosion'); });
+  tabBtnNomenclatura.addEventListener('click', function(){ activate('nomenclatura'); });
 
   /* Expuesto globalmente para que otras vistas (p.ej. el Maestro de Materiales, al saltar
      a una lista de materiales donde un código aparece como componente) puedan cambiar de
      pestaña hacia Listas de Materiales de forma programática. */
   window.__activateSuiteTab = activate;
 
-  ['mm', 'bom'].forEach(function(prefix){
+  ['mm', 'bom', 'nomenclatura'].forEach(function(prefix){
     var header = document.getElementById(prefix + 'HeaderTop');
     var toggle = document.getElementById(prefix + 'HeaderToggle');
     if(!header || !toggle) return;
@@ -3777,6 +3962,10 @@ function formatFechaHoraCorta(d){
     // que Listas de Materiales pueda marcar como Cat3 cualquier lista cuyo material dueño
     // aparezca aquí, y para el resumen exportado.
     window.MM_CAT3_MAP = cat3Map;
+    // Filas completas del Maestro (solo lectura) para la pestaña Nomenclatura: materiales
+    // parecidos ya creados y posibles duplicados.
+    window.MM_ROWS = state.rows;
+    if(window.__refrescarNomenclatura){ try{ window.__refrescarNomenclatura(); }catch(e){} }
     if(window.__refreshBomView){
       try{ window.__refreshBomView(); }catch(e){}
     }
@@ -3784,7 +3973,7 @@ function formatFechaHoraCorta(d){
 
   async function onDataLoaded(fname, opts){
     opts = opts || {};
-    fnameText.textContent = fname + '  ·  ' + state.rows.length.toLocaleString('es') + ' registros';
+    fnameText.textContent = fname + '  ·  ' + state.rows.length.toLocaleString('es-PE') + ' registros';
     filebar.style.display = 'flex';
     toolbar.style.display = 'flex';
     tableWrap.style.display = 'block';
@@ -3931,7 +4120,7 @@ function formatFechaHoraCorta(d){
       normalizarFechasMM(rows);
       state.headers = Object.keys(rows[0]);
       state.rows = rows;
-      onDataLoaded('Datos guardados en Supabase', {skipSave:true});
+      onDataLoaded('Maestro de Materiales guardado', {skipSave:true});
       return true;
     }catch(e){
       console.error('Error cargando Maestro de Materiales desde Supabase', e);
@@ -3940,9 +4129,9 @@ function formatFechaHoraCorta(d){
   }
 
   function updateStats(){
-    $('mmStatTotal').textContent = state.rows.length.toLocaleString('es');
+    $('mmStatTotal').textContent = state.rows.length.toLocaleString('es-PE');
     $('mmStatTipos').textContent = uniqueSorted('Denominación tipo material').length;
-    tabBadgeMM.textContent = state.rows.length.toLocaleString('es');
+    tabBadgeMM.textContent = state.rows.length.toLocaleString('es-PE');
     var dates = state.rows.map(function(r){ return parseDMY(r['Última modificación']); }).filter(Boolean);
     if(dates.length){
       dates.sort(function(a,b){ return b-a; });
@@ -3952,7 +4141,7 @@ function formatFechaHoraCorta(d){
       $('mmStatRango').textContent = '—';
     }
     var suspendidos = state.rows.filter(function(r){ return isSuspendedCode(r['Estado mat.todos ce']); }).length;
-    $('mmStatSuspendidos').textContent = suspendidos.toLocaleString('es');
+    $('mmStatSuspendidos').textContent = suspendidos.toLocaleString('es-PE');
   }
 
   // Las fechas del Maestro se normalizan a dd/mm/aaaa al cargarlas (normalizarFechasMM), así
@@ -4295,7 +4484,7 @@ function formatFechaHoraCorta(d){
       });
     }
 
-    resultCount.innerHTML = '<b style="color:var(--ink)">'+total.toLocaleString('es')+'</b> de '+state.rows.length.toLocaleString('es')+' materiales';
+    resultCount.innerHTML = '<b style="color:var(--ink)">'+total.toLocaleString('es-PE')+'</b> de '+state.rows.length.toLocaleString('es-PE')+' materiales';
     pgInfo.textContent = 'Página '+state.page+' de '+pages;
     $('mmPgFirst').disabled = state.page<=1;
     $('mmPgPrev').disabled = state.page<=1;
@@ -4446,7 +4635,7 @@ function formatFechaHoraCorta(d){
     }
 
     var itemsHtml = results.map(function(r){
-      var cantTxt = (r.cantidad!==null && !isNaN(r.cantidad)) ? r.cantidad.toLocaleString('es') : '';
+      var cantTxt = (r.cantidad!==null && !isNaN(r.cantidad)) ? r.cantidad.toLocaleString('es-PE') : '';
       var descTxt = r.descripcion || '';
       var badges = '';
       if(r.centro) badges += '<span class="badge badge-neutro" style="margin-right:4px;">'+escapeHtml(r.centro)+'</span>';
@@ -6265,7 +6454,7 @@ function formatFechaHoraCorta(d){
     if(pageRows.length===0){
       tableBody.innerHTML = '';
       emptyState.style.display = 'block';
-      emptyState.querySelector('p').textContent = ROWS.length === 0 ? 'Haz clic en "Cargar Excel" para empezar.' : 'No se encontraron registros con los filtros aplicados.';
+      emptyState.querySelector('p').textContent = ROWS.length === 0 ? 'Carga el export de SAP de Listas de Materiales para empezar.' : 'No se encontraron registros con los filtros aplicados.';
       return;
     }
     emptyState.style.display = 'none';
@@ -8273,6 +8462,157 @@ function formatFechaHoraCorta(d){
      arbol-motor.js) — la lógica de versionamiento/retroceso de etapas vive en un único
      archivo, nunca duplicada entre el navegador y el servidor. -->
 <script src="arbol-motor.js"></script>
+<script src="nomenclatura.js"></script>
+<script>
+/* ============================================================
+   PESTAÑA NOMENCLATURA — formulario en vivo sobre window.NomenclaturaMateriales
+   (reglas en nomenclatura.js). Cada cambio regenera los cuatro textos; los materiales
+   parecidos salen de window.MM_ROWS (el Maestro cargado).
+   ============================================================ */
+(function(){
+  var N = window.NomenclaturaMateriales;
+  var vista = document.getElementById('view-nomenclatura');
+  if(!N || !vista) return;
+  var campos = { tipo:'ZTER' };
+  var $ = function(id){ return document.getElementById(id); };
+  var inputs = Array.prototype.slice.call(vista.querySelectorAll('[data-campo]'));
+
+  function esc(t){ return String(t === null || t === undefined ? '' : t).replace(/[&<>"]/g, function(c){ return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' }[c]; }); }
+  function opciones(sel, lista, etiqueta){
+    sel.innerHTML = '<option value="">—</option>' + lista.map(function(x){ return '<option value="' + esc(x.id) + '">' + esc(etiqueta(x)) + '</option>'; }).join('');
+  }
+  opciones(vista.querySelector('[data-campo="forma"]'), N.FORMAS, function(f){ return f.id + ' — ' + f.insp.charAt(0) + f.insp.slice(1).toLowerCase(); });
+  opciones(vista.querySelector('[data-campo="envase"]'), N.ENVASES, function(e){ return (e.abrev || e.id) + ' — ' + e.nombre[0]; });
+  opciones(vista.querySelector('[data-campo="componente"]'), N.COMPONENTES, function(c){ return (c.abrevDB || c.abrev) + ' — ' + c.insp.charAt(0) + c.insp.slice(1).toLowerCase(); });
+
+  function leer(){
+    inputs.forEach(function(el){
+      var k = el.getAttribute('data-campo');
+      campos[k] = el.type === 'checkbox' ? el.checked : el.value;
+    });
+  }
+  function escribir(){
+    inputs.forEach(function(el){
+      var k = el.getAttribute('data-campo');
+      if(el.type === 'checkbox') el.checked = !!campos[k];
+      else el.value = campos[k] === undefined || campos[k] === null ? '' : campos[k];
+    });
+  }
+  function pintarTipo(){
+    Array.prototype.forEach.call(vista.querySelectorAll('.nom-tipo'), function(b){
+      var activo = b.getAttribute('data-tipo') === campos.tipo;
+      b.classList.toggle('activo', activo);
+      b.setAttribute('aria-checked', activo);
+    });
+    Array.prototype.forEach.call(vista.querySelectorAll('[data-tipos]'), function(el){
+      el.hidden = el.getAttribute('data-tipos').split(' ').indexOf(campos.tipo) === -1;
+    });
+    var et = vista.querySelector('[data-etiqueta-generico]');
+    if(et) et.textContent = campos.tipo === 'ZMPR' ? 'Nombre genérico (inspección)' : 'Nombre completo para inspección';
+  }
+
+  var SALIDAS = [
+    { k:'textoMaterial', titulo:'Texto Material', campo:'Texto breve · máx. 40', limite:N.LIMITE_TEXTO_MATERIAL },
+    { k:'datosBasicos',  titulo:'Texto de datos básicos', campo:'Texto básico' },
+    { k:'inspeccion',    titulo:'Texto de inspección', campo:'Inspección' },
+    { k:'inspeccionVI',  titulo:'Texto de insp. VI', campo:'Inspección adicional' }
+  ];
+  var ultimo = null;
+
+  function generar(){
+    leer();
+    var r = N.generar(campos);
+    ultimo = r;
+    $('nomSalida').innerHTML = SALIDAS.map(function(o){
+      var v = r[o.k] || '';
+      if(campos.tipo === 'ZMEE' || campos.tipo === 'ZMPR'){ if(o.k === 'inspeccionVI') return ''; }
+      var cuenta = v.length + (o.limite ? ' / ' + o.limite : '') + ' car.';
+      var excede = o.limite && v.length > o.limite;
+      return '<div class="nom-salida-item"><div class="nom-salida-cab"><b>' + esc(o.titulo) + '</b><span class="' + (excede ? 'excede' : '') + '">' + esc(o.campo) + ' · ' + cuenta + '</span></div>' +
+        '<div class="nom-salida-txt"><output>' + esc(v) + '</output>' + (v ? '<button type="button" class="nom-copiar" data-copiar="' + o.k + '">Copiar</button>' : '') + '</div></div>';
+    }).join('');
+    var notas = r.notas.map(function(n){ return '<div class="nom-nota">' + esc(n) + '</div>'; });
+    var dups = N.duplicados(window.MM_ROWS || [], r);
+    if(dups.length){
+      notas.unshift('<div class="nom-nota dup">Ya existe un material con este texto: ' + dups.map(function(d){ return '<b>' + esc(d.Material) + '</b> ' + esc(d['Texto Material']); }).join(' · ') + '. Revisa si no es el mismo antes de crearlo.</div>');
+    }
+    $('nomNotas').innerHTML = notas.join('');
+    pintarParecidos();
+  }
+
+  var tParecidos = null;
+  function pintarParecidos(){
+    clearTimeout(tParecidos);
+    tParecidos = setTimeout(function(){
+      var filas = window.MM_ROWS || [];
+      var info = $('nomParecidosInfo');
+      var lista = N.parecidos(filas, campos, 10);
+      info.textContent = filas.length ? '' : 'El Maestro de Materiales aún no está cargado.';
+      $('nomParecidos').innerHTML = lista.length ? lista.map(function(x, i){
+        var r = x.fila;
+        return '<tr><td class="cod">' + esc(r.Material) + '<small>' + esc(r['Tipo material'] || '') + '</small></td>' +
+          '<td>' + esc(r['Fecha creación material'] || '') + '</td>' +
+          '<td class="tm">' + esc(r['Texto Material'] || '') + '</td>' +
+          '<td>' + esc(r['Texto de datos básicos'] || '') + '</td>' +
+          '<td>' + esc(r['Texto de inspección'] || '') + '</td>' +
+          '<td>' + esc(r['Texto de insp. VI'] || '') + '</td>' +
+          '<td><button type="button" class="nom-usar" data-usar="' + i + '" title="Cargar sus datos en el formulario para partir de este material">Usar como base</button></td></tr>';
+      }).join('') : '<tr><td colspan="7" class="nom-vacio">' + (String(campos.nombre || '').trim() ? 'No se encontraron materiales con ese nombre.' : 'Escribe el nombre para ver los materiales parecidos.') + '</td></tr>';
+      pintarParecidos.lista = lista;
+    }, 180);
+  }
+
+  vista.addEventListener('input', function(e){ if(e.target.closest('[data-campo]')) generar(); });
+  vista.addEventListener('change', function(e){ if(e.target.closest('[data-campo]')) generar(); });
+  vista.addEventListener('click', async function(e){
+    var t = e.target.closest('.nom-tipo');
+    if(t){ campos.tipo = t.getAttribute('data-tipo'); pintarTipo(); generar(); return; }
+    var c = e.target.closest('[data-copiar]');
+    if(c && ultimo){ copiar(ultimo[c.getAttribute('data-copiar')] || '', c); return; }
+    var u = e.target.closest('[data-usar]');
+    if(u && pintarParecidos.lista){
+      var fila = pintarParecidos.lista[+u.getAttribute('data-usar')].fila;
+      var tipo = String(fila['Tipo material'] || '').trim();
+      var nuevo = N.interpretar(fila['Texto de datos básicos'] || fila['Texto Material'] || '');
+      nuevo.tipo = ['ZTER','ZSEB','ZMEE','ZMPR'].indexOf(tipo) !== -1 ? tipo : nuevo.tipo;
+      if(fila['Texto de inspección']) nuevo.generico = nuevo.tipo === 'ZMPR' ? fila['Texto de inspección'] : '';
+      campos = nuevo; escribir(); pintarTipo(); generar();
+      vista.querySelector('.nom-layout').scrollIntoView({ behavior:'smooth', block:'start' });
+    }
+  });
+
+  async function copiar(texto, boton){
+    var ok = false;
+    try{ await navigator.clipboard.writeText(texto); ok = true; }
+    catch(e){
+      var ta = document.createElement('textarea'); ta.value = texto; ta.style.cssText = 'position:fixed;opacity:0;';
+      document.body.appendChild(ta); ta.select(); try{ ok = document.execCommand('copy'); }catch(_){} document.body.removeChild(ta);
+    }
+    if(boton){ var o = boton.textContent; boton.textContent = ok ? 'Copiado' : 'Error'; setTimeout(function(){ boton.textContent = o; }, 1200); }
+    return ok;
+  }
+  $('nomCopiarTodo').addEventListener('click', function(){
+    if(!ultimo) return;
+    var lineas = SALIDAS.filter(function(o){ return ultimo[o.k]; }).map(function(o){ return o.titulo + '\t' + ultimo[o.k]; });
+    copiar(lineas.join('\n'), this);
+  });
+  $('nomInterpretar').addEventListener('click', function(){
+    var texto = $('nomPedido').value;
+    if(!texto.trim()){ $('nomPedido').focus(); return; }
+    campos = N.interpretar(texto);
+    escribir(); pintarTipo(); generar();
+  });
+  $('nomPedido').addEventListener('keydown', function(e){ if(e.key === 'Enter' && (e.ctrlKey || e.metaKey)){ e.preventDefault(); $('nomInterpretar').click(); } });
+  $('nomLimpiar').addEventListener('click', function(){
+    $('nomPedido').value = '';
+    campos = { tipo: campos.tipo };
+    escribir(); generar(); $('nomPedido').focus();
+  });
+
+  window.__refrescarNomenclatura = function(){ pintarParecidos(); };
+  pintarTipo(); generar();
+})();
+</script>
 
 <script>
 /* ============================================================
@@ -9113,7 +9453,7 @@ function formatFechaHoraCorta(d){
       return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c];
     });
   }
-  function fmt(n){ return Number(n).toLocaleString('es'); }
+  function fmt(n){ return Number(n).toLocaleString('es-PE'); }
 
   /* ---------- Entrada: lista pegada o importada ---------- */
   /* Una línea por producto. Si la línea trae tabulaciones (copiada de Excel) se respetan
@@ -9840,8 +10180,9 @@ function formatFechaHoraCorta(d){
     // miles de productos tardara casi un minuto. El amarillo sí se mantiene en cada fila.
     var rowMeta = [];
 
-    resultadosExplosion.forEach(function(r){
+    resultadosExplosion.forEach(function(r, ri){
       if(r.arbol.length === 0) return; // sin etapas reconstruidas: no hay nada que desglosar a nivel de componente
+      var claveArbol = ri;
       // Todas las etapas, ramas incluidas (vial y solvente de un kit, dos graneles…), en el
       // mismo orden en que se ven en pantalla.
       a.aplanarArbol(r.arbol).forEach(function(n){
@@ -9853,7 +10194,7 @@ function formatFechaHoraCorta(d){
           // Etapa sin componentes cargados: igual se deja constancia de la etapa en una
           // fila (sin desglose), para no perder de vista que esa etapa existe en el árbol.
           aoa.push([r.centro||'—', r.material, r.descripcion||'', r.version, n.etapa||'—', n.material, n.descripcion||'', n.version, lote(n), n.umBase||'', '—', '—', '(sin componentes cargados)', '', '', '']);
-          rowMeta.push({ lmatBloqueada: lmatBloqueada, vfabBloqueada: vfabBloqueada, zTexto: null, inicioEtapa: true });
+          rowMeta.push({ lmatBloqueada: lmatBloqueada, vfabBloqueada: vfabBloqueada, zTexto: null, inicioEtapa: true, arbol: claveArbol });
           return;
         }
 
@@ -9868,28 +10209,67 @@ function formatFechaHoraCorta(d){
             lmatBloqueada: lmatBloqueada,
             vfabBloqueada: vfabBloqueada,
             zTexto: estadoComp ? ('BLOQUEO ' + estadoComp) : null,
-            inicioEtapa: ci === 0
+            inicioEtapa: ci === 0,
+            arbol: claveArbol
           });
         });
       });
     });
 
-    var ws = XLSX.utils.aoa_to_sheet(aoa);
-    ws['!cols'] = [
-      {wch:9},{wch:15},{wch:40},{wch:8},{wch:16},{wch:16},{wch:40},{wch:8},{wch:12},{wch:8},{wch:11},{wch:13},{wch:43},{wch:24},{wch:13},{wch:7}
-    ];
+    /* Diseño de la hoja: 2 filas de título (qué es y con qué datos se generó), una fila que
+       agrupa las columnas (PRODUCTO / ETAPA / COMPONENTE) y el encabezado. Los datos
+       empiezan en la fila 5; OFS es ese desplazamiento para todo lo que se pinta después. */
+    var OFS = 4;
+    var totalArboles = resultadosExplosion.filter(function(r){ return r.arbol.length; }).length;
+    var centros = Array.from(new Set(resultadosExplosion.map(function(r){ return r.centro; }).filter(Boolean))).sort();
+    var ahora = new Date();
+    var fechaTxt = String(ahora.getDate()).padStart(2,'0') + '/' + String(ahora.getMonth()+1).padStart(2,'0') + '/' + ahora.getFullYear() + ' ' + String(ahora.getHours()).padStart(2,'0') + ':' + String(ahora.getMinutes()).padStart(2,'0');
+    var titulo = [['EXPLOSIÓN MASIVA DE LISTAS DE MATERIALES'],
+      ['Generado el ' + fechaTxt + '  ·  ' + totalArboles.toLocaleString('es-PE') + ' árbol(es)  ·  ' + (aoa.length - 1).toLocaleString('es-PE') + ' fila(s) de componentes' + (centros.length ? '  ·  Centro ' + centros.join(', ') : '') + '  ·  Amarillo = bloqueo (ver comentario de la celda y hoja Leyenda)'],
+      ['PRODUCTO'], headers];
+    var ws = XLSX.utils.aoa_to_sheet(titulo.concat(aoa.slice(1)));
     var lastCol = XLSX.utils.encode_col(headers.length-1);
-    var lastRow = aoa.length;
-    ws['!autofilter'] = { ref: 'A1:'+lastCol+lastRow };
-    ws['!freeze'] = { xSplit:0, ySplit:1 };
+    var lastRow = aoa.length - 1 + OFS;
+    ws['!cols'] = [
+      {wch:8},{wch:13},{wch:38},{wch:7},{wch:21},{wch:13},{wch:38},{wch:7},{wch:11},{wch:7},{wch:8},{wch:13},{wch:42},{wch:24},{wch:12},{wch:6}
+    ];
+    ws['!rows'] = [{ hpt:24 }, { hpt:16 }, { hpt:16 }, { hpt:30 }];
+    ws['!autofilter'] = { ref: 'A' + OFS + ':' + lastCol + lastRow };
+    ws['!freeze'] = { xSplit:0, ySplit:OFS };
+    // Grupos de columnas: Producto (Centro…VFab), Etapa (Etapa…UM lote), Componente (resto).
+    var G_ETAPA = headers.indexOf('Etapa'), G_COMP = headers.indexOf('Posición');
+    ws['!merges'] = [
+      { s:{ r:0, c:0 }, e:{ r:0, c:headers.length-1 } },
+      { s:{ r:1, c:0 }, e:{ r:1, c:headers.length-1 } },
+      { s:{ r:2, c:0 }, e:{ r:2, c:G_ETAPA-1 } },
+      { s:{ r:2, c:G_ETAPA }, e:{ r:2, c:G_COMP-1 } },
+      { s:{ r:2, c:G_COMP }, e:{ r:2, c:headers.length-1 } }
+    ];
+    ws[XLSX.utils.encode_cell({ r:2, c:G_ETAPA })] = { t:'s', v:'ETAPA (LISTA DE MATERIALES)' };
+    ws[XLSX.utils.encode_cell({ r:2, c:G_COMP })] = { t:'s', v:'COMPONENTE' };
 
     var HEADER_FILL = { patternType:'solid', fgColor:{ rgb:'1F3B57' } };
-    var HEADER_FONT = { bold:true, color:{ rgb:'FFFFFF' }, sz:11, name:'Calibri' };
+    var HEADER_FONT = { bold:true, color:{ rgb:'FFFFFF' }, sz:10, name:'Calibri' };
     var THIN_BORDER = { style:'thin', color:{ rgb:'D8DEE1' } };
     var CELL_BORDER = { top:THIN_BORDER, bottom:THIN_BORDER, left:THIN_BORDER, right:THIN_BORDER };
     var FILL_AMARILLO = { patternType:'solid', fgColor:{ rgb:'FFF200' } };
-    var FONT_NORMAL = { sz:10, name:'Calibri' };
-    var FONT_BOLD = { sz:10, name:'Calibri', bold:true };
+    var FONT_NORMAL = { sz:10, name:'Calibri', color:{ rgb:'182430' } };
+    var FONT_BOLD = { sz:10, name:'Calibri', bold:true, color:{ rgb:'182430' } };
+    var FONT_TENUE = { sz:10, name:'Calibri', color:{ rgb:'8996A0' } };
+    var FILL_BANDA = { patternType:'solid', fgColor:{ rgb:'F3F6F7' } };
+    var FILL_GRUPO = [{ patternType:'solid', fgColor:{ rgb:'DCE5EC' } }, { patternType:'solid', fgColor:{ rgb:'DEF0EF' } }, { patternType:'solid', fgColor:{ rgb:'EAE6F5' } }];
+    var FONT_GRUPO = { bold:true, sz:9, name:'Calibri', color:{ rgb:'1F3B57' } };
+    var BORDE_ARBOL = { style:'medium', color:{ rgb:'1F3B57' } };
+
+    // Título, subtítulo y fila de grupos.
+    ws['A1'].s = { font:{ bold:true, sz:14, name:'Calibri', color:{ rgb:'122132' } }, alignment:{ vertical:'center' } };
+    ws['A2'].s = { font:{ sz:9, name:'Calibri', color:{ rgb:'5C6B77' } }, alignment:{ vertical:'center' } };
+    for(var gc = 0; gc < headers.length; gc++){
+      var ga = XLSX.utils.encode_cell({ r:2, c:gc });
+      if(!ws[ga]) ws[ga] = { t:'s', v:'' };
+      var g = gc < G_ETAPA ? 0 : (gc < G_COMP ? 1 : 2);
+      ws[ga].s = { fill:FILL_GRUPO[g], font:FONT_GRUPO, alignment:{ horizontal:'center', vertical:'center' }, border:{ left:{ style:'thin', color:{ rgb:'FFFFFF' } } } };
+    }
 
     // Columnas que se marcan (amarillo + comentario), sacadas de "headers" por nombre para
     // que no se corran si se agrega otra columna: Material hijo, la VFab de la etapa (la
@@ -9898,13 +10278,17 @@ function formatFechaHoraCorta(d){
     var COL_VFAB = headers.lastIndexOf('VFab');
     var COL_COMPONENTE = headers.indexOf('Componente');
 
-    function estilarEncabezado(hoja, totalColumnas){
+    function estilarEncabezado(hoja, totalColumnas, fila){
       for(var c=0; c<totalColumnas; c++){
-        var addr = XLSX.utils.encode_cell({r:0, c:c});
+        var addr = XLSX.utils.encode_cell({r:fila || 0, c:c});
         hoja[addr].s = { fill: HEADER_FILL, font: HEADER_FONT, alignment:{ vertical:'center', horizontal:'center', wrapText:true }, border: CELL_BORDER };
       }
     }
-    estilarEncabezado(ws, headers.length);
+    estilarEncabezado(ws, headers.length, OFS - 1);
+    // Columnas cortas centradas; cantidades a la derecha con formato numérico.
+    var CENTRADAS = ['Centro','VFab','Posición','UM','UM lote'];
+    var COL_CANT = headers.indexOf('Cantidad'), COL_LOTE = headers.indexOf('Tamaño de lote');
+    var COLS_PADRE = [0, 1, 2, 3]; // se repiten en todo el bloque del árbol: en gris salvo la primera fila
 
     /* Agrega (o añade a) el comentario de una celda, en el formato que espera
        xlsx-js-style/SheetJS: un array de {a: autor, t: texto} en la propiedad "c".
@@ -9919,29 +10303,41 @@ function formatFechaHoraCorta(d){
       ws[addr].c.hidden = true;
     }
 
+    var bandaArbol = -1, claveAnterior = null;
     rowMeta.forEach(function(meta, i){
-      var rIdx = i+1;
-      // Estilo base de toda la fila (bordes + fuente normal), luego se pintan de amarillo
-      // solo las celdas puntuales observadas — no toda la fila, tal como se pidió.
+      var rIdx = i + OFS;
+      // Bandas por árbol (cada bloque Material padre + VFab alterna fondo blanco / gris muy
+      // claro, con una línea marcada arriba) para leer dónde empieza y termina cada uno.
+      var clave = meta.arbol;
+      var inicioArbol = clave !== claveAnterior;
+      if(inicioArbol){ bandaArbol++; claveAnterior = clave; }
+      var fill = bandaArbol % 2 ? FILL_BANDA : null;
       for(var cc=0; cc<headers.length; cc++){
         var addr2 = XLSX.utils.encode_cell({r:rIdx, c:cc});
         if(!ws[addr2]) ws[addr2] = { t:'s', v:'' };
-        ws[addr2].s = { font: FONT_NORMAL, border: CELL_BORDER, alignment:{ vertical:'center', wrapText:true } };
+        var borde = inicioArbol ? { top:BORDE_ARBOL, bottom:THIN_BORDER, left:THIN_BORDER, right:THIN_BORDER } : CELL_BORDER;
+        var fuente = (!inicioArbol && COLS_PADRE.indexOf(cc) !== -1) ? FONT_TENUE : (meta.inicioEtapa && (cc === G_ETAPA || cc === COL_MATERIAL_HIJO) ? FONT_BOLD : FONT_NORMAL);
+        var st = { font: fuente, border: borde, alignment:{ vertical:'top', wrapText:true, horizontal: CENTRADAS.indexOf(headers[cc]) !== -1 ? 'center' : undefined } };
+        if(fill) st.fill = fill;
+        if(cc === COL_CANT || cc === COL_LOTE){
+          st.alignment.horizontal = 'right';
+        }
+        ws[addr2].s = st;
       }
 
       if(meta.lmatBloqueada){
         var addrLmat = XLSX.utils.encode_cell({r:rIdx, c:COL_MATERIAL_HIJO});
-        ws[addrLmat].s = { fill: FILL_AMARILLO, font: FONT_BOLD, border: CELL_BORDER, alignment:{ vertical:'center', wrapText:true } };
+        ws[addrLmat].s = Object.assign({}, ws[addrLmat].s, { fill: FILL_AMARILLO, font: FONT_BOLD });
         if(meta.inicioEtapa) agregarComentario(addrLmat, 'LMAT BLOQUEADA');
       }
       if(meta.vfabBloqueada){
         var addrVfab = XLSX.utils.encode_cell({r:rIdx, c:COL_VFAB});
-        ws[addrVfab].s = { fill: FILL_AMARILLO, font: FONT_BOLD, border: CELL_BORDER, alignment:{ vertical:'center', wrapText:true } };
+        ws[addrVfab].s = Object.assign({}, ws[addrVfab].s, { fill: FILL_AMARILLO, font: FONT_BOLD });
         if(meta.inicioEtapa) agregarComentario(addrVfab, 'VFAB BLOQUEADA');
       }
       if(meta.zTexto){
         var addrComp = XLSX.utils.encode_cell({r:rIdx, c:COL_COMPONENTE});
-        ws[addrComp].s = { fill: FILL_AMARILLO, font: FONT_BOLD, border: CELL_BORDER, alignment:{ vertical:'center', wrapText:true } };
+        ws[addrComp].s = Object.assign({}, ws[addrComp].s, { fill: FILL_AMARILLO, font: FONT_BOLD });
         agregarComentario(addrComp, meta.zTexto);
       }
     });
@@ -9957,34 +10353,63 @@ function formatFechaHoraCorta(d){
       var al = resumenAlcance(r.arbol);
       return [r.material, r.descripcion || '', r.alt, r.version, r.centro || '', al.etapas, al.hasta, MOTIVO_LABELS[r.motivo.tipo], r.motivo.texto];
     }));
-    var wsResumen = XLSX.utils.aoa_to_sheet(resumenAoa);
-    wsResumen['!cols'] = [{wch:13},{wch:42},{wch:6},{wch:8},{wch:8},{wch:7},{wch:26},{wch:20},{wch:80}];
-    wsResumen['!autofilter'] = { ref: 'A1:' + XLSX.utils.encode_col(resumenHeaders.length-1) + resumenAoa.length };
-    estilarEncabezado(wsResumen, resumenHeaders.length);
+    /* Hojas de apoyo con el mismo lenguaje visual: título, encabezado, filas con borde fino,
+       bandas alternas y el estado de cada árbol con su color. */
+    var ESTADO_ESTILO = {
+      'Completo': { fill:{ patternType:'solid', fgColor:{ rgb:'DEF0EF' } }, font:{ bold:true, sz:10, name:'Calibri', color:{ rgb:'0A5352' } } },
+      'No resuelto': { fill:{ patternType:'solid', fgColor:{ rgb:'E8EDEE' } }, font:{ bold:true, sz:10, name:'Calibri', color:{ rgb:'5C6B77' } } }
+    };
+    var ESTADO_ALERTA = { fill:{ patternType:'solid', fgColor:{ rgb:'F5E7E5' } }, font:{ bold:true, sz:10, name:'Calibri', color:{ rgb:'963B32' } } };
+    function hojaTabla(titulo, subtitulo, cabeceras, filas, anchos, opciones){
+      opciones = opciones || {};
+      var hoja = XLSX.utils.aoa_to_sheet([[titulo], [subtitulo], cabeceras].concat(filas));
+      var ult = XLSX.utils.encode_col(cabeceras.length - 1);
+      hoja['!cols'] = anchos.map(function(w){ return { wch:w }; });
+      hoja['!rows'] = [{ hpt:22 }, { hpt:15 }, { hpt:26 }];
+      hoja['!merges'] = [{ s:{ r:0, c:0 }, e:{ r:0, c:cabeceras.length-1 } }, { s:{ r:1, c:0 }, e:{ r:1, c:cabeceras.length-1 } }];
+      if(filas.length) hoja['!autofilter'] = { ref: 'A3:' + ult + (filas.length + 3) };
+      hoja['A1'].s = { font:{ bold:true, sz:13, name:'Calibri', color:{ rgb:'122132' } } };
+      hoja['A2'].s = { font:{ sz:9, name:'Calibri', color:{ rgb:'5C6B77' } } };
+      estilarEncabezado(hoja, cabeceras.length, 2);
+      filas.forEach(function(f, i){
+        for(var c = 0; c < cabeceras.length; c++){
+          var a = XLSX.utils.encode_cell({ r:i + 3, c:c });
+          if(!hoja[a]) hoja[a] = { t:'s', v:'' };
+          var st = { font:FONT_NORMAL, border:CELL_BORDER, alignment:{ vertical:'top', wrapText:true, horizontal:(opciones.centradas || []).indexOf(c) !== -1 ? 'center' : undefined } };
+          if(i % 2) st.fill = FILL_BANDA;
+          if(c === opciones.colEstado){ var e = ESTADO_ESTILO[f[c]] || ESTADO_ALERTA; st.fill = e.fill; st.font = e.font; st.alignment.horizontal = 'center'; }
+          if(c === 0) st.font = Object.assign({}, st.font, { bold:true });
+          hoja[a].s = st;
+        }
+      });
+      return hoja;
+    }
+    var completos = resultadosExplosion.filter(function(r){ return r.motivo.tipo === 'ok'; }).length;
+    var wsResumen = hojaTabla('RESUMEN POR ÁRBOL',
+      resultadosExplosion.length.toLocaleString('es-PE') + ' árbol(es) · ' + completos.toLocaleString('es-PE') + ' completo(s) · ' + (resultadosExplosion.length - completos).toLocaleString('es-PE') + ' con observaciones',
+      resumenHeaders, resumenAoa.slice(1), [13,42,6,8,8,8,26,20,80], { colEstado:7, centradas:[2,3,4,5] });
     XLSX.utils.book_append_sheet(wb, wsResumen, 'RESUMEN');
 
     if(noResueltos.length){
-      var noResAoa = [['Material','Motivo']].concat(noResueltos.map(function(n){ return [n.material, n.motivo]; }));
-      var wsNoRes = XLSX.utils.aoa_to_sheet(noResAoa);
-      wsNoRes['!cols'] = [{wch:14},{wch:90}];
-      estilarEncabezado(wsNoRes, 2);
+      var wsNoRes = hojaTabla('CÓDIGOS SIN ÁRBOL', noResueltos.length.toLocaleString('es-PE') + ' código(s) de la lista no generaron árbol',
+        ['Material','Motivo'], noResueltos.map(function(n){ return [n.material, n.motivo]; }), [14,100]);
       XLSX.utils.book_append_sheet(wb, wsNoRes, 'NO RESUELTOS');
     }
 
     var legendAoa = [
-      ['Leyenda — Explosión masiva'],
+      ['LEYENDA — EXPLOSIÓN MASIVA'],
       ['Amarillo en la columna "Material hijo" (comentario "LMAT BLOQUEADA" en la primera fila de esa etapa) — esa lista de materiales figura INACTIVA en SAP.'],
       ['Amarillo en la columna "VFab" de la etapa (comentario "VFAB BLOQUEADA" en la primera fila de esa etapa) — esa Versión de Fabricación figura bloqueada en el archivo de Versiones de Fabricación cargado.'],
       ['Amarillo con comentario "BLOQUEO Z1 / Z2 / Z3" (sobre la columna "Componente") — ese componente figura con ese estado en el Maestro de Materiales.'],
       ['Los comentarios no tapan la hoja: la celda comentada muestra un triangulito rojo en la esquina y el texto aparece al pasar el cursor sobre ella.'],
       [''],
-      ['Nota: cada bloque de filas con el mismo "Material padre" + "VFab" (columnas B y D) corresponde a UN árbol completo, desglosado componente por componente en cada etapa. Si el material de partida tenía más de una Versión de Fabricación disponible, aparece un bloque completo por cada una, uno detrás del otro.'],
+      ['Cada árbol (mismo "Material padre" + "VFab", columnas B y D) es un bloque con fondo alterno y una línea azul arriba; dentro del bloque, Centro, Material padre, descripción y VFab de entrada se muestran en gris desde la segunda fila. Si el material tenía varias Versiones de Fabricación, aparece un bloque por cada una.'],
       ['Hoja RESUMEN: una fila por árbol generado, con hasta qué etapa llegó y su estado. Hoja NO RESUELTOS (si existe): códigos de la lista que no generaron árbol, con el motivo.'],
     ];
     var wsLegend = XLSX.utils.aoa_to_sheet(legendAoa);
     wsLegend['!cols'] = [{wch:120}];
     var FONT_NOTA = { italic:true, sz:10, name:'Calibri', color:{ rgb:'5C6B77' } };
-    wsLegend['A1'].s = { font:{ bold:true, sz:12, name:'Calibri' } };
+    wsLegend['A1'].s = { font:{ bold:true, sz:13, name:'Calibri', color:{ rgb:'122132' } } };
     wsLegend['A2'].s = { fill:FILL_AMARILLO, font:FONT_BOLD };
     wsLegend['A3'].s = { fill:FILL_AMARILLO, font:FONT_BOLD };
     wsLegend['A4'].s = { fill:FILL_AMARILLO, font:FONT_BOLD };

@@ -39,6 +39,10 @@ grep -n "APP [0-9] —" index.html
 ### Pestañas de la interfaz (4 + chat flotante)
 1. **Maestro de Materiales** — ficha de materiales de SAP, filtros por columna,
    detección de Categoría 3, materias primas exclusivas ZMPR/ZMEE.
+   Los buscadores (Maestro, Listas, Árbol y Explosión) buscan por palabras: cada
+   palabra escrita, completa o en parte, debe aparecer en cualquier orden y sin
+   importar tildes ("etiqu wo" encuentra ETIQUET WOMEN). Helper compartido:
+   `window.__crearBuscador` / `window.__normBusqueda`.
 2. **Listas de Materiales** — el BOM (Bill of Materials): listas, componentes,
    Versiones de Fabricación (VFab), exportadores a Excel con formato, y el
    nuevo **botón flotante de Auditoría de incoherencias** (esquina inferior

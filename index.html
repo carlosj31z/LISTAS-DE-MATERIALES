@@ -1978,7 +1978,7 @@ window.__conXLSX = async function(){
     <div class="toolbar-row" id="mmToolbar" style="display:none; margin-top:14px;">
       <div class="search-box">
         <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="9" cy="9" r="6"/><path d="M17 17l-4-4" stroke-linecap="round"/></svg>
-        <input type="text" id="mmSearchInput" placeholder="Buscar por código o texto de material&hellip;">
+        <input type="text" id="mmSearchInput" placeholder="Buscar por código o texto de material&hellip;" title="Escribe una o varias palabras, completas o en parte y en cualquier orden: «etiqu wo» encuentra ETIQUET WOMEN">
       </div>
       <button class="btn filter-btn" id="mmSearchModeToggle" type="button" title="Alternar entre buscar por Material/Texto material o por Texto de inspección">Buscando: Material</button>
       <div class="toolbar-divider"></div>
@@ -2859,6 +2859,30 @@ function formatFechaHoraCorta(d){
   function dos(n){ return (n < 10 ? '0' : '') + n; }
   window.__fechaDMY = function(p){ return p ? dos(p.d) + '/' + dos(p.m) + '/' + p.y : ''; };
   window.__fechaISO = function(p){ return p ? p.y + '-' + dos(p.m) + '-' + dos(p.d) : ''; };
+})();
+
+/* ============================================================
+   BÚSQUEDA POR PALABRAS
+   Lo que se escribe en un buscador se parte en palabras y cada una tiene que aparecer en
+   el texto, en cualquier orden y sin importar tildes ni mayúsculas: "etiqu wo" encuentra
+   "ETIQUET WOMEN" (antes había que escribir el texto exacto y seguido, "etiquet wo").
+   window.__crearBuscador(consulta) devuelve null si no hay nada que buscar, o una función
+   que recibe un texto YA normalizado con window.__normBusqueda y dice si coincide.
+   ============================================================ */
+(function(){
+  window.__normBusqueda = function(t){
+    return String(t === null || t === undefined ? '' : t).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+  };
+  window.__crearBuscador = function(consulta){
+    var palabras = window.__normBusqueda(consulta).split(/\s+/).filter(Boolean);
+    if(!palabras.length) return null;
+    return function(textoNormalizado){
+      for(var i = 0; i < palabras.length; i++){
+        if(textoNormalizado.indexOf(palabras[i]) === -1) return false;
+      }
+      return true;
+    };
+  };
 })();
 </script>
 
@@ -4302,8 +4326,23 @@ function formatFechaHoraCorta(d){
      muestra en la tabla) como por mmGetFilteredExcept (para calcular los conteos de cada
      panel de columna sin que el propio filtro de esa columna se autoexcluya). exceptKey
      indica qué filtro de columna omitir (o null para aplicar todos). */
+  /* Texto en que busca cada fila, ya normalizado (sin tildes, en minúsculas): se calcula una
+     sola vez por fila y modo, así escribir en el buscador no vuelve a procesar 25.000 filas. */
+  var textoBusquedaMM = new WeakMap();
+  function textoBusquedaFila(r){
+    var c = textoBusquedaMM.get(r);
+    if(!c){ c = {}; textoBusquedaMM.set(r, c); }
+    var modo = state.searchMode === 'inspeccion' ? 'insp' : 'mat';
+    if(c[modo] === undefined){
+      c[modo] = window.__normBusqueda(modo === 'insp'
+        ? String(r['Texto de inspección']||'')
+        : String(r['Material']||'') + ' ' + String(r['Texto Material']||'') + ' ' + String(r['Denom.estándar']||''));
+    }
+    return c[modo];
+  }
+
   function applyFiltersCore(exceptKey){
-    var q = searchInput.value.trim().toLowerCase();
+    var buscar = window.__crearBuscador(searchInput.value);
     return state.rows.filter(function(r){
       if(state.onlySuspendidos && !isSuspendedCode(r['Estado mat.todos ce'])) return false;
       if(state.omitSuspendidos && isSuspendedCode(r['Estado mat.todos ce'])) return false;
@@ -4326,15 +4365,8 @@ function formatFechaHoraCorta(d){
         if(df.hasta && d > new Date(df.hasta+'T23:59:59')) return false;
       }
 
-      if(q){
-        var hay;
-        if(state.searchMode === 'inspeccion'){
-          hay = String(r['Texto de inspección']||'').toLowerCase();
-        } else {
-          hay = (String(r['Material']||'') + ' ' + String(r['Texto Material']||'') + ' ' + String(r['Denom.estándar']||'')).toLowerCase();
-        }
-        if(hay.indexOf(q) === -1) return false;
-      }
+      // Cada palabra escrita debe aparecer, en cualquier orden ("etiqu wo" -> ETIQUET WOMEN).
+      if(buscar && !buscar(textoBusquedaFila(r))) return false;
       // Filtro adicional aplicado por el Chat con IA (ver módulo "ia-chat" al final del
       // archivo) — recibe la fila como objeto {columna: valor}, igual que ya la maneja
       // esta vista, y se ignora silenciosamente si no hay ningún filtro de IA activo.
@@ -4832,6 +4864,17 @@ function formatFechaHoraCorta(d){
   let dateDesde = '';
   let dateHasta = '';
   let searchTerm = '';
+  let buscadorBom = null; // función de window.__crearBuscador para searchTerm (null = sin búsqueda)
+  // Texto normalizado de todas las columnas de cada fila, calculado una sola vez por fila.
+  const textoBusquedaBomCache = new WeakMap();
+  function textoBusquedaBom(row){
+    let t = textoBusquedaBomCache.get(row);
+    if(t === undefined){
+      t = window.__normBusqueda(COLUMNS.map((_, i) => String(row[i] || '')).join(' '));
+      textoBusquedaBomCache.set(row, t);
+    }
+    return t;
+  }
   let filterMM = false;
   let filterOmitInactivos = false;
   let filterHv1 = null; // null | 'pendiente' | 'actualizada'
@@ -6114,6 +6157,7 @@ function formatFechaHoraCorta(d){
     FILTER_DEFS.forEach(f => filterState[f.key] = new Set());
     dateDesde = ''; dateHasta = '';
     searchTerm = '';
+    buscadorBom = null;
     document.getElementById('bomSearchInput').value = '';
     filterMM = false;
     document.getElementById('bomToggleMM').classList.remove('active');
@@ -6367,10 +6411,8 @@ function formatFechaHoraCorta(d){
       if(dateDesde && iso < dateDesde) return false;
       if(dateHasta && iso > dateHasta) return false;
     }
-    if(searchTerm) {
-      const hay = COLUMNS.map((_, i) => String(row[i] || '')).join(' ').toLowerCase();
-      if(!hay.includes(searchTerm)) return false;
-    }
+    // Cada palabra escrita debe aparecer en alguna columna, en cualquier orden.
+    if(buscadorBom && !buscadorBom(textoBusquedaBom(row))) return false;
     // Filtro adicional aplicado por el Chat con IA (ver módulo "ia-chat" al final del
     // archivo) — esta vista guarda las filas como arrays por posición, así que se arma un
     // objeto {columna: valor} bajo demanda antes de pasarlo al predicado, para que la
@@ -7837,6 +7879,7 @@ function formatFechaHoraCorta(d){
     }
     if(e.target.id==='bomSearchInput'){
       searchTerm = e.target.value.trim().toLowerCase();
+      buscadorBom = window.__crearBuscador(searchTerm);
       currentPage = 1;
       updateAll();
     }
@@ -7921,6 +7964,7 @@ function formatFechaHoraCorta(d){
     const d1 = document.getElementById('bomCreadoDesde'); if(d1) d1.value='';
     const d2 = document.getElementById('bomCreadoHasta'); if(d2) d2.value='';
     searchTerm='';
+    buscadorBom = null;
     document.getElementById('bomSearchInput').value='';
     filterMM = false;
     document.getElementById('bomToggleMM').classList.remove('active');
@@ -8760,10 +8804,10 @@ function formatFechaHoraCorta(d){
       return;
     }
     var productos = getProductosTerminados();
-    var qNorm = normalizeAccentsUpperArbol(q);
+    // Palabras en cualquier orden, completas o en parte (como en el Maestro de Materiales).
+    var buscar = window.__crearBuscador(q);
     var coincidencias = productos.filter(function(p){
-      return normalizeAccentsUpperArbol(String(p.descripcion||'')).indexOf(qNorm) !== -1
-        || p.material.indexOf(q.toUpperCase()) !== -1;
+      return buscar(window.__normBusqueda(p.material + ' ' + String(p.descripcion||'')));
     }).slice(0, 30);
 
     if(coincidencias.length === 0){
@@ -8779,14 +8823,6 @@ function formatFechaHoraCorta(d){
       '</div>';
     }).join('');
     suggestPanel.classList.add('open');
-  }
-
-  /* Normalización simple (mayúsculas, sin tildes) para la búsqueda por descripción, propia
-     de este módulo — no depende de la función homónima del Maestro de Materiales (que vive
-     en otro IIFE y no está expuesta). */
-  function normalizeAccentsUpperArbol(text){
-    if(text===null||text===undefined) return '';
-    return String(text).normalize('NFKD').replace(/[\u0300-\u036f]/g,'').toUpperCase();
   }
 
   materialInput.addEventListener('input', function(){
@@ -9878,11 +9914,11 @@ function formatFechaHoraCorta(d){
     ocultarNota();
     if(estadoVista.filtro === 'noresuelto'){ renderNoResueltos(); return; }
 
-    var q = estadoVista.texto.trim().toUpperCase();
+    var buscar = window.__crearBuscador(estadoVista.texto);
     var indices = [];
     resultadosExplosion.forEach(function(r, i){
       if(estadoVista.filtro !== 'todos' && r.motivo.tipo !== estadoVista.filtro) return;
-      if(q && (r.material + ' ' + r.version + ' ' + r.descripcion).toUpperCase().indexOf(q) === -1) return;
+      if(buscar && !buscar(window.__normBusqueda(r.material + ' ' + r.version + ' ' + r.descripcion))) return;
       indices.push(i);
     });
     if(!indices.length){
@@ -9932,8 +9968,8 @@ function formatFechaHoraCorta(d){
   }
 
   function renderNoResueltos(){
-    var q = estadoVista.texto.trim().toUpperCase();
-    var lista = noResueltos.filter(function(n){ return !q || n.material.toUpperCase().indexOf(q) !== -1; });
+    var buscar = window.__crearBuscador(estadoVista.texto);
+    var lista = noResueltos.filter(function(n){ return !buscar || buscar(window.__normBusqueda(n.material + ' ' + n.motivo)); });
     if(!lista.length){
       resultBody.innerHTML = '<div class="expl-vacio-filtro">Ningún código coincide con la búsqueda.</div>';
       return;

@@ -7,6 +7,10 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<!-- Solo los dígitos 0-9 de Noto Sans Mono (text=…): el cero de IBM Plex Mono lleva un punto al
+     centro y en los códigos se confundía con 6 y 9. Con este subconjunto primero en --mono, los
+     dígitos salen con cero liso y las letras siguen siendo de IBM Plex Mono. -->
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Mono:wght@400;500;600&text=0123456789&display=swap" rel="stylesheet">
 <link rel="preconnect" href="https://wjlryrqkcnvjlrdibzol.supabase.co" crossorigin>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
@@ -92,7 +96,7 @@ window.__conXLSX = async function(){
     --orange-soft:#F6E4D3;
     --border:#D8DEE1;
     --border-soft:#E6EAEC;
-    --mono: 'IBM Plex Mono', ui-monospace, 'SFMono-Regular', monospace;
+    --mono: 'Noto Sans Mono', 'IBM Plex Mono', ui-monospace, 'SFMono-Regular', monospace;
     --body: 'IBM Plex Sans', system-ui, -apple-system, sans-serif;
     --display: 'Space Grotesk', system-ui, -apple-system, sans-serif;
     --radius: 8px;
@@ -302,6 +306,65 @@ window.__conXLSX = async function(){
   .filter-option input{margin:0; accent-color:var(--teal);}
   .filter-option .opt-label{flex:1; overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
   .filter-option .opt-count{color:var(--ink-faint); font-family:var(--mono); font-size:11px;}
+
+  /* ================= Dónde se usa ================= */
+  .du-barra .toolbar-row{ flex-wrap:wrap; }
+  .du-nav{ display:flex; gap:4px; }
+  .du-nav-btn{ width:34px; height:34px; border-radius:var(--radius); border:1px solid var(--border); background:var(--surface-alt); color:var(--ink); cursor:pointer; display:flex; align-items:center; justify-content:center; }
+  .du-nav-btn svg{ width:15px; height:15px; }
+  .du-nav-btn:hover:not(:disabled){ border-color:var(--teal); color:var(--teal); }
+  .du-nav-btn:disabled{ opacity:.35; cursor:default; }
+  .du-search{ max-width:360px; }
+  .du-search input{ font-family:var(--mono); }
+  .du-recorrido{ display:flex; flex-wrap:wrap; align-items:center; gap:4px; margin-top:8px; min-height:4px; }
+  .du-recorrido:empty{ margin-top:0; }
+  .du-paso{ border:none; background:transparent; font-family:var(--mono); font-size:12px; color:var(--ink-soft); padding:2px 6px; border-radius:6px; cursor:pointer; }
+  .du-paso:hover{ background:var(--surface-alt); color:var(--ink); }
+  .du-paso.activo{ background:var(--navy); color:#fff; }
+  .du-flecha{ color:var(--ink-faint); font-size:12px; }
+  .du-card{ max-width:1240px; }
+  .du-ficha-cod{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+  .du-cod{ font-family:var(--mono); font-size:24px; font-weight:600; color:var(--navy-deep); cursor:pointer; }
+  .du-ficha-desc{ margin-top:4px; font-size:14px; color:var(--ink); }
+  .du-tenue{ color:var(--ink-faint); }
+  .du-cifras{ display:flex; gap:10px; flex-wrap:wrap; margin-top:14px; }
+  .du-cifra{ text-decoration:none; color:var(--ink-soft); font-size:12.5px; border:1px solid var(--border); border-radius:var(--radius); padding:8px 12px; background:var(--bg); }
+  .du-cifra b{ font-family:var(--mono); font-size:16px; color:var(--navy-deep); margin-right:4px; }
+  .du-cifra:hover{ border-color:var(--teal); }
+  .du-rel{ margin-top:12px; font-size:12.5px; color:var(--ink-soft); }
+  .du-badge{ display:inline-block; font-family:var(--mono); font-size:10.5px; padding:2px 7px; border-radius:6px; white-space:nowrap; }
+  .du-ok{ background:var(--teal-soft); color:#0A5352; }
+  .du-mal{ background:var(--brick-soft); color:var(--brick); }
+  .du-z{ background:var(--brick-soft); color:var(--brick); font-weight:600; }
+  .du-neutro{ background:var(--surface-alt); color:var(--ink-soft); }
+  .du-sec-cab{ display:flex; justify-content:space-between; align-items:flex-start; gap:12px; flex-wrap:wrap; margin-bottom:10px; }
+  .du-sec-cab h2{ font-family:var(--display); font-size:16px; margin:0; color:var(--ink); }
+  .du-cuenta{ font-family:var(--mono); font-size:12px; color:var(--ink-faint); font-weight:500; margin-left:4px; }
+  .du-sec-sub{ margin:3px 0 0; font-size:12px; color:var(--ink-faint); }
+  .du-sec-acc{ display:flex; gap:8px; }
+  .du-tabla-wrap{ overflow:auto; max-height:520px; border:1px solid var(--border-soft); border-radius:var(--radius); }
+  .du-tabla{ width:100%; min-width:760px; border-collapse:collapse; font-size:12.5px; }
+  .du-tabla th{ position:sticky; top:0; z-index:2; background:var(--navy); color:#fff; font-family:var(--mono); font-size:10.5px; text-transform:uppercase; letter-spacing:0.04em; padding:8px 10px; text-align:left; white-space:nowrap; }
+  .du-tabla td{ padding:6px 10px; border-bottom:1px solid var(--border-soft); vertical-align:top; color:var(--ink); user-select:none; }
+  .du-tabla tbody tr:nth-child(even) td{ background:#FAFBFB; }
+  .du-tabla tbody tr:hover td{ background:var(--teal-soft); }
+  .du-tabla td.cell-selected{ background:rgba(14,124,123,0.18) !important; }
+  .du-tabla td.du-c{ text-align:center; white-space:nowrap; }
+  .du-tabla td.du-num{ text-align:right; font-family:var(--mono); white-space:nowrap; }
+  .du-tabla .du-mono{ font-family:var(--mono); }
+  .du-tabla td.du-cod-td{ white-space:nowrap; }
+  .du-tabla td.du-acc-td{ white-space:nowrap; text-align:right; }
+  .du-link{ border:none; background:none; padding:0; font-family:var(--mono); font-weight:600; font-size:12.5px; color:var(--teal); cursor:pointer; text-decoration:underline; text-decoration-color:rgba(14,124,123,0.35); text-underline-offset:2px; }
+  .du-link:hover{ color:var(--navy-deep); text-decoration-color:currentColor; }
+  .du-arbol{ border:1px solid var(--border); background:#fff; border-radius:6px; padding:3px 8px; font-size:11.5px; color:var(--ink-soft); cursor:pointer; }
+  .du-arbol:hover{ border-color:var(--teal); color:var(--teal); }
+  .du-chips{ display:flex; gap:6px; flex-wrap:wrap; margin-bottom:10px; }
+  .du-chip{ border:1px solid var(--border); background:var(--surface-alt); border-radius:999px; padding:5px 11px; font-size:12px; cursor:pointer; color:var(--ink); }
+  .du-chip.activo{ background:var(--navy); border-color:var(--navy); color:#fff; }
+  .du-vacio{ color:var(--ink-faint); font-size:13px; margin:4px 0; }
+  .field-group-title .comp-copiar{ float:right; margin:-4px 0 0 8px; font-family:var(--body); text-transform:none; letter-spacing:0; font-size:11.5px; padding:5px 9px; }
+  .field-group-title .comp-copiar:hover{ color:var(--teal); border-color:var(--teal); background:var(--teal-soft); }
+  .arbol-comp-acciones{ display:flex; justify-content:flex-end; margin:0 0 6px; }
 
   /* ================= Nomenclatura ================= */
   .nom-layout{ display:grid; grid-template-columns:minmax(0,1.05fr) minmax(0,1fr); gap:16px; max-width:1240px; margin:0 auto; align-items:start; }
@@ -1932,6 +1995,7 @@ window.__conXLSX = async function(){
     <button class="suite-tab active" data-tab="mm" id="tabBtnMM">Maestro de Materiales <span class="tab-badge" id="tabBadgeMM">0</span></button>
     <button class="suite-tab" data-tab="bom" id="tabBtnBOM">Listas de Materiales <span class="tab-badge" id="tabBadgeBOM">0</span></button>
     <button class="suite-tab" data-tab="arbol" id="tabBtnArbol">Árbol del producto</button>
+    <button class="suite-tab" data-tab="donde" id="tabBtnDonde">Dónde se usa</button>
     <button class="suite-tab" data-tab="explosion" id="tabBtnExplosion">Explosión masiva</button>
     <button class="suite-tab" data-tab="nomenclatura" id="tabBtnNomenclatura">Nomenclatura</button>
   </div>
@@ -2388,6 +2452,33 @@ window.__conXLSX = async function(){
   </main>
 </section>
 
+<section class="app-view" id="view-donde">
+  <header class="top top-collapsed" id="dondeHeaderTop">
+    <button class="header-toggle" id="dondeHeaderToggle" title="Mostrar/ocultar detalles del encabezado" aria-label="Mostrar/ocultar detalles del encabezado">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M6 9l6 6 6-6"/></svg>
+    </button>
+    <p class="eyebrow"><span class="dot"></span>SAP · USO DE UN MATERIAL</p>
+    <h1 class="title">Dónde se usa</h1>
+    <p class="subtitle">Escribe un código para ver en qué listas de materiales está, a qué productos terminados llega y cuál es su propia lista. Cada código de las tablas lleva a ese código; Atrás y Adelante (o Alt + ← / →) recorren lo consultado.</p>
+  </header>
+  <div class="toolbar du-barra">
+    <div class="toolbar-row">
+      <div class="du-nav">
+        <button type="button" class="du-nav-btn" id="duAtras" title="Atrás (Alt + ←)" aria-label="Atrás"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M15 18l-6-6 6-6"/></svg></button>
+        <button type="button" class="du-nav-btn" id="duAdelante" title="Adelante (Alt + →)" aria-label="Adelante"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M9 18l6-6-6-6"/></svg></button>
+      </div>
+      <div class="search-box du-search">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+        <input type="text" id="duCodigo" placeholder="Código de material, p. ej. 1100002760" spellcheck="false" autocomplete="off" inputmode="numeric">
+      </div>
+      <button type="button" class="btn btn-primary btn-compact" id="duBuscar">Consultar</button>
+      <button type="button" class="btn btn-ghost btn-compact" id="duExportar" disabled title="Las tres tablas de este código en un Excel">Exportar a Excel</button>
+    </div>
+    <div class="du-recorrido" id="duRecorrido" aria-label="Códigos consultados"></div>
+  </div>
+  <main class="view-main"><div id="duResultado"></div></main>
+</section>
+
 <section class="app-view" id="view-explosion">
 
   <header class="top top-collapsed" id="explosionHeaderTop">
@@ -2489,6 +2580,10 @@ window.__conXLSX = async function(){
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="4" r="2"/><circle cx="6" cy="14" r="2"/><circle cx="18" cy="14" r="2"/><circle cx="12" cy="21" r="2"/><path d="M12 6v3M12 9L6 12M12 9l6 3M8 15.5L11 19M16 15.5L13 19"/></svg>
       <span>Ver en Árbol del producto</span>
     </button>
+    <button type="button" class="drawer-tree-btn" id="bomDrawerDondeBtn" title="Ver en qué listas y productos se usa este material">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="6"/><path d="M20 20l-4.3-4.3M11 8v6M8 11h6"/></svg>
+      <span>Dónde se usa</span>
+    </button>
     <button type="button" class="drawer-tree-btn" id="bomDrawerReescalarBtn" title="Estimar las cantidades de los componentes con otra cantidad base (regla de 3 simple)" style="display:none;">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 20h16M7 16V9M12 16V5M17 16v-4"/></svg>
       <span>Cambiar cantidad base</span>
@@ -2580,8 +2675,12 @@ function formatFechaHoraCorta(d){
   var viewExplosion = document.getElementById('view-explosion');
   var tabBtnNomenclatura = document.getElementById('tabBtnNomenclatura');
   var viewNomenclatura = document.getElementById('view-nomenclatura');
+  var tabBtnDonde = document.getElementById('tabBtnDonde');
+  var viewDonde = document.getElementById('view-donde');
 
   function activate(tab){
+    tabBtnDonde.classList.toggle('active', tab==='donde');
+    viewDonde.classList.toggle('active', tab==='donde');
     tabBtnNomenclatura.classList.toggle('active', tab==='nomenclatura');
     viewNomenclatura.classList.toggle('active', tab==='nomenclatura');
     tabBtnMM.classList.toggle('active', tab==='mm');
@@ -2598,13 +2697,14 @@ function formatFechaHoraCorta(d){
   tabBtnArbol.addEventListener('click', function(){ activate('arbol'); });
   tabBtnExplosion.addEventListener('click', function(){ activate('explosion'); });
   tabBtnNomenclatura.addEventListener('click', function(){ activate('nomenclatura'); });
+  tabBtnDonde.addEventListener('click', function(){ activate('donde'); setTimeout(function(){ var i = document.getElementById('duCodigo'); if(i && !i.value) i.focus(); }, 30); });
 
   /* Expuesto globalmente para que otras vistas (p.ej. el Maestro de Materiales, al saltar
      a una lista de materiales donde un código aparece como componente) puedan cambiar de
      pestaña hacia Listas de Materiales de forma programática. */
   window.__activateSuiteTab = activate;
 
-  ['mm', 'bom', 'nomenclatura'].forEach(function(prefix){
+  ['mm', 'bom', 'nomenclatura', 'donde'].forEach(function(prefix){
     var header = document.getElementById(prefix + 'HeaderTop');
     var toggle = document.getElementById(prefix + 'HeaderToggle');
     if(!header || !toggle) return;
@@ -3482,7 +3582,7 @@ function formatFechaHoraCorta(d){
     if(!toastEl){
       toastEl = document.createElement('div');
       toastEl.style.cssText = 'position:fixed;z-index:99999;left:50%;bottom:28px;transform:translateX(-50%) translateY(10px);'+
-        'background:#122132;color:#fff;font-family:IBM Plex Mono,ui-monospace,monospace;font-size:12.5px;'+
+        'background:#122132;color:#fff;font-family:Noto Sans Mono,IBM Plex Mono,ui-monospace,monospace;font-size:12.5px;'+
         'padding:9px 16px;border-radius:8px;box-shadow:0 8px 24px rgba(18,33,50,0.35);opacity:0;'+
         'transition:opacity .15s ease, transform .15s ease;pointer-events:none;display:flex;align-items:center;gap:8px;';
       toastEl.innerHTML = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#4FD1C5" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg><span></span>';
@@ -4690,7 +4790,7 @@ function formatFechaHoraCorta(d){
     return '<div class="field-group">'+
       '<div class="field-group-title">Listas de materiales que lo contienen <span class="fg-count">'+results.length+' lista'+(results.length!==1?'s':'')+'</span></div>'+
       '<div class="comp-group">'+itemsHtml+'</div>'+
-      '<p style="margin:8px 2px 0; font-size:11.5px; color:var(--ink-faint);">Clic en una lista para abrir su detalle en Listas de Materiales.</p>'+
+      '<p style="margin:8px 2px 0; font-size:11.5px; color:var(--ink-faint);">Clic en una lista para abrir su detalle en Listas de Materiales. <button type="button" class="du-link" data-mm-donde="'+escapeAttr(materialCode)+'">Ver productos relacionados y copiar a Excel</button></p>'+
     '</div>';
   }
 
@@ -4799,6 +4899,12 @@ function formatFechaHoraCorta(d){
         }
       });
     }
+
+    var dondeLink = drawerBody.querySelector('[data-mm-donde]');
+    if(dondeLink) dondeLink.addEventListener('click', function(){
+      closeDrawer();
+      if(window.__abrirDondeSeUsa) window.__abrirDondeSeUsa(dondeLink.getAttribute('data-mm-donde'));
+    });
 
     Array.prototype.forEach.call(drawerBody.querySelectorAll('[data-bom-material]'), function(el){
       el.addEventListener('click', function(e){
@@ -6781,6 +6887,7 @@ function formatFechaHoraCorta(d){
       `;
     }
 
+    ultimaListaComponentes = { material: String(material||'').trim(), alt: String(altVal||'1').trim(), descripcion: iDesc !== -1 ? row[iDesc] : '', comps: comps };
     const compCodes = new Set(comps.map(c => String(c[cComponente]||'').trim()));
     const esListaConciliacion = isConciliacionAltList(altVal);
     const esListaZ3Bloqueada = isRowZ3Bloqueada(row);
@@ -6858,6 +6965,7 @@ function formatFechaHoraCorta(d){
         <div class="field-group-title">
           Componentes de la lista
           <span class="fg-count">${comps.length} ítem${comps.length!==1?'s':''} · ${groups.size} posición${groups.size!==1?'es':''}${altVal!==''&&altVal!==undefined?` · alternativa ${esc(altVal)}`:''}</span>
+          <button type="button" class="btn btn-ghost btn-compact comp-copiar" data-copiar-componentes title="Copia todos los componentes con encabezados, una columna por campo, para pegar en Excel">Copiar para Excel</button>
         </div>
         ${esListaZ3BloqueadaBanner?`<div class="susp-banner">Código de la LMat se encuentra bloqueada — no se marca como pendiente de Hv.1 ni de conciliación.</div>`:''}
         ${pendingHv1?`<div class="hv1-banner">Esta lista de materiales está pendiente de actualizar con materiales Humanova (Hv.1).</div>`:''}
@@ -6867,6 +6975,22 @@ function formatFechaHoraCorta(d){
       </div>
     `;
   }
+
+  /* Componentes de la última lista abierta en el detalle, para "Copiar para Excel". */
+  let ultimaListaComponentes = null;
+  document.addEventListener('click', (e)=>{
+    if(!e.target.closest('[data-copiar-componentes]') || !ultimaListaComponentes) return;
+    const L = ultimaListaComponentes;
+    const tipo = window.MM_TIPO_MAP || {}, estado = window.MM_ESTADO_MAP || {}, grupo = window.MM_GRUPO_ART_MAP || {};
+    const cab = ['Lista','Alt.','Descripción de la lista','Posición','Componente','Descripción de componente','Cantidad','UM','Probabilidad de empleo','Material vigente (si es código antiguo)','Tipo material','Estado','Grupo de artículos'];
+    const filas = L.comps.map(c => {
+      const cod = String(c[cComponente]||'').trim();
+      const vig = (getOldCodeMatches(cod) || []).map(m => String(m.material||'').trim()).join(' / ');
+      return [L.material, L.alt, L.descripcion, cPos!==-1 ? c[cPos] : '', cod, cDenom!==-1 ? c[cDenom] : '', cCantidad!==-1 ? c[cCantidad] : '', cUM!==-1 ? c[cUM] : '',
+        cProbabilidad!==-1 ? c[cProbabilidad] : '', vig, tipo[cod] || '', estado[cod] || '', grupo[cod] || ''];
+    });
+    window.__copiarTabla(cab, filas, filas.length + ' componente(s) de ' + L.material + ' copiados: pégalos en Excel.');
+  });
 
   function openDrawer(row){
     const materialCodeForHeader = iMaterial !== -1 ? row[iMaterial] : '';
@@ -6900,6 +7024,13 @@ function formatFechaHoraCorta(d){
         treeBtn.style.display = 'none';
         treeBtn.onclick = null;
       }
+    }
+
+    const dondeBtn = document.getElementById('bomDrawerDondeBtn');
+    if(dondeBtn){
+      const matD = iMaterial !== -1 ? String(row[iMaterial] || '').trim() : '';
+      dondeBtn.style.display = matD ? 'inline-flex' : 'none';
+      dondeBtn.onclick = function(){ closeDrawer(); if(window.__abrirDondeSeUsa) window.__abrirDondeSeUsa(matD); };
     }
 
     const reescBtn = document.getElementById('bomDrawerReescalarBtn');
@@ -8660,6 +8791,346 @@ function formatFechaHoraCorta(d){
 
 <script>
 /* ============================================================
+   COPIAR TABLAS A EXCEL
+   window.__copiarTabla(cabeceras, filas, mensaje) copia como texto separado por tabulaciones
+   (cabecera incluida): al pegar en Excel cae una columna por campo. Los valores quedan
+   tal como vienen del export de SAP (códigos como texto, cantidades con punto decimal).
+   ============================================================ */
+(function(){
+  function limpiarCelda(v){ return String(v === null || v === undefined ? '' : v).replace(/[\t\r\n]+/g, ' ').trim(); }
+  window.__copiarTabla = async function(cabeceras, filas, mensaje){
+    var texto = [cabeceras].concat(filas).map(function(f){ return f.map(limpiarCelda).join('\t'); }).join('\n');
+    var ok = false;
+    try{ await navigator.clipboard.writeText(texto); ok = true; }
+    catch(e){
+      var ta = document.createElement('textarea'); ta.value = texto; ta.style.cssText = 'position:fixed;top:0;left:0;opacity:0;';
+      document.body.appendChild(ta); ta.select(); try{ ok = document.execCommand('copy'); }catch(_){} document.body.removeChild(ta);
+    }
+    if(window.__aviso) window.__aviso(ok ? (mensaje || (filas.length.toLocaleString('es-PE') + ' fila(s) copiadas con encabezados: pégalas en Excel.')) : 'No se pudo copiar al portapapeles.', ok ? '' : 'error', 3500);
+    return ok;
+  };
+})();
+</script>
+
+<script>
+/* ============================================================
+   PESTAÑA "DÓNDE SE USA"
+   A partir de un código: (1) las listas de materiales que lo contienen como componente,
+   (2) los productos terminados a los que llega subiendo por esas listas, con el camino, y
+   (3) su propia lista de materiales si la tiene. Cada código de las tablas lleva a ese
+   código (como navegar una base de datos), con Atrás / Adelante y el recorrido visible.
+   Cada tabla se copia con encabezados para pegar en Excel (o se selecciona un rango con el
+   mouse y Ctrl+C), y todo se exporta a un Excel.
+
+   Datos: los mismos de las otras pestañas (window.BOM_ROWS, BOM_COMP_ROWS y el Maestro),
+   con los índices del motor del árbol (window.__arbolAPI) para la información de cada
+   lista. El cruce es por Material + Lista alternativa, como en el resto de la app.
+   ============================================================ */
+(function(){
+  var vista = document.getElementById('view-donde');
+  if(!vista) return;
+  var $ = function(id){ return document.getElementById(id); };
+  var input = $('duCodigo');
+  var historial = [], posicion = -1;
+  var actual = null; // { codigo, listas:[], productos:[], propias:{alts, alt, comps} }
+
+  function esc(t){ return String(t === null || t === undefined ? '' : t).replace(/[&<>"]/g, function(c){ return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' }[c]; }); }
+  function n(v){ return Number(v).toLocaleString('es-PE'); }
+  function norm(v){ return String(v === null || v === undefined ? '' : v).trim(); }
+  function normAlt(a){ var s = norm(a); return s === '' ? '1' : s; }
+  function api(){ return window.__arbolAPI || null; }
+  function hayDatos(){ return window.BOM_COMP_ROWS && window.BOM_COMP_ROWS.length && window.BOM_ROWS && window.BOM_ROWS.length && api(); }
+
+  /* Índice inverso Componente -> filas de componentes que lo usan, construido una sola vez
+     por carga del archivo de Componentes. */
+  var cacheInverso = { ref:null, porCodigo:null };
+  function indiceInverso(){
+    var filas = window.BOM_COMP_ROWS || [];
+    if(cacheInverso.ref === filas) return cacheInverso.porCodigo;
+    var C = window.BOM_COMP_COLUMNS || [];
+    var iM = C.indexOf('Material'), iA = C.indexOf('Lista mat.alternat.'), iC = C.indexOf('Componente'), iP = C.indexOf('Núm.posición');
+    var iQ = C.indexOf('Cantidad componente'), iU = C.indexOf('Un.medida componente'), iD = C.indexOf('Denominación de componente');
+    var m = new Map();
+    filas.forEach(function(r){
+      var cod = norm(r[iC]);
+      if(!cod) return;
+      if(!m.has(cod)) m.set(cod, []);
+      m.get(cod).push({ material:norm(r[iM]), alt:normAlt(r[iA]), pos:iP !== -1 ? norm(r[iP]) : '', cantidad:iQ !== -1 ? r[iQ] : '', um:iU !== -1 ? norm(r[iU]) : '', denominacion:iD !== -1 ? norm(r[iD]) : '' });
+    });
+    cacheInverso = { ref:filas, porCodigo:m };
+    return m;
+  }
+
+  function infoLista(material, alt){ var a = api(); return a ? a.buildBomIndex().byKey[material + '||' + alt] || null : null; }
+  function altsDe(material){ var a = api(); return a ? (a.buildBomIndex().altsByMaterial[material] || []) : []; }
+  function esAcondicionado(material){
+    return altsDe(material).some(function(e){ return /ACONDICIONADO/i.test(String(e.etapa || '')); }) || /^(ZTER|ZTMM)$/.test(norm((window.MM_TIPO_MAP || {})[material]));
+  }
+  function descripcionDe(codigo){
+    var t = (window.MM_TEXTO_MAP || {})[codigo];
+    if(t) return String(t);
+    var al = altsDe(codigo);
+    if(al.length && al[0].descripcion) return String(al[0].descripcion);
+    var usos = indiceInverso().get(codigo);
+    return usos && usos.length ? usos[0].denominacion : '';
+  }
+
+  /* (1) Listas que contienen el código: una fila por lista (Material + Alt) y posición. */
+  function listasQueContienen(codigo){
+    var usos = indiceInverso().get(codigo) || [];
+    var vistos = {};
+    return usos.filter(function(u){ var k = u.material + '|' + u.alt + '|' + u.pos; if(vistos[k]) return false; vistos[k] = true; return true; })
+      .map(function(u){
+        var l = infoLista(u.material, u.alt) || {};
+        return { material:u.material, alt:u.alt, descripcion:l.descripcion || descripcionDe(u.material), etapa:l.etapa || '', centro:l.centro || '', estado:l.estado || '',
+                 pos:u.pos, cantidad:u.cantidad, um:u.um, cantidadBase:l.cantidadBase, umBase:l.umBase || '', enBom:!!l.material };
+      })
+      .sort(function(a, b){ return a.material.localeCompare(b.material) || a.alt.localeCompare(b.alt, 'es', { numeric:true }) || a.pos.localeCompare(b.pos); });
+  }
+
+  /* (2) Productos terminados a los que llega: se sube por las listas que lo contienen (en
+     anchura, así el camino guardado es el más corto) hasta los materiales de Acondicionado. */
+  function productosRelacionados(codigo){
+    var inv = indiceInverso();
+    var camino = {}; camino[codigo] = [codigo];
+    var cola = [codigo], productos = [], visitados = 0;
+    while(cola.length && visitados < 20000){
+      var actualCod = cola.shift(); visitados++;
+      var padres = {};
+      (inv.get(actualCod) || []).forEach(function(u){ padres[u.material] = true; });
+      Object.keys(padres).forEach(function(p){
+        if(camino[p]) return;
+        camino[p] = camino[actualCod].concat([p]);
+        if(camino[p].length > 15) return;
+        if(esAcondicionado(p)) productos.push(p);
+        cola.push(p);
+      });
+    }
+    return productos.map(function(p){
+      var al = altsDe(p);
+      var centros = Array.from(new Set(al.map(function(e){ return norm(e.centro); }).filter(Boolean))).join(', ');
+      var est = (window.MM_ESTADO_MAP || {})[p];
+      return { material:p, descripcion:descripcionDe(p), centro:centros, estado:norm(est), niveles:camino[p].length - 1, camino:camino[p] };
+    }).sort(function(a, b){ return a.niveles - b.niveles || a.material.localeCompare(b.material); });
+  }
+
+  /* (3) Su propia lista de materiales (si tiene), por alternativa. */
+  function listaPropia(codigo, altElegida){
+    var alts = [];
+    var vistas = {};
+    altsDe(codigo).forEach(function(e){ if(!vistas[e.alt]){ vistas[e.alt] = true; alts.push(e); } });
+    alts.sort(function(a, b){ return String(a.alt).localeCompare(String(b.alt), 'es', { numeric:true }); });
+    if(!alts.length) return { alts:[], alt:null, comps:[] };
+    var alt = altElegida && vistas[altElegida] ? altElegida : alts[0].alt;
+    var e = alts.filter(function(x){ return x.alt === alt; })[0];
+    var comps = api().buildAllCompsIndex().componentesDe(codigo, alt, e.listaTecnica) || [];
+    return { alts:alts, alt:alt, info:e, comps:comps };
+  }
+
+  /* ---------- Dibujo ---------- */
+  function linkCodigo(c){ return '<button type="button" class="du-link" data-ir="' + esc(c) + '" title="Ver dónde se usa ' + esc(c) + '">' + esc(c) + '</button>'; }
+  function estadoBadge(v){
+    var s = norm(v);
+    if(!s) return '';
+    var cls = /^Z\d/i.test(s) ? 'du-z' : (/^activo$/i.test(s) ? 'du-ok' : (/inactivo/i.test(s) ? 'du-mal' : 'du-neutro'));
+    return '<span class="du-badge ' + cls + '">' + esc(s) + '</span>';
+  }
+  function tabla(cabeceras, filasHtml, clase){
+    return '<div class="du-tabla-wrap"><table class="du-tabla ' + (clase || '') + '"><thead><tr>' + cabeceras.map(function(h){ return '<th>' + esc(h) + '</th>'; }).join('') + '</tr></thead><tbody>' + filasHtml + '</tbody></table></div>';
+  }
+  function celdas(ri, valores){ return '<tr>' + valores.map(function(v, ci){ return '<td data-r="' + ri + '" data-c="' + ci + '"' + (v.cls ? ' class="' + v.cls + '"' : '') + '>' + v.html + '</td>'; }).join('') + '</tr>'; }
+  function cant(v){ return v === '' || v === null || v === undefined ? '' : Number(v).toLocaleString('es-PE', { maximumFractionDigits:3 }); }
+
+  var CAB_LISTAS = ['Lista (material)', 'Alt.', 'Descripción de la lista', 'Etapa', 'Centro', 'Estado', 'Posición', 'Cantidad', 'UM', 'Cant. base', 'UM base'];
+  var CAB_PRODUCTOS = ['Producto terminado', 'Descripción', 'Centro', 'Estado', 'Niveles', 'Camino'];
+  var CAB_COMPS = ['Posición', 'Componente', 'Descripción', 'Cantidad', 'UM', 'Tipo material', 'Estado', 'Grupo de artículos'];
+
+  function datosTablas(){
+    var tipo = window.MM_TIPO_MAP || {}, est = window.MM_ESTADO_MAP || {}, grupo = window.MM_GRUPO_ART_MAP || {};
+    return {
+      listas: actual.listas.map(function(l){ return [l.material, l.alt, l.descripcion, l.etapa, l.centro, l.estado, l.pos, l.cantidad, l.um, l.cantidadBase, l.umBase]; }),
+      productos: actual.productos.map(function(p){ return [p.material, p.descripcion, p.centro, p.estado, p.niveles, p.camino.join(' > ')]; }),
+      comps: actual.propias.comps.map(function(c){ return [c.pos, c.componente, c.denominacion, c.cantidad, c.um, norm(tipo[c.componente]), norm(est[c.componente]), norm(grupo[c.componente])]; })
+    };
+  }
+
+  function seccion(id, titulo, cuenta, subtitulo, cuerpo, acciones){
+    return '<section class="expl-card du-card" id="' + id + '"><div class="du-sec-cab"><div><h2>' + titulo + ' <span class="du-cuenta">' + cuenta + '</span></h2>' +
+      (subtitulo ? '<p class="du-sec-sub">' + subtitulo + '</p>' : '') + '</div><div class="du-sec-acc">' + (acciones || '') + '</div></div>' + cuerpo + '</section>';
+  }
+
+  function render(){
+    var res = $('duResultado');
+    if(!actual){ res.innerHTML = ''; return; }
+    var c = actual.codigo;
+    var tipo = norm((window.MM_TIPO_MAP || {})[c]), est = norm((window.MM_ESTADO_MAP || {})[c]), grupo = norm((window.MM_GRUPO_ART_MAP || {})[c]);
+    var desc = descripcionDe(c);
+    // Código antiguo / vigente del mismo material (Maestro: "Nro. antiguo de material").
+    var oc = window.MM_OLDCODE_MAP || {}, rel = [];
+    (oc[c] || []).forEach(function(m){ rel.push({ cod:norm(m.material), txt:'material vigente' }); });
+    Object.keys(oc).forEach(function(k){ if((oc[k] || []).some(function(m){ return norm(m.material) === c; }) && norm(k) !== c) rel.push({ cod:norm(k), txt:'código antiguo' }); });
+
+    var ficha = '<section class="expl-card du-card du-ficha">' +
+      '<div class="du-ficha-cod"><span class="du-cod" data-copy-code="' + esc(c) + '" title="Clic para copiar el código">' + esc(c) + '</span>' + estadoBadge(est) + (tipo ? '<span class="du-badge du-neutro">' + esc(tipo) + '</span>' : '') + '</div>' +
+      '<div class="du-ficha-desc">' + (desc ? esc(desc) : '<span class="du-tenue">Sin descripción en los datos cargados</span>') + (grupo ? ' <span class="du-tenue">· ' + esc(grupo) + '</span>' : '') + '</div>' +
+      '<div class="du-cifras">' +
+        '<a href="#duSecListas" class="du-cifra"><b>' + n(actual.listas.length) + '</b> lista(s) lo contienen</a>' +
+        '<a href="#duSecProductos" class="du-cifra"><b>' + n(actual.productos.length) + '</b> producto(s) terminado(s)</a>' +
+        '<a href="#duSecPropia" class="du-cifra"><b>' + n(actual.propias.alts.length) + '</b> alternativa(s) de lista propia</a>' +
+      '</div>' +
+      (rel.length ? '<div class="du-rel">Mismo material con otro código: ' + rel.map(function(r){ return linkCodigo(r.cod) + ' <span class="du-tenue">(' + r.txt + ')</span>'; }).join(' · ') + '</div>' : '') +
+    '</section>';
+
+    var btnCopiar = function(k){ return '<button type="button" class="btn btn-ghost btn-compact" data-copiar="' + k + '">Copiar para Excel</button>'; };
+
+    var filasListas = actual.listas.map(function(l, i){
+      return celdas(i, [{ html:linkCodigo(l.material), cls:'du-cod-td' }, { html:esc(l.alt), cls:'du-c' }, { html:esc(l.descripcion) }, { html:esc(l.etapa) }, { html:esc(l.centro), cls:'du-c' },
+        { html:estadoBadge(l.estado) }, { html:esc(l.pos), cls:'du-c du-mono' }, { html:cant(l.cantidad), cls:'du-num' }, { html:esc(l.um), cls:'du-c' }, { html:cant(l.cantidadBase), cls:'du-num' }, { html:esc(l.umBase), cls:'du-c' }]);
+    }).join('');
+    var secListas = seccion('duSecListas', 'Listas que contienen ' + esc(c), n(actual.listas.length), 'Una fila por lista y posición. Clic en un código para seguir por él.',
+      actual.listas.length ? tabla(CAB_LISTAS, filasListas) : '<p class="du-vacio">Este código no aparece como componente en ninguna lista cargada.</p>', actual.listas.length ? btnCopiar('listas') : '');
+
+    var filasProd = actual.productos.map(function(p, i){
+      return celdas(i, [{ html:linkCodigo(p.material), cls:'du-cod-td' }, { html:esc(p.descripcion) }, { html:esc(p.centro), cls:'du-c' }, { html:estadoBadge(p.estado) }, { html:esc(p.niveles), cls:'du-c' },
+        { html:p.camino.map(function(x, j){ return j === 0 ? '<span class="du-mono du-tenue">' + esc(x) + '</span>' : linkCodigo(x); }).join(' <span class="du-flecha">›</span> ') }]) .replace('</tr>', '<td class="du-acc-td"><button type="button" class="du-arbol" data-arbol="' + esc(p.material) + '" title="Abrir el árbol de este producto">Árbol</button></td></tr>');
+    }).join('');
+    var secProd = seccion('duSecProductos', 'Productos terminados a los que llega', n(actual.productos.length),
+      'Subiendo por las listas hasta Acondicionado. "Camino" muestra por qué listas pasa (el más corto).',
+      actual.productos.length ? tabla(CAB_PRODUCTOS.concat(['']), filasProd) : '<p class="du-vacio">' + (actual.listas.length ? 'Las listas que lo contienen no llegan a ningún producto de Acondicionado.' : (esAcondicionado(c) ? 'Es un producto terminado y no está dentro de otra lista.' : 'Sin listas que lo contengan.')) + '</p>',
+      actual.productos.length ? btnCopiar('productos') : '');
+
+    var pr = actual.propias, secPropia;
+    if(pr.alts.length){
+      var chips = pr.alts.map(function(e){ return '<button type="button" class="du-chip' + (e.alt === pr.alt ? ' activo' : '') + '" data-alt="' + esc(e.alt) + '">Alt. ' + esc(e.alt) + (e.etapa ? ' · ' + esc(e.etapa) : '') + '</button>'; }).join('');
+      var tipoM = window.MM_TIPO_MAP || {}, estM = window.MM_ESTADO_MAP || {}, grupoM = window.MM_GRUPO_ART_MAP || {};
+      var filasC = pr.comps.map(function(k, i){
+        return celdas(i, [{ html:esc(k.pos), cls:'du-c du-mono' }, { html:k.componente ? linkCodigo(k.componente) : '', cls:'du-cod-td' }, { html:esc(k.denominacion) }, { html:cant(k.cantidad), cls:'du-num' }, { html:esc(k.um), cls:'du-c' },
+          { html:esc(norm(tipoM[k.componente])), cls:'du-c' }, { html:estadoBadge(estM[k.componente]) }, { html:esc(norm(grupoM[k.componente])) }]);
+      }).join('');
+      var info = pr.info || {};
+      secPropia = seccion('duSecPropia', 'Lista de materiales de ' + esc(c), n(pr.comps.length) + ' componente(s)',
+        [info.descripcion, info.centro ? 'Centro ' + info.centro : '', info.cantidadBase !== '' && info.cantidadBase != null ? 'Cantidad base ' + cant(info.cantidadBase) + ' ' + (info.umBase || '') : '', info.estado].filter(Boolean).map(esc).join(' · '),
+        '<div class="du-chips">' + chips + '</div>' + (pr.comps.length ? tabla(CAB_COMPS, filasC) : '<p class="du-vacio">Esta alternativa no tiene componentes cargados.</p>'),
+        pr.comps.length ? btnCopiar('comps') : '');
+    } else {
+      secPropia = seccion('duSecPropia', 'Lista de materiales de ' + esc(c), '', '', '<p class="du-vacio">Este código no tiene lista de materiales propia (se compra o se usa directo).</p>', '');
+    }
+    res.innerHTML = ficha + secListas + secProd + secPropia;
+    Array.prototype.forEach.call(res.querySelectorAll('.du-tabla-wrap'), function(w){ if(window.__setupCellRangeSelection) w.__sel = window.__setupCellRangeSelection(w); });
+  }
+
+  function pintarNavegacion(){
+    $('duAtras').disabled = posicion <= 0;
+    $('duAdelante').disabled = posicion >= historial.length - 1;
+    $('duExportar').disabled = !actual;
+    var desde = Math.max(0, historial.length - 12);
+    $('duRecorrido').innerHTML = historial.length ? historial.slice(desde).map(function(cod, i){
+      var j = desde + i;
+      return (i ? '<span class="du-flecha">›</span>' : '') + '<button type="button" class="du-paso' + (j === posicion ? ' activo' : '') + '" data-paso="' + j + '">' + esc(cod) + '</button>';
+    }).join('') : '';
+  }
+
+  function consultar(codigo, desdeHistorial){
+    codigo = norm(codigo).toUpperCase();
+    if(!codigo) return;
+    input.value = codigo;
+    if(!hayDatos()){
+      $('duResultado').innerHTML = '<section class="expl-card du-card"><p class="du-vacio">Aún no están cargadas las Listas de Materiales y sus Componentes.</p></section>';
+      return;
+    }
+    if(!desdeHistorial){
+      historial = historial.slice(0, posicion + 1);
+      if(historial[historial.length - 1] !== codigo) historial.push(codigo);
+      posicion = historial.length - 1;
+    }
+    actual = { codigo:codigo, listas:listasQueContienen(codigo), productos:productosRelacionados(codigo), propias:listaPropia(codigo, null) };
+    render(); pintarNavegacion();
+    if(vista.classList.contains('active')) window.scrollTo({ top:0 });
+  }
+  function ir(paso){
+    if(paso < 0 || paso >= historial.length) return;
+    posicion = paso;
+    consultar(historial[posicion], true);
+  }
+
+  $('duBuscar').addEventListener('click', function(){ consultar(input.value); });
+  input.addEventListener('keydown', function(e){ if(e.key === 'Enter'){ e.preventDefault(); consultar(input.value); } });
+  $('duAtras').addEventListener('click', function(){ ir(posicion - 1); });
+  $('duAdelante').addEventListener('click', function(){ ir(posicion + 1); });
+  document.addEventListener('keydown', function(e){
+    if(!vista.classList.contains('active') || !e.altKey) return;
+    if(e.key === 'ArrowLeft'){ e.preventDefault(); ir(posicion - 1); }
+    if(e.key === 'ArrowRight'){ e.preventDefault(); ir(posicion + 1); }
+  });
+  $('duRecorrido').addEventListener('click', function(e){ var b = e.target.closest('[data-paso]'); if(b) ir(+b.getAttribute('data-paso')); });
+
+  vista.addEventListener('click', function(e){
+    var wrap = e.target.closest('.du-tabla-wrap');
+    if(wrap && wrap.__sel && wrap.__sel.wasDragged && wrap.__sel.wasDragged()) return;
+    var l = e.target.closest('[data-ir]');
+    if(l){ e.preventDefault(); consultar(l.getAttribute('data-ir')); return; }
+    var a = e.target.closest('[data-alt]');
+    if(a && actual){ actual.propias = listaPropia(actual.codigo, a.getAttribute('data-alt')); render(); var s = $('duSecPropia'); if(s) s.scrollIntoView({ block:'nearest' }); return; }
+    var t = e.target.closest('[data-arbol]');
+    if(t){
+      var mat = t.getAttribute('data-arbol'), alts = altsDe(mat).map(function(x){ return x.alt; });
+      var alt = alts.indexOf('1') !== -1 ? '1' : (alts[0] || '1');
+      if(api() && api().abrirArbolDesdeExplosion) api().abrirArbolDesdeExplosion(mat, alt, null);
+      return;
+    }
+    var cp = e.target.closest('[data-copiar]');
+    if(cp && actual){
+      var d = datosTablas(), k = cp.getAttribute('data-copiar');
+      if(k === 'listas') window.__copiarTabla(CAB_LISTAS, d.listas);
+      if(k === 'productos') window.__copiarTabla(CAB_PRODUCTOS, d.productos);
+      if(k === 'comps') window.__copiarTabla(['Lista', 'Alt.'].concat(CAB_COMPS), d.comps.map(function(f){ return [actual.codigo, actual.propias.alt].concat(f); }));
+    }
+    var ancla = e.target.closest('a.du-cifra');
+    if(ancla){ e.preventDefault(); var dest = document.querySelector(ancla.getAttribute('href')); if(dest) dest.scrollIntoView({ behavior:'smooth', block:'start' }); }
+  });
+
+  $('duExportar').addEventListener('click', async function(){
+    if(!actual || !await window.__conXLSX()) return;
+    var d = datosTablas();
+    var BORDE = { style:'thin', color:{ rgb:'D8DEE1' } };
+    function hoja(titulo, cab, filas, anchos){
+      var ws = XLSX.utils.aoa_to_sheet([[titulo], cab].concat(filas));
+      ws['!cols'] = anchos.map(function(w){ return { wch:w }; });
+      ws['!merges'] = [{ s:{ r:0, c:0 }, e:{ r:0, c:cab.length - 1 } }];
+      if(filas.length) ws['!autofilter'] = { ref:'A2:' + XLSX.utils.encode_col(cab.length - 1) + (filas.length + 2) };
+      ws['A1'].s = { font:{ bold:true, sz:13, name:'Calibri', color:{ rgb:'122132' } } };
+      for(var c = 0; c < cab.length; c++){
+        var a = XLSX.utils.encode_cell({ r:1, c:c });
+        ws[a].s = { fill:{ patternType:'solid', fgColor:{ rgb:'1F3B57' } }, font:{ bold:true, color:{ rgb:'FFFFFF' }, sz:10, name:'Calibri' }, alignment:{ horizontal:'center', vertical:'center', wrapText:true }, border:{ top:BORDE, bottom:BORDE, left:BORDE, right:BORDE } };
+      }
+      filas.forEach(function(f, i){
+        for(var c = 0; c < cab.length; c++){
+          var a = XLSX.utils.encode_cell({ r:i + 2, c:c });
+          if(!ws[a]) ws[a] = { t:'s', v:'' };
+          ws[a].s = { font:{ sz:10, name:'Calibri' }, border:{ top:BORDE, bottom:BORDE, left:BORDE, right:BORDE }, fill: i % 2 ? { patternType:'solid', fgColor:{ rgb:'F3F6F7' } } : undefined };
+        }
+      });
+      return ws;
+    }
+    var wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, hoja('Listas que contienen ' + actual.codigo + ' — ' + descripcionDe(actual.codigo), CAB_LISTAS, d.listas, [14,6,40,18,8,10,9,11,7,11,8]), 'LISTAS');
+    XLSX.utils.book_append_sheet(wb, hoja('Productos terminados a los que llega ' + actual.codigo, CAB_PRODUCTOS, d.productos, [16,42,10,10,8,60]), 'PRODUCTOS');
+    if(actual.propias.alts.length) XLSX.utils.book_append_sheet(wb, hoja('Lista de materiales de ' + actual.codigo + ' (alt. ' + actual.propias.alt + ')', CAB_COMPS, d.comps, [9,14,42,11,7,12,10,26]), 'SU LISTA');
+    XLSX.writeFile(wb, 'donde_se_usa_' + actual.codigo + '.xlsx');
+  });
+
+  // Entrada desde otras pestañas (detalle de una lista, Maestro de Materiales…).
+  window.__abrirDondeSeUsa = function(codigo){
+    if(window.__activateSuiteTab) window.__activateSuiteTab('donde');
+    document.querySelectorAll('.filter-panel.open').forEach(function(p){ p.classList.remove('open'); });
+    consultar(codigo);
+  };
+  pintarNavegacion();
+})();
+</script>
+
+<script>
+/* ============================================================
    APP 3 — ÁRBOL DEL PRODUCTO (ids con prefijo "arbol")
 
    Reconstruye, a partir de un Material de Acondicionado + su Alternativa,
@@ -8932,7 +9403,8 @@ function formatFechaHoraCorta(d){
         '<span class="c-desc">'+esc(c.denominacion||'')+'</span>'+
       '</div>';
     }).join('');
-    return '<div class="arbol-comp-list">'+filas+'</div>';
+    return '<div class="arbol-comp-acciones"><button type="button" class="nom-copiar" data-copiar-nodo title="Copia los componentes de esta etapa con encabezados, para pegar en Excel">Copiar para Excel</button></div>' +
+      '<div class="arbol-comp-list">'+filas+'</div>';
   }
 
   /* index = posición del nodo en el árbol aplanado (ids únicos de sus controles); esFin =
@@ -9155,6 +9627,14 @@ function formatFechaHoraCorta(d){
           if(!isOpen && panel.getAttribute('data-loaded') !== '1'){
             panel.innerHTML = renderComponentesPanel(nodo, i);
             panel.setAttribute('data-loaded', '1');
+            var copiarBtn = panel.querySelector('[data-copiar-nodo]');
+            if(copiarBtn) copiarBtn.addEventListener('click', function(ev){
+              ev.stopPropagation();
+              var estadoM = window.MM_ESTADO_MAP || {}, grupoM = window.MM_GRUPO_ART_MAP || {};
+              window.__copiarTabla(['Lista','Alt.','Etapa','Posición','Componente','Descripción de componente','Cantidad','UM','Estado','Grupo de artículos'],
+                (nodo.componentes || []).map(function(c){ return [nodo.material, nodo.alt, nodo.etapa || '', c.pos, c.componente, c.denominacion, c.cantidad, c.um, estadoM[c.componente] || '', grupoM[c.componente] || '']; }),
+                (nodo.componentes || []).length + ' componente(s) de ' + nodo.material + ' copiados: pégalos en Excel.');
+            });
           }
           panel.classList.toggle('open', !isOpen);
           toggleBtn.classList.toggle('open', !isOpen);

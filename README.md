@@ -36,7 +36,7 @@ Localizar cada bloque en el HTML actual:
 grep -n "APP [0-9] —" index.html
 ```
 
-### Pestañas de la interfaz (4 + chat flotante)
+### Pestañas de la interfaz (6 + chat flotante)
 1. **Maestro de Materiales** — ficha de materiales de SAP, filtros por columna,
    detección de Categoría 3, materias primas exclusivas ZMPR/ZMEE.
    Los buscadores (Maestro, Listas, Árbol y Explosión) buscan por palabras: cada
@@ -71,7 +71,15 @@ grep -n "APP [0-9] —" index.html
    en materiales de maquila se elige la alternativa cuya VFab está libre
    (bloqueo distinto de "1" y "2"). Soporta múltiples combinaciones cuando
    hay ambigüedad de Versión de Fabricación.
-4. **Explosión masiva** — corre el mismo motor del Árbol del producto sobre
+4. **Dónde se usa** — a partir de un código: las listas que lo contienen
+   (posición, cantidad, cantidad base), los productos terminados a los que llega
+   subiendo por esas listas (con el camino más corto) y su propia lista por
+   alternativa. Cada código de las tablas navega a ese código (Atrás / Adelante,
+   Alt + ← / →, y el recorrido clicable). Cada tabla se copia con encabezados
+   para Excel (`window.__copiarTabla`) o por rango con el mouse + Ctrl+C, y todo
+   se exporta a un Excel. Entradas: botón "Dónde se usa" del detalle de una lista
+   y enlace en el detalle del Maestro (`window.__abrirDondeSeUsa(codigo)`).
+5. **Explosión masiva** — corre el mismo motor del Árbol del producto sobre
    una lista de materiales sin límite de cantidad (pegada desde Excel en un
    cuadro de texto, o importada de un .xlsx/.csv: columna A = Material,
    B = VFab opcional). Los materiales con varias VFab se resuelven en bloque
@@ -81,14 +89,14 @@ grep -n "APP [0-9] —" index.html
    tamaño de lote —Cantidad base y su unidad— de la lista de cada etapa; celdas
    amarillas en bloqueos con comentarios ocultos —triangulito rojo, texto al
    pasar el cursor—) más hojas RESUMEN (una fila por árbol) y NO RESUELTOS.
-5. **Nomenclatura** — propone el Texto Material (máx. 40), el Texto de datos
+6. **Nomenclatura** — propone el Texto Material (máx. 40), el Texto de datos
    básicos, el Texto de inspección y el Texto de insp. VI de un material nuevo
    (producto terminado, granel, envase y empaque o materia prima) con la misma
    estructura que los últimos creados en el Maestro. Interpreta el pedido escrito
    libremente, avisa si ya existe un material con ese texto y muestra los más
    parecidos como modelo. Reglas en `nomenclatura.js` (sin DOM; se puede probar
    con node).
-6. **Chat con IA** (botón flotante, esquina inferior derecha, en MM y BOM) —
+7. **Chat con IA** (botón flotante, esquina inferior derecha, en MM y BOM) —
    filtrado de las tablas con preguntas en lenguaje natural, vía Gemini. Ver
    sección 5 — **tiene un bug pendiente sin resolver**.
 
@@ -330,6 +338,10 @@ usar cualquier key vieja.
 ---
 
 ## 6. Convenciones de código a respetar
+
+- **Dígitos en la fuente monoespaciada:** `--mono` empieza por un subconjunto de
+  Noto Sans Mono que solo trae 0-9 (cero liso); el resto del texto sigue en IBM
+  Plex Mono, cuyo cero con punto se confundía con 6 y 9.
 
 - **Nunca duplicar lógica de cálculo del árbol.** Todo lo que necesite
   construir/leer un árbol de producto debe usar `window.__arbolAPI` (objeto
